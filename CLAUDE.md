@@ -35,6 +35,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 - P2 — CLAUDE.md base template — SHIPPED 2026-04-07
 - P11 — CLAUDE.md code template — SHIPPED 2026-04-07
 - P12 — SOP v2: owner feedback iteration — SHIPPED 2026-04-07
+- P13 — SOP Compliance Checker Agent — SHIPPED 2026-04-07
 
 **High:**
 - P3 — Agent memory template (`docs/templates/agent-memory-template.md`)
@@ -133,12 +134,17 @@ Memory files live at `~/.claude/projects/[project-hash]/memory/`.
 | Backlog | `Backlog.md` |
 | Current build plan | `docs/build-plans/phase-0-foundation.md` |
 | Feature map | `docs/feature-map.md` |
+| Compliance checklist | `docs/sop/compliance-checklist.md` |
+| SOP checker agent | `.claude/agents/sop-checker.md` |
 
 ---
 
 ## Recent Work
 
 *Append-only. New entries at top. Include commit refs.*
+
+### 2026-04-07: P13 — SOP Compliance Checker Agent
+Compliance checker agent (`.claude/agents/sop-checker.md`) and canonical checklist (`docs/sop/compliance-checklist.md`). ~64 checks across 8 categories, three-tier scoring with critical-failure cap.
 
 ### 2026-04-07: P12 — SOP v2 owner feedback iteration
 10 changes applied based on multi-session usage feedback. Reframed additive-only to never-delete-without-a-trace, delineated memory systems, added test gates, snapshot resume model, conflict precedence, schema protocol, backlog archive threshold, no-derived-facts rule, multi-agent code conflict nuance.

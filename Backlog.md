@@ -155,6 +155,23 @@ Apply project owner feedback from multi-session usage. 10 changes:
 
 ---
 
+### P13 — SOP Compliance Checker Agent
+`[SHIPPED - 2026-04-07] [Feature]`
+
+Agent that audits any project folder against the Claude Code Agent SOP and produces a scored compliance report with actionable recommendations.
+
+**Acceptance criteria:**
+- `.claude/agents/sop-checker.md` exists with agent definition - DONE
+- `docs/sop/compliance-checklist.md` exists with all checks, weights, and scoring formula - DONE
+- Agent correctly detects code vs non-code projects - DONE
+- Agent produces a scored markdown report with per-check PASS/FAIL - DONE
+- Report includes "Top Recommendations" and "Path to 100%" sections - DONE
+- Agent is read-only — never modifies target project files - DONE
+- Checklist covers: file existence, section presence, tag format, date format, P-number sequencing, cross-file consistency, memory system separation - DONE
+- Scoring uses Critical/Important/Recommended tiers with critical-failure cap at 49 - DONE
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
@@ -163,3 +180,4 @@ Apply project owner feedback from multi-session usage. 10 changes:
 - P2 — CLAUDE.md base template — SHIPPED 2026-04-07 (updated same day to base-only version)
 - P11 — CLAUDE.md code project template — SHIPPED 2026-04-07
 - P12 — SOP v2: owner feedback iteration — SHIPPED 2026-04-07
+- P13 — SOP Compliance Checker Agent — SHIPPED 2026-04-07

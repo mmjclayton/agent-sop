@@ -70,6 +70,7 @@ agent-sop/
 - 2026-04-07: Batch 0.3b — P11 shipped. CLAUDE.md code template published at docs/templates/claude-md-template-code.md.
 - 2026-04-07: Batch 0.3c — 9 SOP improvements applied following independent analysis: Quick Reference Card, template split, [WON'T] format standard, project_resume.md naming lock, Key Documents sync rule, [VERIFIED] non-code definition, interrupted session recovery, Issue Tracker Sync Rules rename, phase boundary definition.
 - 2026-04-07: Batch 0.3d — P12 shipped. SOP v2 owner feedback iteration: 10 changes applied. Reframed additive-only rule, delineated memory systems, added test gates, snapshot resume model, conflict precedence, schema protocol, backlog archive threshold, no-derived-facts rule, multi-agent code conflict nuance. All templates and tracking files updated.
+- 2026-04-07: Batch 0.3e — P13 shipped. SOP Compliance Checker agent and canonical compliance checklist. ~64 checks across 8 categories with three-tier scoring system. Agent definition at `.claude/agents/sop-checker.md`, checklist at `docs/sop/compliance-checklist.md`.
 
 ---
 

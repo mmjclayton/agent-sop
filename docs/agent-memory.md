@@ -56,6 +56,7 @@ See CLAUDE.md Key Documents table.
 - 2026-04-07: Backlog archive threshold added — move shipped items older than 90 days to archive when file exceeds ~2,000 lines.
 - 2026-04-07: "No derived facts in memory" rule added — store rules not measurements (test counts, line numbers, versions go stale immediately).
 - 2026-04-07: Multi-agent contention expanded — docs conflicts resolve by appending, code conflicts require reading both versions, semantic conflicts flagged for human resolution.
+- 2026-04-07: SOP Compliance Checker agent created (P13). Checklist at `docs/sop/compliance-checklist.md`, agent at `.claude/agents/sop-checker.md`. ~59 checks (non-code) / ~64 checks (code) across 8 categories. Three-tier scoring: Critical (cap at 49), Important (5pts), Recommended (2pts).
 
 ---
 
