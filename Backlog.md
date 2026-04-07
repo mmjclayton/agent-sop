@@ -4,7 +4,7 @@ Single source of truth for all work items. Never delete without a trace — upda
 
 ## Tag Taxonomy
 
-- Status (first): `[OPEN]` `[IN PROGRESS]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T]`
+- Status (first): `[OPEN]` `[IN PROGRESS]` `[BLOCKED]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T]`
 - Type (second): `[Feature]` `[Iteration]` `[Bug]` `[Refactor]`
 - Optional: `[has-open-questions]` `[ok-for-automation]`
 

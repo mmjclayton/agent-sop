@@ -6,7 +6,7 @@
 
 ## Agent SOP
 
-This project IS the Agent SOP library. All agents working on this project still follow the SOP defined in `docs/sop/claude-agent-sop.md` — including the never-delete-without-a-trace rule and session checklists.
+This project IS the Agent SOP library. All agents working on this project still follow the SOP defined in `docs/sop/claude-agent-sop.md` — including the never-delete-without-a-trace rule and session checklists. Conflict precedence: code/git > CLAUDE.md > Backlog.md > build-plan > feature-map > agent-memory > resume point.
 
 ---
 
@@ -23,7 +23,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 | Agent Memory | `docs/agent-memory.md` | Permanent cross-session context |
 | Feature Map | `docs/feature-map.md` | Shipped documents + roadmap |
 | Backlog | `Backlog.md` | Single source of truth for all work items |
-| Core SOP | `docs/sop/claude-agent-sop.md` | The main SOP document |
+| Core SOP | `docs/sop/claude-agent-sop.md` (lines 1-35 for Quick Reference) | The main SOP document |
 | CLAUDE.md Template | `docs/templates/claude-md-template.md` | Template for new projects |
 
 ---
@@ -56,7 +56,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 `Backlog.md` is the single source of truth. Never delete without a trace — update in place, mark superseded, or archive.
 
 ### Tag taxonomy
-- Status (first): `[OPEN]` `[IN PROGRESS]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T]`
+- Status (first): `[OPEN]` `[IN PROGRESS]` `[BLOCKED]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T]`
 - Type (second): `[Feature]` `[Iteration]` `[Bug]` `[Refactor]`
 - Optional: `[has-open-questions]` `[ok-for-automation]`
 
@@ -114,13 +114,14 @@ Memory files live at `~/.claude/projects/[project-hash]/memory/`.
 ### Session end checklist
 **Never delete without a trace. Update in place, mark superseded, or archive.**
 
-1. `Backlog.md` — update status tags and item bodies in place, append new items.
-2. `docs/feature-map.md` — append shipped documents.
-3. `docs/agent-memory.md` — append decisions/gotchas, move completed to Completed Work.
-4. `docs/build-plans/phase-N.md` — append to Batch Log.
-5. `project_resume.md` — overwrite with current session state.
-6. `MEMORY.md` index — append new entries.
-7. Commit all docs changes in the same commit as the work.
+1. Run tests (code projects) — fix failures before proceeding.
+2. `Backlog.md` — update status tags and item bodies in place, append new items.
+3. `docs/feature-map.md` — append shipped documents.
+4. `docs/agent-memory.md` — append decisions/gotchas, move completed to Completed Work.
+5. `docs/build-plans/phase-N.md` — append to Batch Log.
+6. `project_resume.md` — overwrite with current session state.
+7. `MEMORY.md` index — append new entries.
+8. Commit all docs changes in the same commit as the work.
 
 ---
 
@@ -143,16 +144,16 @@ Memory files live at `~/.claude/projects/[project-hash]/memory/`.
 
 *Append-only. New entries at top. Include commit refs.*
 
-### 2026-04-07: P13 — SOP Compliance Checker Agent
-Compliance checker agent (`.claude/agents/sop-checker.md`) and canonical checklist (`docs/sop/compliance-checklist.md`). ~64 checks across 8 categories, three-tier scoring with critical-failure cap.
+### 2026-04-07: P13 — SOP Compliance Checker Agent (commits c0b697d-22f1eb0)
+Compliance checker agent (`.claude/agents/sop-checker.md`) and canonical checklist (`docs/sop/compliance-checklist.md`). ~64 checks across 8 categories, three-tier scoring with critical-failure cap. README rewritten.
 
-### 2026-04-07: P12 — SOP v2 owner feedback iteration
+### 2026-04-07: P12 — SOP v2 owner feedback iteration (commit 79c5a5c)
 10 changes applied based on multi-session usage feedback. Reframed additive-only to never-delete-without-a-trace, delineated memory systems, added test gates, snapshot resume model, conflict precedence, schema protocol, backlog archive threshold, no-derived-facts rule, multi-agent code conflict nuance.
 
-### 2026-04-07: SOP improvements + P11
+### 2026-04-07: SOP improvements + P11 (commit 79c5a5c)
 9 improvements applied to core SOP following independent analysis. CLAUDE.md template split into base + code variant (P11 shipped). All tracking files updated per session end checklist.
 
-### 2026-04-07: Initial scaffold
+### 2026-04-07: Initial scaffold (commit 79c5a5c)
 Project created and P1, P2 shipped — CLAUDE.md, Backlog.md, docs/agent-memory.md, docs/feature-map.md, phase-0 build plan, README.md, core SOP, CLAUDE.md template.
 
 ---
