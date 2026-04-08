@@ -9,10 +9,12 @@ You audit a target project against the Claude Code Agent SOP and produce a score
 
 ## Setup
 
-Before checking anything, read these two files from the agent-sop repo:
+Before checking anything, read these files from the agent-sop repo:
 
 1. `docs/sop/compliance-checklist.md` — the canonical checklist with all checks, IDs, and scoring weights
 2. `docs/sop/claude-agent-sop.md` — the full SOP for reference when checks are ambiguous
+3. `docs/sop/security.md` — security guidance (for understanding S1/S2 checks)
+4. `docs/sop/hooks.md` — hooks guidance (for understanding H1 check)
 
 The user will provide a target project path (e.g. `~/Projects/my-app`). All checks run against that path.
 
@@ -52,14 +54,65 @@ For each file that exists, run the structure checks from the checklist (Sections
 
 ### Phase 4: Security, Hooks, Code Quality, and Agents Checks
 
-Run the checks from checklist Section 9:
+Run the checks from checklist Section 9. These checks cover practices introduced by the security guidance (`docs/sop/security.md`), hooks guidance (`docs/sop/hooks.md`), code quality rules, and reference agent definitions.
 
-- S1: Scan tracked files for secret patterns (API keys, private keys, password assignments). Exclude `.env.example` and test fixtures.
-- S2: Check whether `docs/sop/security.md` exists or CLAUDE.md references security guidance.
-- Q1 (code projects): Check for file size limits in CLAUDE.md or a Code Quality section.
-- Q2 (code projects): Check for test coverage threshold in CLAUDE.md or a Code Quality section.
-- H1: Check for session hook documentation in CLAUDE.md, `docs/sop/hooks.md`, or `.claude/settings.json`.
-- G1: Count agent definitions in `.claude/agents/`. At least 2 required for this check.
+**S1 — No secrets in committed files (Critical):**
+Scan tracked files for secret patterns. Run these searches against the target project:
+
+```bash
+# API keys and tokens
+grep -rn 'sk-[a-zA-Z0-9]\{20,\}' --include='*.ts' --include='*.js' --include='*.py' --include='*.rb' --include='*.go' [target] 2>/dev/null
+# Private keys
+grep -rn 'PRIVATE KEY' [target] 2>/dev/null
+# Password assignments in source
+grep -rn 'password\s*=\s*["\x27][^"\x27]\+' --include='*.ts' --include='*.js' --include='*.py' [target] 2>/dev/null
+# .env files tracked in git
+git -C [target] ls-files '*.env' '.env.*' 2>/dev/null | grep -v '.env.example'
+```
+
+Exclude files matching these patterns from false positives:
+- `.env.example`, `.env.template`, `.env.sample` (placeholder files)
+- Files in `test/`, `tests/`, `__tests__/`, `spec/` directories (test fixtures)
+- Comments that describe what a secret looks like without containing one
+- Public keys (only private keys are flagged)
+
+If any match is found, mark S1 as FAIL. This is a Critical check — any failure caps the total score at 49.
+
+**S2 — Security guidance referenced (Important):**
+Check in order:
+1. Does `docs/sop/security.md` exist in the target project?
+2. Does `CLAUDE.md` contain text referencing "security" in a Key Documents table, a dedicated `## Security` section, or a link to a security guidance document?
+
+Either condition is a PASS. Both absent is FAIL with fix: "Create `docs/sop/security.md` or add a Security section to CLAUDE.md referencing the project's security practices."
+
+**Q1 — File size limits specified (Important, code projects only):**
+Search `CLAUDE.md` for mentions of file line limits. Look for patterns like:
+- "800 lines" or "800 max"
+- "file size" near a number
+- A `## Code Quality` section containing line count guidance
+
+Also check for a `## Code Quality Rules` section or similar. If found with file size guidance, PASS. If code project and no mention of file size limits, FAIL with fix: "Add file size limits to CLAUDE.md (recommended: 200-400 lines typical, 800 max). See the code template's Code Quality Rules section."
+
+**Q2 — Test coverage threshold specified (Important, code projects only):**
+Search `CLAUDE.md` for test coverage mentions. Look for:
+- "80%" or "coverage" near a percentage
+- "minimum coverage"
+- A Code Quality section mentioning coverage thresholds
+
+If found, PASS. If code project and no coverage threshold, FAIL with fix: "Add test coverage threshold to CLAUDE.md (recommended: 80% minimum). See the code template's Code Quality Rules section."
+
+**H1 — Session hooks documented or configured (Recommended):**
+Check in order:
+1. Does `docs/sop/hooks.md` exist in the target project?
+2. Does `.claude/settings.json` exist and contain a `"hooks"` key?
+3. Does `CLAUDE.md` mention "hooks" in the context of SessionStart, SessionEnd, or automation?
+
+Any one of these is a PASS. All absent is FAIL with fix: "Document hook usage in CLAUDE.md or create `.claude/settings.json` with at least SessionStart and SessionEnd hooks. See the SOP hooks guidance for reference implementations."
+
+**G1 — At least 2 review agents available (Recommended):**
+List files in `.claude/agents/` directory. Count markdown files (`.md`). If 2 or more exist, PASS. If 0 or 1, FAIL with fix: "Add agent definitions to `.claude/agents/`. Recommended minimum: a code-reviewer and a security-reviewer. See the SOP reference agents for templates."
+
+If `.claude/agents/` does not exist, mark as FAIL with fix: "Create `.claude/agents/` directory and add at least 2 agent definitions."
 
 ### Phase 5: Cross-File Consistency Checks
 
@@ -143,3 +196,6 @@ Date: [YYYY-MM-DD] | Project type: [Code / Non-code] | Score: [N]/100
 - If the score is 49 or below due to the critical cap, the Summary should lead with which critical checks failed and what to fix first.
 - The "Path to 100%" section should include every remaining fix, not just the top recommendations. Group by effort so the user can batch their work.
 - If the project scores 100, say so clearly and note any WARN items that might drift.
+- For S1 (secrets scan), if secrets are found, list the specific files and line numbers in the Fix needed column. This is a Critical check so it must be prominently flagged.
+- For Q1/Q2, note these are code-project-only. Non-code projects should show N/A.
+- For G1 (agents), list which agents were found and how many. If only 1 exists, recommend specific agents to add (e.g. "Add a code-reviewer agent. See `.claude/agents/code-reviewer.md` in the agent-sop repo for a template.").
