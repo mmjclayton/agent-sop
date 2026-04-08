@@ -193,13 +193,31 @@ The SOP includes an automated compliance checker agent. Run it from a Claude Cod
 
 ## Getting Started
 
-### New project
+### Quick setup (recommended)
 
-Two options:
+Clone this repo, then run the setup script against your project:
 
-**Option A: Human walkthrough.** Read `docs/examples/new-project-walkthrough.md` for a step-by-step guide using a concrete example project. Good for understanding what each file does and why.
+```bash
+# For documentation, markdown, or script projects
+./setup.sh /path/to/your/project
 
-**Option B: Agent setup.** Paste this into a Claude Code session on your project:
+# For web apps, APIs, CLIs, or anything with tests and a database
+./setup.sh /path/to/your/project --code
+```
+
+This copies the standard file set into your project: `CLAUDE.md`, `Backlog.md`, `docs/agent-memory.md`, `docs/feature-map.md`, `docs/build-plans/phase-0-foundation.md`, and the core SOP document. Existing files are not overwritten unless you pass `--force`.
+
+After running the script, open each file and replace the `[bracket placeholders]` with real project-specific content. Then validate:
+
+```
+@sop-checker check SOP compliance for /path/to/your/project
+```
+
+### Other setup options
+
+**Human walkthrough.** Read `docs/examples/new-project-walkthrough.md` for a step-by-step guide using a concrete example project. Good for understanding what each file does and why before creating anything.
+
+**Agent-driven setup.** Paste this into a Claude Code session on your project:
 
 ```
 I want you to implement the Agent SOP in this project. The SOP repo is at ~/Projects/agent-sop.
@@ -215,19 +233,11 @@ Fill in all sections with real project-specific content. Do not leave template p
 After creating the files, run through the verification checklist, then commit.
 ```
 
-### Existing project
-
-Two options:
-
-**Option A: Checklist migration.** Read `docs/examples/existing-project-migration.md` for a structured audit-and-fix checklist. Covers common gaps (missing sections, duplicate information, incorrect file naming) and provides a verification checklist at the end.
-
-**Option B: Automated audit.** Run the compliance checker to see exactly what is missing:
+**Existing project migration.** Read `docs/examples/existing-project-migration.md` for a structured audit-and-fix checklist. Covers common gaps (missing sections, duplicate information, incorrect file naming) and provides a verification checklist at the end. Alternatively, run the compliance checker to see exactly what is missing:
 
 ```
 @sop-checker check SOP compliance for ~/Projects/my-app
 ```
-
-The report includes a "Path to 100%" section grouped by effort level.
 
 ---
 
@@ -238,6 +248,7 @@ agent-sop/
   CLAUDE.md                              # This project's own SOP config
   Backlog.md                             # Work items for the SOP library itself
   README.md                              # This file
+  setup.sh                               # Onboarding script for new projects
   .claude/
     agents/
       sop-checker.md                     # Compliance checker agent
