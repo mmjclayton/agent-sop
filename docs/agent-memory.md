@@ -56,6 +56,11 @@ See CLAUDE.md Key Documents table.
 - 2026-04-07: Backlog archive threshold added — move shipped items older than 90 days to archive when file exceeds ~2,000 lines.
 - 2026-04-07: "No derived facts in memory" rule added — store rules not measurements (test counts, line numbers, versions go stale immediately).
 - 2026-04-07: Multi-agent contention expanded — docs conflicts resolve by appending, code conflicts require reading both versions, semantic conflicts flagged for human resolution.
+- 2026-04-08: Token optimisation applied — SOP line-range index (saves ~900 tokens), unified checklists to 5 start / 7 end, merged Key Documents + Dispatch into single section, trimmed template Backlog Management from ~47 to ~15 lines. Net -100 lines across templates.
+- 2026-04-08: Compliance checks C3 updated to 5 steps (was 7), C4 to 7 steps (was 8), C5/C7 accept merged "Key Documents & Dispatch" header.
+- 2026-04-08: P3-P5 standalone templates shipped. All High priority items now complete.
+- 2026-04-08: Implementation guide updated for unified checklists, merged dispatch, and new Step 7 (security, hooks, agents, code quality).
+- 2026-04-08: README fully rewritten to reflect current state (12 shipped items, 5 agents, ~70 checks).
 - 2026-04-08: Security guidance adapted from ECC security guide, not copied. Rewritten in Agent SOP voice (Australian English, no em-dashes, direct). Covers prompt injection, secret scanning, MCP trust, sandbox, memory hygiene.
 - 2026-04-08: Hooks guidance covers all 6 Claude Code hook types with reference JSON config examples. Hooks automate SOP checklists but do not replace them.
 - 2026-04-08: Code quality rules are language-agnostic defaults in the code template. Projects should add language-specific rules via `.claude/rules/` files.
@@ -85,6 +90,13 @@ See CLAUDE.md Key Documents table.
 
 ## Completed Work
 
+- 2026-04-08: P3 — Agent memory template shipped at `docs/templates/agent-memory-template.md`.
+- 2026-04-08: P4 — Backlog template shipped at `docs/templates/backlog-template.md`.
+- 2026-04-08: P5 — Build plan template shipped at `docs/templates/build-plan-template.md`.
+- 2026-04-08: Token optimisation commit — SOP line-range index, unified checklists, merged dispatch, trimmed templates.
+- 2026-04-08: sop-checker agent updated for C3 (5 steps), C4 (7 steps), C5/C7 (merged header).
+- 2026-04-08: Implementation guide updated for current SOP state.
+- 2026-04-08: README rewritten.
 - 2026-04-08: P14 — Security guidance document shipped at `docs/sop/security.md`.
 - 2026-04-08: P15 — Hooks guidance with 6 reference implementations shipped at `docs/sop/hooks.md`.
 - 2026-04-08: P16 — Code quality rules added to `docs/templates/claude-md-template-code.md`.

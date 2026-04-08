@@ -72,7 +72,9 @@ agent-sop/
 - 2026-04-07: Batch 0.3d — P12 shipped. SOP v2 owner feedback iteration: 10 changes applied. Reframed additive-only rule, delineated memory systems, added test gates, snapshot resume model, conflict precedence, schema protocol, backlog archive threshold, no-derived-facts rule, multi-agent code conflict nuance. All templates and tracking files updated. Commit 79c5a5c.
 - 2026-04-07: Batch 0.3e — P13 shipped. SOP Compliance Checker agent and canonical compliance checklist. ~64 checks across 8 categories with three-tier scoring system. Agent definition at `.claude/agents/sop-checker.md`, checklist at `docs/sop/compliance-checklist.md`. Commit c0b697d.
 - 2026-04-07: Batch 0.3f — Self-compliance fixes. 8-step session end checklist, [BLOCKED] tag, conflict precedence, commit refs, line-range hints. Score: 49 → 100. Commit b0942cf.
-- 2026-04-08: Batch 0.4 — P14-P20 shipped. Security guidance, hooks guidance, code quality rules, 4 reference agents, expanded code template sections, continuous learning pattern, 6 new compliance checks. Adapted from ECC reference repo. Commits f928a42-present.
+- 2026-04-08: Batch 0.4 — P14-P20 shipped. Security guidance, hooks guidance, code quality rules, 4 reference agents, expanded code template sections, continuous learning pattern, 6 new compliance checks. Adapted from ECC reference repo. Commits f928a42-28dc771.
+- 2026-04-08: Batch 0.5 — Token optimisation. SOP line-range index, unified checklists (5 start / 7 end), merged Key Documents + Dispatch, trimmed template Backlog Management. Net -100 lines. Compliance checks C3/C4/C5/C7 updated. sop-checker agent updated. Commits 71a34e0-fd29ee9.
+- 2026-04-08: Batch 0.6 — P3-P5 shipped. Standalone templates for agent-memory, backlog, and build plan. Implementation guide and README updated. Commits a812881-606e49e.
 
 ---
 

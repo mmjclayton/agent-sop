@@ -36,16 +36,13 @@ This project IS the Agent SOP library. All agents working on this project still 
 ## Current Priority Items (as of 2026-04-08)
 
 **Next:**
-- P3 — Agent memory template (`docs/templates/agent-memory-template.md`)
-- P4 — Backlog template (`docs/templates/backlog-template.md`)
-- P5 — Build plan template (`docs/templates/build-plan-template.md`)
 - P6 — New project walkthrough (`docs/examples/new-project-walkthrough.md`)
 - P7 — Existing project migration guide (`docs/examples/existing-project-migration.md`)
 
 **Medium:**
-- P8 — Web app domain variant
-- P9 — Marketing domain variant
-- P10 — Data/analytics domain variant
+- P8 — Web app domain variant `[has-open-questions]`
+- P9 — Marketing domain variant `[has-open-questions]`
+- P10 — Data/analytics domain variant `[has-open-questions]`
 
 ---
 
