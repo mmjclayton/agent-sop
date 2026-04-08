@@ -12,12 +12,47 @@ Claude Code agents start every session with no memory of previous sessions. With
 
 This library defines a standard operating procedure that gives every Claude Code agent session:
 
-- **Immediate orientation.** A defined set of files to read at session start (~900 tokens), so the agent has full project context within the first few tool calls.
+- **Immediate orientation.** A defined set of files to read at session start, so the agent has full project context within the first few tool calls.
 - **Persistent cross-session memory.** Architectural decisions, data model invariants, gotchas, and preferences survive across sessions in `docs/agent-memory.md`.
 - **Consistent update rules.** Every session leaves the project in a state the next session can pick up immediately.
 - **Security guidance.** Prompt injection awareness, secret scanning, MCP trust boundaries, sandbox guidance.
 - **Automated enforcement.** Hooks that automate session checklists, pre-commit quality gates, and pattern extraction.
 - **Measurable compliance.** An automated checker agent that audits any project against the SOP and scores it out of 100.
+
+---
+
+## Token Efficiency
+
+The SOP is designed to minimise context window consumption while giving agents full project awareness. Every file, section, and rule has been measured and trimmed.
+
+### Session start cost
+
+The 5-step session start checklist reads CLAUDE.md, agent-memory.md, project_resume.md, recent git history, and the current Backlog item. Measured token costs for these reads:
+
+| Scenario | Raw tokens | With 1.7x loading overhead | % of 200k context |
+|----------|-----------|---------------------------|-------------------|
+| Fresh project (from templates) | ~1,500 | ~2,600 | 1.3% |
+| Mature project (this repo, 40+ decisions, 17 shipped items) | ~3,100 | ~5,200 | 2.6% |
+
+Token counts are approximated at 1.3 tokens per word. The 1.7x loading overhead reflects the cost of tool calls, file reading, and processing that Claude Code incurs when loading content into context.
+
+### How the overhead stays low
+
+**CLAUDE.md size cap.** Per-session sections are capped at 200 lines (~2,000 tokens). Reference sections (Auth, Database, Design System) are read on demand, not every session. The base template is 151 lines; the code template is 270 lines including all reference sections.
+
+**Merged dispatch table.** Key Documents and Dispatch Quick Reference were originally two separate sections with overlapping file listings. Merging them into a single table eliminated the duplication. This was part of a dedicated optimisation pass (commit `71a34e0`) that removed 100 net lines across templates.
+
+**Line-range hints.** The dispatch table supports line-range annotations (e.g. `index.css (lines 1-80)`). When an agent follows a hint, it reads 80 lines instead of the entire file. The core SOP itself includes a section index with line ranges so agents can read specific sections (~40 lines for session checklists) rather than all 572 lines.
+
+**Snapshot resume, not a log.** `project_resume.md` is overwritten each session (~15 lines). Earlier designs used an append-only log that grew without bound. The snapshot model keeps the resume file at a constant size regardless of how many sessions have passed.
+
+**No derived facts.** The SOP prohibits storing test counts, line numbers, file sizes, and dependency versions in memory files. These values go stale between sessions and cost tokens to read without providing reliable information. Agents check these at runtime instead.
+
+**No duplication across files.** The single-source-of-truth rule means each fact lives in exactly one file. `agent-memory.md` points to the CLAUDE.md dispatch table rather than duplicating it. Work item status lives only in Backlog.md, not in build plans or memory.
+
+**Unified checklists.** Session start (5 steps) and session end (7 steps) are defined once in the SOP and referenced by templates. Earlier versions had slightly different step counts in different files, which meant agents had to read multiple sources to reconcile. One canonical version means one read.
+
+**60% context threshold.** The SOP instructs agents to wrap up at 60% context capacity rather than pushing to 95%. This prevents the degraded performance and unreliable behaviour that occurs when context approaches its limit, and ensures the session end checklist can run cleanly.
 
 ---
 
