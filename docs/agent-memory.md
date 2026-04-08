@@ -90,6 +90,9 @@ See CLAUDE.md Key Documents table.
 
 ## Completed Work
 
+- 2026-04-08: P6 — New project walkthrough shipped at `docs/examples/new-project-walkthrough.md`. Uses concrete Taskflow example.
+- 2026-04-08: P7 — Existing project migration guide shipped at `docs/examples/existing-project-migration.md`. Checklist format, 7 steps.
+- 2026-04-08: README updated with ECC attribution, repo description/tags, new examples and templates tables.
 - 2026-04-08: P3 — Agent memory template shipped at `docs/templates/agent-memory-template.md`.
 - 2026-04-08: P4 — Backlog template shipped at `docs/templates/backlog-template.md`.
 - 2026-04-08: P5 — Build plan template shipped at `docs/templates/build-plan-template.md`.

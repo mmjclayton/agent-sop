@@ -93,26 +93,26 @@ Publish phase build plan template as `docs/templates/build-plan-template.md`.
 ---
 
 ### P6 — New project walkthrough
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-08] [Feature]`
 
 Write example guide at `docs/examples/new-project-walkthrough.md`.
 
 **Acceptance criteria:**
-- Covers: directory setup, git init, creating each standard file, first Claude Code session
-- Uses a concrete example project
-- References templates by path
+- Covers: directory setup, git init, creating each standard file, first Claude Code session - DONE
+- Uses a concrete example project (Taskflow — task management API) - DONE
+- References templates by path - DONE
 
 ---
 
 ### P7 — Existing project migration guide
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-08] [Feature]`
 
 Write migration guide at `docs/examples/existing-project-migration.md`.
 
 **Acceptance criteria:**
-- Covers minimum viable migration steps from SOP Section 12
-- Checklist format
-- Notes common gaps found in existing projects
+- Covers minimum viable migration steps from SOP Section 13 - DONE
+- Checklist format - DONE
+- Notes common gaps found in existing projects - DONE
 
 ---
 
@@ -286,3 +286,5 @@ Added 6 new compliance checks across a new Section 9: S1 (no secrets, Critical),
 - P3 — Agent memory template — SHIPPED 2026-04-08
 - P4 — Backlog template — SHIPPED 2026-04-08
 - P5 — Build plan template — SHIPPED 2026-04-08
+- P6 — New project walkthrough — SHIPPED 2026-04-08
+- P7 — Existing project migration guide — SHIPPED 2026-04-08

@@ -75,6 +75,7 @@ agent-sop/
 - 2026-04-08: Batch 0.4 — P14-P20 shipped. Security guidance, hooks guidance, code quality rules, 4 reference agents, expanded code template sections, continuous learning pattern, 6 new compliance checks. Adapted from ECC reference repo. Commits f928a42-28dc771.
 - 2026-04-08: Batch 0.5 — Token optimisation. SOP line-range index, unified checklists (5 start / 7 end), merged Key Documents + Dispatch, trimmed template Backlog Management. Net -100 lines. Compliance checks C3/C4/C5/C7 updated. sop-checker agent updated. Commits 71a34e0-fd29ee9.
 - 2026-04-08: Batch 0.6 — P3-P5 shipped. Standalone templates for agent-memory, backlog, and build plan. Implementation guide and README updated. Commits a812881-606e49e.
+- 2026-04-08: Batch 0.7 — P6-P7 shipped. New project walkthrough (concrete Taskflow example), existing project migration checklist. README updated with ECC attribution, repo description and tags, new examples table. All tracking files updated.
 
 ---
 

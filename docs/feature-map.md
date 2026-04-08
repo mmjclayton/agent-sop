@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-04-08
+Last updated: 2026-04-08b
 
 ---
 
@@ -23,6 +23,8 @@ Last updated: 2026-04-08
 | P3 | Agent memory template | `docs/templates/agent-memory-template.md` | 2026-04-08 |
 | P4 | Backlog template | `docs/templates/backlog-template.md` | 2026-04-08 |
 | P5 | Build plan template | `docs/templates/build-plan-template.md` | 2026-04-08 |
+| P6 | New project walkthrough | `docs/examples/new-project-walkthrough.md` | 2026-04-08 |
+| P7 | Migration guide | `docs/examples/existing-project-migration.md` | 2026-04-08 |
 
 ---
 
@@ -30,10 +32,7 @@ Last updated: 2026-04-08
 
 ### High Priority
 
-| P# | Document | Path |
-|----|----------|------|
-| P6 | New project walkthrough | `docs/examples/new-project-walkthrough.md` |
-| P7 | Migration guide | `docs/examples/existing-project-migration.md` |
+*All high-priority items shipped.*
 
 ### Medium Priority
 

@@ -49,11 +49,21 @@ This library defines a standard operating procedure that gives every Claude Code
 | Planner | `.claude/agents/planner.md` | Structured build plans with phases and risks |
 | E2E Runner | `.claude/agents/e2e-runner.md` | Playwright end-to-end test generation and execution |
 
-### Examples
+### Templates (standalone)
+
+| Template | Path | Use for |
+|----------|------|---------|
+| Agent Memory | `docs/templates/agent-memory-template.md` | New agent-memory.md files |
+| Backlog | `docs/templates/backlog-template.md` | New Backlog.md files |
+| Build Plan | `docs/templates/build-plan-template.md` | New phase build plans |
+
+### Examples and Guides
 
 | Document | Path | Purpose |
 |----------|------|---------|
-| Implementation Guide | `docs/examples/sop-implementation-guide.md` | Step-by-step setup for new projects |
+| Implementation Guide | `docs/examples/sop-implementation-guide.md` | Agent-facing setup instructions |
+| New Project Walkthrough | `docs/examples/new-project-walkthrough.md` | Human-readable guide with a concrete example project |
+| Migration Guide | `docs/examples/existing-project-migration.md` | Checklist for adding the SOP to an existing project |
 
 ---
 
@@ -129,7 +139,11 @@ The SOP includes an automated compliance checker agent. Run it from a Claude Cod
 
 ### New project
 
-Paste this into a Claude Code session on your project:
+Two options:
+
+**Option A — Human walkthrough:** Read `docs/examples/new-project-walkthrough.md` for a step-by-step guide using a concrete example project. Good for understanding what each file does and why.
+
+**Option B — Agent setup:** Paste this into a Claude Code session on your project:
 
 ```
 I want you to implement the Agent SOP in this project. The SOP repo is at ~/Projects/agent-sop.
@@ -147,7 +161,11 @@ After creating the files, run through the verification checklist, then commit.
 
 ### Existing project
 
-Run the compliance checker to see exactly what is missing:
+Two options:
+
+**Option A — Checklist migration:** Read `docs/examples/existing-project-migration.md` for a structured audit-and-fix checklist. Covers common gaps (missing sections, duplicate information, incorrect file naming) and provides a verification checklist at the end.
+
+**Option B — Automated audit:** Run the compliance checker to see exactly what is missing:
 
 ```
 @sop-checker check SOP compliance for ~/Projects/my-app
@@ -182,8 +200,13 @@ agent-sop/
     templates/
       claude-md-template.md             # CLAUDE.md template (base, any project)
       claude-md-template-code.md        # CLAUDE.md template (code projects)
+      agent-memory-template.md          # Agent memory template
+      backlog-template.md               # Backlog template
+      build-plan-template.md            # Build plan template
     examples/
-      sop-implementation-guide.md       # Step-by-step setup instructions
+      sop-implementation-guide.md       # Agent-facing setup instructions
+      new-project-walkthrough.md        # Human-readable new project guide
+      existing-project-migration.md     # Migration checklist for existing projects
     build-plans/
       phase-0-foundation.md             # Current phase
 ```
@@ -192,4 +215,28 @@ agent-sop/
 
 ## Status
 
-Phase 0 (foundation) in progress. 12 items shipped (P1-P2, P11-P20). Templates for agent-memory, backlog, and build plans are next (P3-P5), followed by walkthrough and migration guides (P6-P7).
+Phase 0 (foundation) in progress. 17 items shipped (P1-P5, P6-P7, P11-P20). Next up: domain-specific variants for web apps (P8), marketing (P9), and data/analytics (P10).
+
+---
+
+## Acknowledgements
+
+Several concepts in this SOP were informed by or adapted from [Everything Claude Code](https://github.com/anthropics/ecc) (ECC), Anthropic's reference collection of skills, rules, agents, and hooks for Claude Code. Specific areas where ECC influenced our approach:
+
+- **Security guidance** (`docs/sop/security.md`) — adapted from ECC's security rules covering prompt injection, secret scanning, and MCP trust boundaries
+- **Hooks guidance** (`docs/sop/hooks.md`) — reference implementations inspired by ECC's hook patterns for SessionStart, PostToolUse, and Stop events
+- **Code quality rules** in the code template — file size limits, immutability, error handling patterns drawn from ECC's coding-style rules
+- **Reference agent definitions** — the code-reviewer, security-reviewer, planner, and e2e-runner agents follow patterns established by ECC's agent library
+- **Compliance checker scoring model** — the three-tier (Critical/Important/Recommended) scoring approach with critical-failure caps
+- **Continuous learning pattern** — pattern extraction cadence and promotion rules adapted from ECC's continuous-learning skill
+
+This SOP is not a fork of ECC. It is an independent, opinionated operating procedure that incorporates proven patterns from the ECC ecosystem alongside original work on session checklists, backlog management, cross-file consistency, and measurable compliance scoring.
+
+---
+
+## Repository Description and Tags
+
+**Description:** Standard operating procedures for Claude Code agents — file structure, session checklists, persistent memory, security, hooks, compliance scoring, and templates for any project type.
+
+**Topics/Tags:**
+`claude-code` `claude` `ai-agents` `sop` `developer-tools` `ai-coding` `llm-agents` `code-quality` `session-management` `agent-memory` `compliance` `templates`

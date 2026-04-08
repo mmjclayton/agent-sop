@@ -36,10 +36,6 @@ This project IS the Agent SOP library. All agents working on this project still 
 ## Current Priority Items (as of 2026-04-08)
 
 **Next:**
-- P6 — New project walkthrough (`docs/examples/new-project-walkthrough.md`)
-- P7 — Existing project migration guide (`docs/examples/existing-project-migration.md`)
-
-**Medium:**
 - P8 — Web app domain variant `[has-open-questions]`
 - P9 — Marketing domain variant `[has-open-questions]`
 - P10 — Data/analytics domain variant `[has-open-questions]`
@@ -122,6 +118,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 ## Recent Work
 
 *Append-only. New entries at top. Include commit refs.*
+
+### 2026-04-08: P6-P7 — Walkthrough and migration guides
+New project walkthrough with concrete Taskflow example, existing project migration checklist, README updated with ECC attribution and repo description/tags.
 
 ### 2026-04-08: P14-P20 — ECC-informed expansion (commits f928a42-present)
 Security guidance, hooks guidance with 6 reference implementations, code quality rules, 4 reference agents (code-reviewer, security-reviewer, planner, e2e-runner), expanded code template sections (Auth, Database, Key Commands, Design System), continuous learning pattern, and 6 new compliance checks. Adapted from everything-claude-code reference repo.
