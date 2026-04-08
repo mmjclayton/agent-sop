@@ -15,6 +15,7 @@ Last updated: 2026-04-08
 | P13 | SOP Compliance Checker Agent | `.claude/agents/sop-checker.md` + `docs/sop/compliance-checklist.md` | 2026-04-07 |
 | P14 | Security guidance | `docs/sop/security.md` | 2026-04-08 |
 | P15 | Hooks guidance | `docs/sop/hooks.md` | 2026-04-08 |
+| P16 | Code quality rules | `docs/templates/claude-md-template-code.md` | 2026-04-08 |
 
 ---
 

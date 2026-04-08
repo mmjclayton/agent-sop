@@ -201,9 +201,14 @@ Hooks guidance at `docs/sop/hooks.md`. Explains hook types and provides 6 refere
 ---
 
 ### P16 — Code quality rules in code template
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-08] [Feature]`
 
-Add Code Quality Rules section to `docs/templates/claude-md-template-code.md`.
+Added Code Quality Rules section to `docs/templates/claude-md-template-code.md` covering: file size limits, immutability, error handling, import ordering, test coverage, linting/type checking, no debug artifacts, function size.
+
+**Acceptance criteria:**
+- Section exists in `docs/templates/claude-md-template-code.md` - DONE
+- Language-agnostic defaults with note to add language-specific rules - DONE
+- Covers all 8 areas from spec - DONE
 
 ---
 
@@ -246,3 +251,4 @@ Add new compliance checks for security, hooks, code quality, and agent availabil
 - P13 — SOP Compliance Checker Agent — SHIPPED 2026-04-07
 - P14 — Security guidance document — SHIPPED 2026-04-08
 - P15 — Hooks guidance document — SHIPPED 2026-04-08
+- P16 — Code quality rules in code template — SHIPPED 2026-04-08

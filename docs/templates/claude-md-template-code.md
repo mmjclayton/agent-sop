@@ -155,6 +155,63 @@ Items tagged `[ok-for-automation]` can be routed to the auto-pipeline. All must 
 
 ---
 
+## Code Quality Rules
+
+*Language-agnostic defaults. Add language-specific rules below or in a separate `.claude/rules/` file.*
+
+### File size
+
+- 200-400 lines typical, 800 lines maximum
+- If a file exceeds 800 lines, split it by responsibility before adding more code
+- Organise by feature or domain, not by type (e.g. `features/auth/` not `controllers/`)
+
+### Immutability
+
+- Prefer `const` over `let`. Never use `var`
+- Create new objects rather than mutating existing ones (spread operator, `map`, `filter`)
+- Rationale: immutable data prevents hidden side effects and makes debugging easier
+
+### Error handling
+
+- Handle errors explicitly at every level. No silent catches, no empty catch blocks
+- Provide user-friendly messages in UI-facing code, detailed context in server logs
+- Never swallow errors. If you catch, log and re-throw or return an error result
+
+### Import ordering
+
+- Standard library / built-in modules first
+- External packages second
+- Internal project modules third
+- Relative imports last
+- Blank line between each group
+
+### Test coverage
+
+- 80% minimum coverage for new code
+- Every new API endpoint must have integration tests
+- Every new component with logic must have unit tests
+- Run the full test suite before opening a PR
+
+### Linting and type checking
+
+- Lint and type-check are non-negotiable pre-commit gates
+- Fix lint errors in your code. Never weaken linter config to make errors go away
+- Type checking (e.g. `tsc --noEmit`, `mypy`, `cargo check`) must pass before commit
+
+### No debug artifacts
+
+- No `console.log` or `debugger` statements in committed code
+- No `TODO` or `FIXME` comments without a corresponding issue or P-number
+- No commented-out code blocks. Delete dead code; git has the history
+
+### Function size
+
+- Functions should do one thing. Prefer small, focused functions over large monolithic ones
+- Split at 50 lines. If a function exceeds 50 lines, extract helpers
+- Prefer early returns over deep nesting (max 4 levels)
+
+---
+
 ## Rules for Automated Builds
 
 1. Read this file first. Then read the Backlog item. Then look at existing code.
