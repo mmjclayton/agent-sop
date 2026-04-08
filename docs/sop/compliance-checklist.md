@@ -1,6 +1,6 @@
 # SOP Compliance Checklist
 
-Last updated: 2026-04-07
+Last updated: 2026-04-08
 
 The canonical list of checks used by the SOP Compliance Checker agent. Each check has a severity tier that determines its scoring weight.
 
@@ -231,6 +231,31 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 ---
 
+## 9. Security, Hooks, Code Quality, and Agents
+
+### Critical
+
+| ID | Check | What to look for |
+|----|-------|-----------------|
+| S1 | No secrets in committed files | Scan for `.env` files, hardcoded API keys (`sk-...`), private keys, `password=` patterns in tracked files. Exclude `.env.example` and test fixtures. |
+
+### Important
+
+| ID | Check | What to look for |
+|----|-------|-----------------|
+| S2 | Security guidance referenced | `docs/sop/security.md` exists OR CLAUDE.md references security guidance |
+| Q1 | File size limits specified (code) | CLAUDE.md or a Code Quality section mentions maximum file line count (e.g. 800 lines) |
+| Q2 | Test coverage threshold specified (code) | CLAUDE.md or a Code Quality section mentions minimum test coverage (e.g. 80%) |
+
+### Recommended
+
+| ID | Check | What to look for |
+|----|-------|-----------------|
+| H1 | Session hooks documented or configured | At least SessionStart and SessionEnd hooks mentioned in CLAUDE.md, `docs/sop/hooks.md`, or `.claude/settings.json` |
+| G1 | At least 2 review agents available | `.claude/agents/` contains at least 2 agent definitions (e.g. code-reviewer + security-reviewer or sop-checker + any other) |
+
+---
+
 ## Check Summary
 
 | Category | Critical | Important | Recommended | Total |
@@ -243,11 +268,12 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | Build Plans Structure | 0 | 4 | 1 | 5 |
 | project_resume.md Structure | 0 | 3 | 0 | 3 |
 | Cross-File Consistency | 0 | 3 | 2 | 5 |
-| **Total (non-code)** | **13** | **38** | **8** | **59** |
-| **Total (code)** | **13** | **43** | **8** | **64** |
+| Security, Hooks, Quality, Agents | 1 | 1 (+2 code) | 2 | 4 (+2) |
+| **Total (non-code)** | **14** | **39** | **10** | **63** |
+| **Total (code)** | **14** | **46** | **10** | **70** |
 
 **Maximum deductions:**
-- Non-code: 13 x 10 + 38 x 5 + 8 x 2 = 130 + 190 + 16 = 336
-- Code: 13 x 10 + 43 x 5 + 8 x 2 = 130 + 215 + 16 = 361
+- Non-code: 14 x 10 + 39 x 5 + 10 x 2 = 140 + 195 + 20 = 355
+- Code: 14 x 10 + 46 x 5 + 10 x 2 = 140 + 230 + 20 = 390
 
 **Normalisation:** Score = max(0, 100 - (total deductions / max possible deductions * 100)). Then apply critical cap (49 max) if any critical check fails.

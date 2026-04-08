@@ -28,16 +28,9 @@ This project IS the Agent SOP library. All agents working on this project still 
 
 ---
 
-## Current Priority Items (as of 2026-04-07)
+## Current Priority Items (as of 2026-04-08)
 
-**Very High:**
-- P1 — Core SOP document — SHIPPED 2026-04-07
-- P2 — CLAUDE.md base template — SHIPPED 2026-04-07
-- P11 — CLAUDE.md code template — SHIPPED 2026-04-07
-- P12 — SOP v2: owner feedback iteration — SHIPPED 2026-04-07
-- P13 — SOP Compliance Checker Agent — SHIPPED 2026-04-07
-
-**High:**
+**Next:**
 - P3 — Agent memory template (`docs/templates/agent-memory-template.md`)
 - P4 — Backlog template (`docs/templates/backlog-template.md`)
 - P5 — Build plan template (`docs/templates/build-plan-template.md`)
@@ -136,6 +129,8 @@ Memory files live at `~/.claude/projects/[project-hash]/memory/`.
 | Current build plan | `docs/build-plans/phase-0-foundation.md` |
 | Feature map | `docs/feature-map.md` |
 | Compliance checklist | `docs/sop/compliance-checklist.md` |
+| Security guidance | `docs/sop/security.md` |
+| Hooks guidance | `docs/sop/hooks.md` |
 | SOP checker agent | `.claude/agents/sop-checker.md` |
 
 ---
@@ -143,6 +138,9 @@ Memory files live at `~/.claude/projects/[project-hash]/memory/`.
 ## Recent Work
 
 *Append-only. New entries at top. Include commit refs.*
+
+### 2026-04-08: P14-P20 — ECC-informed expansion (commits f928a42-present)
+Security guidance, hooks guidance with 6 reference implementations, code quality rules, 4 reference agents (code-reviewer, security-reviewer, planner, e2e-runner), expanded code template sections (Auth, Database, Key Commands, Design System), continuous learning pattern, and 6 new compliance checks. Adapted from everything-claude-code reference repo.
 
 ### 2026-04-07: P13 — SOP Compliance Checker Agent (commits c0b697d-22f1eb0)
 Compliance checker agent (`.claude/agents/sop-checker.md`) and canonical checklist (`docs/sop/compliance-checklist.md`). ~64 checks across 8 categories, three-tier scoring with critical-failure cap. README rewritten.

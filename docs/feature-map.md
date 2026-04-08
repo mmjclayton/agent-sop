@@ -19,6 +19,7 @@ Last updated: 2026-04-08
 | P17 | Reference agent definitions (4) | `.claude/agents/{code-reviewer,security-reviewer,planner,e2e-runner}.md` | 2026-04-08 |
 | P18 | Expanded code template sections | `docs/templates/claude-md-template-code.md` | 2026-04-08 |
 | P19 | Continuous learning pattern | `docs/sop/claude-agent-sop.md` (Section 12) | 2026-04-08 |
+| P20 | Compliance checklist update (6 new checks) | `docs/sop/compliance-checklist.md` + `.claude/agents/sop-checker.md` | 2026-04-08 |
 
 ---
 

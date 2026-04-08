@@ -24,7 +24,7 @@ See CLAUDE.md Key Documents table.
 
 ## In-Flight Work
 
-*(none)*
+*(none)* -- P14-P20 shipped 2026-04-08, moved to Completed Work.
 
 ---
 
@@ -56,6 +56,12 @@ See CLAUDE.md Key Documents table.
 - 2026-04-07: Backlog archive threshold added — move shipped items older than 90 days to archive when file exceeds ~2,000 lines.
 - 2026-04-07: "No derived facts in memory" rule added — store rules not measurements (test counts, line numbers, versions go stale immediately).
 - 2026-04-07: Multi-agent contention expanded — docs conflicts resolve by appending, code conflicts require reading both versions, semantic conflicts flagged for human resolution.
+- 2026-04-08: Security guidance adapted from ECC security guide, not copied. Rewritten in Agent SOP voice (Australian English, no em-dashes, direct). Covers prompt injection, secret scanning, MCP trust, sandbox, memory hygiene.
+- 2026-04-08: Hooks guidance covers all 6 Claude Code hook types with reference JSON config examples. Hooks automate SOP checklists but do not replace them.
+- 2026-04-08: Code quality rules are language-agnostic defaults in the code template. Projects should add language-specific rules via `.claude/rules/` files.
+- 2026-04-08: 4 reference agents (code-reviewer, security-reviewer, planner, e2e-runner) added. All match sop-checker format (YAML frontmatter). code-reviewer and security-reviewer are read-only; planner is read-only; e2e-runner has write access.
+- 2026-04-08: Continuous learning pattern added to SOP Section 12. Extraction cadence: per-session (gotchas), every 5 sessions (audit), at 3+ repeats (promote to rule).
+- 2026-04-08: 6 new compliance checks in Section 9: S1 (secrets, Critical), S2 (security doc), Q1/Q2 (code quality, code-only), H1 (hooks), G1 (agents). Total checks now 63 (non-code) / 70 (code).
 - 2026-04-07: SOP Compliance Checker agent created (P13). Checklist at `docs/sop/compliance-checklist.md`, agent at `.claude/agents/sop-checker.md`. ~59 checks (non-code) / ~64 checks (code) across 8 categories. Three-tier scoring: Critical (cap at 49), Important (5pts), Recommended (2pts).
 - 2026-04-07: Self-compliance fixes applied — 8-step session end checklist, [BLOCKED] in tag taxonomy, conflict precedence inline, commit refs in Recent Work and Batch Log, line-range hints in Key Documents. Score: 49 → 100.
 - 2026-04-07: hst-tracker compliance checked three times (87 → 87 → 97). Validated the checker agent works against a real code project.
@@ -79,6 +85,13 @@ See CLAUDE.md Key Documents table.
 
 ## Completed Work
 
+- 2026-04-08: P14 — Security guidance document shipped at `docs/sop/security.md`.
+- 2026-04-08: P15 — Hooks guidance with 6 reference implementations shipped at `docs/sop/hooks.md`.
+- 2026-04-08: P16 — Code quality rules added to `docs/templates/claude-md-template-code.md`.
+- 2026-04-08: P17 — 4 reference agent definitions shipped in `.claude/agents/`.
+- 2026-04-08: P18 — Auth, Database, Key Commands, Design System sections expanded in code template.
+- 2026-04-08: P19 — Continuous learning pattern added to SOP Section 12.
+- 2026-04-08: P20 — 6 new compliance checks added to checklist Section 9. sop-checker agent updated.
 - 2026-04-07: Batch 0.1 — Project scaffold created. All standard files in place.
 - 2026-04-07: P1 — Core SOP document published at `docs/sop/claude-agent-sop.md`.
 - 2026-04-07: P2 — CLAUDE.md base template published at `docs/templates/claude-md-template.md`.

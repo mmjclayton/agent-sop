@@ -255,9 +255,15 @@ Added continuous learning as an optional pattern in SOP Section 12. Covers what 
 ---
 
 ### P20 — Compliance checklist update (security, hooks, quality, agents)
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-08] [Feature]`
 
-Add new compliance checks for security, hooks, code quality, and agent availability.
+Added 6 new compliance checks across a new Section 9: S1 (no secrets, Critical), S2 (security doc, Important), Q1 (file size limits, Important code-only), Q2 (test coverage threshold, Important code-only), H1 (hooks documented, Recommended), G1 (2+ review agents, Recommended). Updated sop-checker agent with new Phase 4 for these checks.
+
+**Acceptance criteria:**
+- 6 new checks added to `docs/sop/compliance-checklist.md` - DONE
+- Summary table updated with new totals - DONE
+- sop-checker agent updated to know about new checks - DONE
+- S1 is Critical (10pts), S2/Q1/Q2 are Important (5pts), H1/G1 are Recommended (2pts) - DONE
 
 ---
 
@@ -276,3 +282,4 @@ Add new compliance checks for security, hooks, code quality, and agent availabil
 - P17 — Reference agent definitions — SHIPPED 2026-04-08
 - P18 — Expand code template sections — SHIPPED 2026-04-08
 - P19 — Continuous learning pattern — SHIPPED 2026-04-08
+- P20 — Compliance checklist update — SHIPPED 2026-04-08

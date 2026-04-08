@@ -50,7 +50,18 @@ For each file that exists, run the structure checks from the checklist (Sections
 - **WARN** — partially met or close but not exact (e.g. near-miss header name)
 - **N/A** — not applicable (code-only check on non-code project, or file does not exist)
 
-### Phase 4: Cross-File Consistency Checks
+### Phase 4: Security, Hooks, Code Quality, and Agents Checks
+
+Run the checks from checklist Section 9:
+
+- S1: Scan tracked files for secret patterns (API keys, private keys, password assignments). Exclude `.env.example` and test fixtures.
+- S2: Check whether `docs/sop/security.md` exists or CLAUDE.md references security guidance.
+- Q1 (code projects): Check for file size limits in CLAUDE.md or a Code Quality section.
+- Q2 (code projects): Check for test coverage threshold in CLAUDE.md or a Code Quality section.
+- H1: Check for session hook documentation in CLAUDE.md, `docs/sop/hooks.md`, or `.claude/settings.json`.
+- G1: Count agent definitions in `.claude/agents/`. At least 2 required for this check.
+
+### Phase 5: Cross-File Consistency Checks
 
 Run the checks from checklist Section 8. These require reading multiple files and comparing:
 
@@ -58,7 +69,7 @@ Run the checks from checklist Section 8. These require reading multiple files an
 - Extract In-Flight Work items from agent-memory.md, verify each has a matching `[IN PROGRESS]` entry in Backlog.md
 - Verify agent-memory.md Key Documents section references CLAUDE.md rather than duplicating
 
-### Phase 5: Scoring
+### Phase 6: Scoring
 
 1. Count passed and failed checks per tier (Critical, Important, Recommended).
 2. Calculate raw deductions: (critical failures x 10) + (important failures x 5) + (recommended failures x 2).
@@ -66,7 +77,7 @@ Run the checks from checklist Section 8. These require reading multiple files an
 4. Score = max(0, 100 - (raw deductions / max possible deductions x 100)), rounded to nearest integer.
 5. If any Critical check failed, cap the score at 49.
 
-### Phase 6: Generate Report
+### Phase 7: Generate Report
 
 Output the report directly to the terminal. Do not write it to a file.
 
