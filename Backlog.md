@@ -241,9 +241,16 @@ Fleshed out Auth (provider, token type, middleware, protected routes), Database 
 ---
 
 ### P19 — Continuous learning pattern
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-08] [Feature]`
 
-Add continuous learning as an optional pattern in SOP Section 12.
+Added continuous learning as an optional pattern in SOP Section 12. Covers what to extract, where to store, extraction cadence (every session + every 5 sessions audit + promotion at 3+ repeats), automated extraction via hooks, and exclusions.
+
+**Acceptance criteria:**
+- Pattern added to Section 12 of `docs/sop/claude-agent-sop.md` - DONE
+- Covers what to extract and where to store - DONE
+- Includes periodic review guidance (every 5 sessions) - DONE
+- References hooks.md for automated extraction - DONE
+- Clarifies what does not belong - DONE
 
 ---
 
@@ -268,3 +275,4 @@ Add new compliance checks for security, hooks, code quality, and agent availabil
 - P16 — Code quality rules in code template — SHIPPED 2026-04-08
 - P17 — Reference agent definitions — SHIPPED 2026-04-08
 - P18 — Expand code template sections — SHIPPED 2026-04-08
+- P19 — Continuous learning pattern — SHIPPED 2026-04-08

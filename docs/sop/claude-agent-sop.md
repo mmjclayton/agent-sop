@@ -489,6 +489,35 @@ Any change to the data model must follow this sequence. Do not skip steps or reo
 
 Add this checklist to the project's CLAUDE.md under Rules for Automated Builds. The SOP templates include it in the code variant (`claude-md-template-code.md`).
 
+### Continuous learning (pattern extraction across sessions)
+
+Agent sessions produce reusable decisions, gotchas, and patterns that are valuable beyond the current session. Continuous learning is the practice of systematically extracting these patterns and persisting them for future sessions.
+
+**What to extract:**
+- Decisions that resolved ambiguity (e.g. "use displayMuscleGroup() for all muscle group display logic")
+- Data model invariants that are not obvious from the schema
+- Framework-specific patterns that agents commonly get wrong
+- Workarounds for library or tooling quirks
+- Error resolutions that took significant debugging effort
+
+**Where to store extracted patterns:**
+- `docs/agent-memory.md` -- for facts any contributor needs (decisions, invariants, gotchas, named utility functions)
+- Auto-memory (`~/.claude/projects/.../memory/`) -- for user preferences, feedback on agent behaviour, session-specific notes
+
+**Extraction cadence:**
+- After every session: extract decisions and gotchas as part of the session end checklist (step 4)
+- Every 5 sessions: audit `docs/agent-memory.md` for stale or redundant entries. Mark outdated entries `[SUPERSEDED]` and move to `## Archived`
+- When a pattern repeats across 3+ sessions: promote it from a gotcha to a rule in CLAUDE.md or a dedicated `.claude/rules/` file
+
+**Automated extraction (optional):**
+Claude Code hooks can automate pattern detection. A `Stop` hook can evaluate each agent response for extractable patterns and prompt the agent to persist them. See `docs/sop/hooks.md` for reference implementations.
+
+**What does NOT belong in extracted patterns:**
+- Derived facts (test counts, line numbers, dependency versions) -- these go stale immediately
+- One-time fixes or typo corrections
+- External API issues or transient errors
+- Information already documented in CLAUDE.md or the codebase
+
 ---
 
 ## 13. Applying This SOP to a New Project
