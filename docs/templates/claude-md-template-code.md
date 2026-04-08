@@ -114,44 +114,67 @@ Items tagged `[ok-for-automation]` can be routed to the auto-pipeline. All must 
 
 ```bash
 # Development
-[dev server command]
-[dev client command]
+[dev server command]            # e.g. npm run dev:server
+[dev client command]            # e.g. npm run dev:client
 
 # Testing
-[run all tests]
-[run server tests]
-[run client tests]
+[run all tests]                 # e.g. npm test
+[run server tests only]         # e.g. npm run test:server
+[run client tests only]         # e.g. npm run test:client
+[run single test file]          # e.g. npx vitest run path/to/file.test.ts
 
 # Database
-[migration deploy command]
-[migration create command]
+[migration deploy command]      # e.g. npx prisma migrate deploy
+[migration create command]      # e.g. npx prisma migrate dev --name [name]
+
+# Linting and type checking
+[lint command]                  # e.g. npx eslint .
+[type check command]            # e.g. npx tsc --noEmit
+
+# Build
+[build command]                 # e.g. npm run build
 ```
 
 ---
 
 ## Auth
 
-- **Identity provider:** [provider and endpoint]
-- **Database:** [where data lives]
-- **Session handling:** [approach]
-- **Public routes:** [list]
+- **Identity provider:** [provider, e.g. Supabase Auth, Auth0, NextAuth, Clerk]
+- **Token type:** [JWT / session cookie / API key]
+- **Session handling:** [approach, e.g. httpOnly cookies, bearer tokens, middleware refresh]
+- **Auth middleware:** [file path, e.g. `src/middleware.ts` or `server/middleware/auth.js`]
+- **Protected routes pattern:** [how routes are guarded, e.g. middleware check, wrapper component, RLS]
+- **Public routes:** [list routes that do not require authentication]
+- **Database:** [where user and session data lives, e.g. `users` table, Supabase auth.users]
+- **Key rule:** [the most important auth rule for this project, e.g. "never trust getSession() alone, always verify with getUser()"]
 
 ---
 
 ## Database
 
-- **Models:** [list model names]
-- **Key constraints:** [anything non-obvious about relationships or data integrity]
+- **ORM:** [e.g. Prisma, Drizzle, Sequelize, SQLAlchemy, raw SQL]
+- **Migration tool:** [e.g. Prisma Migrate, Knex, Alembic, manual SQL files]
+- **Schema location:** [file path, e.g. `prisma/schema.prisma`, `server/models/`]
+- **Models:** [list model names and brief purpose, e.g. "User, Program, Exercise, WorkSet"]
+- **Naming conventions:** [table naming, e.g. snake_case plural; column naming, e.g. camelCase]
+- **Query patterns:** [e.g. "always use ORM, never raw SQL" or "use query builder for complex joins"]
+- **Key constraints:** [anything non-obvious about relationships, cascades, or data integrity]
+- **Schema change protocol:** edit schema -> create migration -> update server routes -> update client code -> add tests -> verify test suite passes
 
 ---
 
 ## Design System
 
-- **Palette:** [key colour values]
-- **Accent colours:** [values]
-- **Responsive breakpoint:** [value]
-- **Touch targets:** [minimum size]
-- **CSS tokens location:** [file + line range]
+- **Component library:** [e.g. Shadcn/ui, Radix, custom components, Material UI]
+- **Palette:** [key colour values, e.g. primary: #1a1a2e, surface: #16213e]
+- **Accent colours:** [values for interactive elements, status indicators]
+- **Typography scale:** [font stack, heading sizes, body size, line heights]
+- **Spacing scale:** [base unit and scale, e.g. "4px base: 4, 8, 12, 16, 24, 32, 48"]
+- **Responsive breakpoint:** [value, e.g. 768px single breakpoint]
+- **Responsive strategy:** [e.g. mobile-first, desktop-first, single breakpoint with fluid scaling]
+- **Touch targets:** [minimum size, e.g. 44x44px]
+- **Icon system:** [e.g. Lucide, Heroicons, custom SVGs]
+- **CSS tokens location:** [file + line range, e.g. `client/src/index.css` (lines 1-80)]
 
 ---
 

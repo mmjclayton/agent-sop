@@ -228,9 +228,15 @@ Created 4 reference agents in `.claude/agents/`: code-reviewer.md, security-revi
 ---
 
 ### P18 — Expand code template sections
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-08] [Feature]`
 
-Flesh out Auth, Database, Key Commands, Design System sections in `docs/templates/claude-md-template-code.md`.
+Fleshed out Auth (provider, token type, middleware, protected routes), Database (ORM, migration tool, naming, query patterns, schema change protocol), Key Commands (examples for dev, test, single test, migration, lint, type-check, build), Design System (component library, typography, spacing, responsive strategy, icon system) in `docs/templates/claude-md-template-code.md`.
+
+**Acceptance criteria:**
+- Auth has 8 fields including middleware and protected routes pattern - DONE
+- Database has 8 fields including ORM, migration tool, schema change protocol - DONE
+- Key Commands has example entries for all required categories - DONE
+- Design System has 10 fields including component library, spacing, typography, icons - DONE
 
 ---
 
@@ -261,3 +267,4 @@ Add new compliance checks for security, hooks, code quality, and agent availabil
 - P15 — Hooks guidance document — SHIPPED 2026-04-08
 - P16 — Code quality rules in code template — SHIPPED 2026-04-08
 - P17 — Reference agent definitions — SHIPPED 2026-04-08
+- P18 — Expand code template sections — SHIPPED 2026-04-08
