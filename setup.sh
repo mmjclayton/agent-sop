@@ -188,6 +188,16 @@ if [ -f "$SOP_SOURCE" ]; then
     copy_if_missing "$SOP_SOURCE" "$TARGET/docs/sop/claude-agent-sop.md"
 fi
 
+# ── Copy slash commands ───────────────────────────────────────────────────────
+
+COMMANDS_DIR="$SCRIPT_DIR/.claude/commands"
+if [ -d "$COMMANDS_DIR" ]; then
+    for cmd_file in "$COMMANDS_DIR"/*.md; do
+        [ -f "$cmd_file" ] || continue
+        copy_if_missing "$cmd_file" "$TARGET/.claude/commands/$(basename "$cmd_file")"
+    done
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 echo ""
@@ -196,8 +206,8 @@ echo ""
 echo "  1. Open each file in $TARGET and replace [bracket placeholders]"
 echo "     with real project-specific content."
 echo ""
-echo "  2. Start a Claude Code session on your project. The agent will"
-echo "     read CLAUDE.md and orient using the standard file set."
+echo "  2. Start a Claude Code session on your project. Use /restart-sop"
+echo "     to run the session start checklist. Use /update-sop at the end."
 echo ""
 echo "  3. Validate your setup with the compliance checker:"
 echo "     @sop-checker check SOP compliance for $TARGET"

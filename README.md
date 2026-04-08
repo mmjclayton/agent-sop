@@ -135,14 +135,23 @@ These cannot be overridden by any project-specific configuration:
 
 ## Session Checklists
 
-**Start (5 steps):**
+Two slash commands automate these checklists. Type them in any Claude Code session on a project that has the SOP installed.
+
+| Command | What it does |
+|---------|-------------|
+| `/restart-sop` | Reads all context files, checks git history, flags inconsistencies, and reports readiness |
+| `/update-sop` | Updates all tracking files, writes the resume snapshot, and commits |
+
+The commands are installed by copying `.claude/commands/` into your project (the setup script does this automatically).
+
+**Start (5 steps, or `/restart-sop`):**
 1. Read CLAUDE.md
 2. Read MEMORY.md and project_resume.md
 3. Read docs/agent-memory.md
 4. Run `git log --oneline -10`, cross-check memory against current state
 5. Read the Backlog item(s) for this session
 
-**End (7 steps):**
+**End (7 steps, or `/update-sop`):**
 1. Run tests (code projects)
 2. Update Backlog.md
 3. Update docs/feature-map.md
@@ -250,6 +259,9 @@ agent-sop/
   README.md                              # This file
   setup.sh                               # Onboarding script for new projects
   .claude/
+    commands/
+      restart-sop.md                     # /restart-sop — session start checklist
+      update-sop.md                      # /update-sop — session end checklist
     agents/
       sop-checker.md                     # Compliance checker agent
       code-reviewer.md                   # Code review agent
