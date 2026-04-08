@@ -1,3 +1,7 @@
+---
+description: Run the Agent SOP session start checklist. Reads all context files, checks git history, flags inconsistencies, and reports readiness before coding begins.
+---
+
 Start a new session by executing the Agent SOP session start checklist. Read every file listed below, in order. Do not skip any step.
 
 ## Step 1: Read CLAUDE.md
