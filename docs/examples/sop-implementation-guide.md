@@ -27,22 +27,21 @@ Create these files in order. Fill in project-specific details — do not leave t
 ### 3.1 — `CLAUDE.md` (project root)
 
 Required sections:
-- **Agent SOP** — reference to the SOP and the two non-negotiable rules
+- **Agent SOP** — reference to the SOP and the two non-negotiable rules, plus conflict precedence
 - **Build Plans — READ FIRST** — link to `docs/build-plans/phase-0-foundation.md`
-- **Key Documents** — table with paths to all standard files
-- **Current Priority Items** — P-numbered items grouped by Very High / High / Medium
-- **Backlog Management** — tag taxonomy, lazy issue creation rule, automation criteria
+- **Key Documents & Dispatch** — single table with paths to all standard files (minimum 5 entries), test command, and after-shipping reminder
+- **Current Priority Items** — OPEN/IN PROGRESS items only, grouped by priority tier
+- **Backlog Management** — tag taxonomy and rules (process details live in the SOP, not here)
 - **Stack** — technologies, hosting, CI, live URL (or n/a)
 - **Key Commands** — the 3-5 most-used shell commands for this project
 - **Rules for Automated Builds** — numbered rules, must include "never delete without a trace" and "update Backlog.md and feature-map.md when work ships"
-- **Session & Memory Hygiene** — start checklist (7 steps) and end checklist (8 steps, test gate is step 1 for code projects)
-- **Dispatch Quick Reference** — minimum 5 named files with full paths, updated each phase
+- **Session & Memory Hygiene** — start checklist (5 steps) and end checklist (7 steps, test gate is step 1 for code projects)
 - **Recent Work** — append-only, new entries at top, always include PR/commit refs
 - **Deprioritised** — items moved here from priority lists, never removed
 
-For code projects, also add: **Auth**, **Database**, **Design System** sections.
+For code projects, also add: **Auth**, **Database**, **Design System**, **Code Quality Rules** sections.
 
-Keep per-session sections under 200 lines / 2,000 tokens. Reference sections (Auth, DB, Design System) may extend beyond.
+Keep per-session sections under 200 lines / 2,000 tokens. Reference sections (Auth, DB, Design System, Code Quality) may extend beyond.
 
 ### 3.2 — `Backlog.md` (project root)
 
@@ -273,12 +272,28 @@ git commit -m "docs: implement Agent SOP — standard file set and session check
 
 ---
 
+## Step 7 — Optional: security, hooks, and agents
+
+These are not required for basic SOP compliance but are recommended for code projects.
+
+**Security guidance:** Copy `docs/sop/security.md` from the agent-sop repo to your project, or create a `## Security` section in CLAUDE.md covering your auth model, secret handling, and input validation.
+
+**Hooks:** Create `.claude/settings.json` with at least SessionStart (auto-load context) and PreCompact (session-end reminder) hooks. See `docs/sop/hooks.md` in the agent-sop repo for 6 reference implementations with JSON config examples.
+
+**Review agents:** Copy `code-reviewer.md` and `security-reviewer.md` from the agent-sop repo's `.claude/agents/` to your project's `.claude/agents/` directory. Customise the stack-specific sections for your project.
+
+**Code quality rules:** For code projects, add a `## Code Quality Rules` section to CLAUDE.md specifying file size limits (800 max), test coverage threshold (80%), and language-specific conventions. The code template includes a ready-made section.
+
+---
+
 ## Ongoing rules
 
-**Every session start:** run the 7-step start checklist. No exceptions.
+**Every session start:** run the 5-step start checklist. No exceptions.
 
-**Every session end:** run the 8-step end checklist. For code projects, step 1 is running tests. No exceptions. Wrap up at 60% context capacity — do not push to 95%.
+**Every session end:** run the 7-step end checklist. For code projects, step 1 is running tests. No exceptions. Wrap up at 60% context capacity — do not push to 95%.
 
 **When files disagree:** code/git > CLAUDE.md > Backlog.md > build-plan > feature-map > agent-memory > resume point. Trust what you observe over what memory says.
 
 **Memory separation:** `docs/agent-memory.md` (committed) is for facts any contributor needs. Auto-memory (local) is for user preferences and session state. Never store project-critical information only in auto-memory.
+
+**Continuous learning:** After every session, extract reusable decisions and gotchas into `docs/agent-memory.md`. Every 5 sessions, audit for stale entries. When a pattern repeats 3+ times, promote it to a rule in CLAUDE.md.
