@@ -172,6 +172,62 @@ Agent that audits any project folder against the Claude Code Agent SOP and produ
 
 ---
 
+### P14 — Security guidance document
+`[SHIPPED - 2026-04-08] [Feature]`
+
+Agent security guidance at `docs/sop/security.md`. Covers prompt injection awareness, secret scanning, MCP trust boundaries, sandbox guidance for autonomous runs, memory hygiene for untrusted work, and minimum bar checklist.
+
+**Acceptance criteria:**
+- File exists at `docs/sop/security.md` - DONE
+- Covers prompt injection, secret scanning, MCP trust, sandbox, memory hygiene - DONE
+- Includes detection scan commands - DONE
+- Australian English, no em-dashes - DONE
+- Adapted from ECC security guide, not copied - DONE
+
+---
+
+### P15 — Hooks guidance document
+`[OPEN] [Feature]`
+
+Hooks guidance at `docs/sop/hooks.md`. Explains hook types and provides 6 reference implementations.
+
+---
+
+### P16 — Code quality rules in code template
+`[OPEN] [Feature]`
+
+Add Code Quality Rules section to `docs/templates/claude-md-template-code.md`.
+
+---
+
+### P17 — Reference agent definitions
+`[OPEN] [Feature]`
+
+Create 4 reference agents in `.claude/agents/`: code-reviewer, security-reviewer, planner, e2e-runner.
+
+---
+
+### P18 — Expand code template sections
+`[OPEN] [Feature]`
+
+Flesh out Auth, Database, Key Commands, Design System sections in `docs/templates/claude-md-template-code.md`.
+
+---
+
+### P19 — Continuous learning pattern
+`[OPEN] [Feature]`
+
+Add continuous learning as an optional pattern in SOP Section 12.
+
+---
+
+### P20 — Compliance checklist update (security, hooks, quality, agents)
+`[OPEN] [Feature]`
+
+Add new compliance checks for security, hooks, code quality, and agent availability.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
@@ -181,3 +237,4 @@ Agent that audits any project folder against the Claude Code Agent SOP and produ
 - P11 — CLAUDE.md code project template — SHIPPED 2026-04-07
 - P12 — SOP v2: owner feedback iteration — SHIPPED 2026-04-07
 - P13 — SOP Compliance Checker Agent — SHIPPED 2026-04-07
+- P14 — Security guidance document — SHIPPED 2026-04-08
