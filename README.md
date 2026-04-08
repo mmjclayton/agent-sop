@@ -8,103 +8,90 @@ Standard operating procedures for Claude Code agents. Consistent structure, pers
 
 Claude Code agents start every session with no memory of previous sessions. Without structure, each session rediscovers context, duplicates information across files, loses track of decisions, and drifts from established patterns. Over multiple sessions this compounds — agents overwrite previous work, contradict earlier decisions, and leave the project in a state the next session cannot pick up cleanly.
 
-The cost is real: wasted context window on re-orientation, repeated mistakes, inconsistent output quality, and human time spent correcting agent behaviour that should have been prevented by structure.
-
 ## The Solution
 
 This library defines a standard operating procedure that gives every Claude Code agent session:
 
-- **Immediate orientation** — a defined set of files to read at session start, so the agent has full project context within the first few tool calls
-- **Persistent cross-session memory** — architectural decisions, data model invariants, gotchas, and preferences survive across sessions without relying on Claude Code's unreliable auto-memory
+- **Immediate orientation** — a defined set of files to read at session start (~900 tokens), so the agent has full project context within the first few tool calls
+- **Persistent cross-session memory** — architectural decisions, data model invariants, gotchas, and preferences survive across sessions in `docs/agent-memory.md`
 - **Consistent update rules** — every session leaves the project in a state the next session can pick up immediately
-- **Measurable compliance** — an automated checker agent that audits any project against the SOP and scores it
+- **Security guidance** — prompt injection awareness, secret scanning, MCP trust boundaries, sandbox guidance
+- **Automated enforcement** — hooks that automate session checklists, pre-commit quality gates, and pattern extraction
+- **Measurable compliance** — an automated checker agent that audits any project against the SOP and scores it out of 100
 
-## What the SOP Covers
+---
 
-### 1. Standard File Set
+## What's Included
 
-Every project using the SOP has these files:
+### Core SOP
 
-| File | Purpose |
-|------|---------|
-| `CLAUDE.md` | Master context file — stack, conventions, priority items, session checklists, dispatch reference. The first file every agent reads. |
-| `Backlog.md` | Single source of truth for all work items. Status tags, P-numbers, acceptance criteria. |
-| `docs/agent-memory.md` | Permanent cross-session context — architectural decisions, data model invariants, gotchas, named utility functions. Committed to git, visible to all contributors. |
-| `docs/feature-map.md` | Shipped feature inventory and prioritised roadmap. |
-| `docs/build-plans/phase-N.md` | Per-phase architecture, scope, locked decisions, batch logs, deploy checklists. |
-| `project_resume.md` (local) | Point-in-time snapshot of where the project stands. Overwritten each session. |
+| Document | Path | Purpose |
+|----------|------|---------|
+| Core SOP | `docs/sop/claude-agent-sop.md` | The main SOP — file structure, rules, checklists, update triggers |
+| Security Guidance | `docs/sop/security.md` | Prompt injection, secret scanning, MCP trust, sandboxing |
+| Hooks Guidance | `docs/sop/hooks.md` | Hook types + 6 reference implementations |
+| Compliance Checklist | `docs/sop/compliance-checklist.md` | ~70 checks with scoring weights |
 
-### 2. Two Non-Negotiable Rules
+### Templates
+
+| Template | Path | Use for |
+|----------|------|---------|
+| CLAUDE.md (base) | `docs/templates/claude-md-template.md` | Any project type |
+| CLAUDE.md (code) | `docs/templates/claude-md-template-code.md` | Full-stack code projects (adds Auth, Database, Design System, Code Quality Rules) |
+
+### Reference Agents
+
+| Agent | Path | Purpose |
+|-------|------|---------|
+| SOP Checker | `.claude/agents/sop-checker.md` | Audits any project for SOP compliance |
+| Code Reviewer | `.claude/agents/code-reviewer.md` | Reviews code for quality, security, maintainability |
+| Security Reviewer | `.claude/agents/security-reviewer.md` | OWASP Top 10, secret detection, auth issues |
+| Planner | `.claude/agents/planner.md` | Structured build plans with phases and risks |
+| E2E Runner | `.claude/agents/e2e-runner.md` | Playwright end-to-end test generation and execution |
+
+### Examples
+
+| Document | Path | Purpose |
+|----------|------|---------|
+| Implementation Guide | `docs/examples/sop-implementation-guide.md` | Step-by-step setup for new projects |
+
+---
+
+## Two Non-Negotiable Rules
 
 These cannot be overridden by any project-specific configuration:
 
-1. **Never delete without a trace.** Update in place, mark `[SUPERSEDED]`, or move to `## Archived`. In-place edits (status changes, corrections, folding answers into items) are expected. Silent removal is not.
+1. **Never delete without a trace.** Update in place, mark `[SUPERSEDED]`, or move to `## Archived`. In-place edits are expected. Silent removal is not.
 
 2. **One source of truth.** Each information type lives in exactly one file. When files disagree, explicit precedence resolves it: code/git > CLAUDE.md > Backlog.md > build-plan > feature-map > agent-memory > resume point.
 
-### 3. Session Checklists
+---
 
-**Session start (7 steps):** Read CLAUDE.md, MEMORY.md, project_resume.md, agent-memory.md, build plan, git log. Cross-check memory against current file state.
+## Session Checklists
 
-**Session end (8 steps):** Run tests (code projects), update Backlog, feature-map, agent-memory, build plan batch log, project_resume. Commit docs with the work.
+**Start (5 steps):**
+1. Read CLAUDE.md
+2. Read MEMORY.md + project_resume.md
+3. Read docs/agent-memory.md
+4. Run `git log --oneline -10`, cross-check memory against current state
+5. Read the Backlog item(s) for this session
 
-Agents wrap up at 60% context capacity — not 95%. Running to the limit produces degraded output and risks losing session-end updates.
+**End (7 steps):**
+1. Run tests (code projects)
+2. Update Backlog.md
+3. Update docs/feature-map.md
+4. Update docs/agent-memory.md
+5. Update docs/build-plans/phase-N.md Batch Log
+6. Overwrite project_resume.md
+7. Commit docs/ changes with the work
 
-### 4. Backlog Management
-
-- P-numbers assigned sequentially, never reused
-- Tag order: status first (`[OPEN]`, `[IN PROGRESS]`, `[SHIPPED - YYYY-MM-DD]`, `[VERIFIED]`, `[WON'T]`), type second (`[Feature]`, `[Iteration]`, `[Bug]`, `[Refactor]`)
-- Issues lazy-created only when work moves to `[IN PROGRESS]`
-- Archive threshold at ~2,000 lines
-
-### 5. Memory System Separation
-
-| System | Location | What belongs |
-|--------|----------|-------------|
-| `docs/agent-memory.md` | In-repo (git) | Facts any contributor needs — decisions, invariants, gotchas, utility functions |
-| Auto-memory (`~/.claude/.../memory/`) | Local machine | User preferences, session state, personal workflow notes |
-
-Derived facts (test counts, line numbers, dependency versions) do not belong in either — they go stale immediately.
-
-### 6. Build Plans and Phased Work
-
-Each phase gets its own file with: Problem, Scope, Architecture, Key Decisions (marked `[LOCKED]`), Batch Log (append-only), Deploy Checklist, and Open Questions. Shipped phases are frozen except for the Batch Log.
-
-### 7. Conflict Resolution
-
-When files disagree, precedence is explicit and deterministic:
-
-1. Code and git state (always wins)
-2. CLAUDE.md (project rules)
-3. Backlog.md (work item status)
-4. Build plans (phase architecture)
-5. Feature map (shipped inventory)
-6. Agent memory (cross-session context)
-7. Resume point (lowest precedence)
-
-## How This Impacts Claude Code Performance
-
-**Context efficiency.** The Dispatch Quick Reference (minimum 5 named files) and Key Documents table mean agents reach the right files in 2-3 tool calls instead of exploring blindly. The 200-line limit on CLAUDE.md per-session sections keeps the master context file lean.
-
-**Decision persistence.** Architectural decisions, data model invariants, and gotchas survive across sessions in `docs/agent-memory.md`. Agents do not re-derive conclusions or repeat mistakes that previous sessions already resolved.
-
-**Reduced drift.** The session-end checklist forces every session to update tracking files before closing. The next session starts with accurate state, not stale memory claims that need to be cross-checked against reality.
-
-**Predictable behaviour.** Tag formats, file ownership rules, and update triggers are defined once. Agents do not invent their own conventions or slowly drift from established patterns across sessions.
-
-**Safe handoffs.** Multi-agent contention is handled explicitly — separate branches, docs conflicts resolved by appending, code conflicts require reading both versions, semantic conflicts flagged for human resolution.
-
-**Test gates.** Code projects run the full test suite as step 1 of the session-end checklist. Broken code does not get committed and left for the next session to discover.
+Wrap up at 60% context capacity, not 95%.
 
 ---
 
 ## Compliance Checker
 
-The SOP includes an automated compliance checker agent at `.claude/agents/sop-checker.md`. It audits any project folder against the SOP and produces a scored report.
-
-### Running the checker
-
-In a Claude Code session on this repo:
+The SOP includes an automated compliance checker agent. Run it from a Claude Code session:
 
 ```
 @sop-checker check SOP compliance for ~/Projects/my-app
@@ -112,18 +99,19 @@ In a Claude Code session on this repo:
 
 ### What it checks
 
-~64 checks across 8 categories:
+~70 checks across 9 categories:
 
 | Category | What it verifies |
 |----------|-----------------|
-| File Existence | All 5 mandatory files + 2 local files present at correct paths |
-| CLAUDE.md Structure | All required sections present, 200-line limit, session checklists correct |
-| Backlog.md Structure | Tag format, status/type order, P-number sequencing, date formats |
-| agent-memory.md Structure | All 8 sections present, no derived facts, no duplicated Key Documents |
-| feature-map.md Structure | Last-updated header, shipped/roadmap sections |
-| Build Plan Structure | All 7 sections, Batch Log format, `[LOCKED]` markers |
-| project_resume.md Structure | Correct naming, snapshot format, required sections |
-| Cross-File Consistency | Shipped items in both Backlog and feature-map, in-flight work matches |
+| File Existence | All mandatory files present at correct paths |
+| CLAUDE.md Structure | Required sections, checklist steps, line limits |
+| Backlog.md Structure | Tag format, status/type order, P-number sequencing |
+| agent-memory.md | All 8 sections, no derived facts, no duplication |
+| feature-map.md | Last-updated header, shipped/roadmap sections |
+| Build Plans | All 7 sections, Batch Log format, [LOCKED] markers |
+| project_resume.md | Correct naming, snapshot format, required sections |
+| Cross-File Consistency | Shipped items in both Backlog and feature-map |
+| Security, Hooks, Quality, Agents | Secret scanning, security docs, file limits, coverage threshold, hooks, agents |
 
 ### Scoring
 
@@ -133,16 +121,7 @@ In a Claude Code session on this repo:
 | Important | 5 each | Deducted from pool |
 | Recommended | 2 each | Advisory |
 
-**Compliance tiers:** 90-100 fully compliant, 70-89 largely compliant, 50-69 partially compliant, 0-49 non-compliant.
-
-### Report output
-
-The checker produces:
-- Per-check PASS/FAIL tables with specific fix instructions
-- Top recommendations ordered by impact
-- "Path to 100%" grouped by effort level (quick / medium / structural)
-
-The checker is **read-only** — it never modifies the target project.
+90-100 fully compliant. 70-89 largely compliant. 50-69 partially compliant. 0-49 non-compliant.
 
 ---
 
@@ -150,7 +129,7 @@ The checker is **read-only** — it never modifies the target project.
 
 ### New project
 
-Read `docs/examples/sop-implementation-guide.md` for step-by-step setup instructions, or paste these instructions into a Claude Code session on your project:
+Paste this into a Claude Code session on your project:
 
 ```
 I want you to implement the Agent SOP in this project. The SOP repo is at ~/Projects/agent-sop.
@@ -168,7 +147,13 @@ After creating the files, run through the verification checklist, then commit.
 
 ### Existing project
 
-The SOP includes a minimum viable migration checklist in Section 13. The compliance checker can identify exactly what is missing and what to fix.
+Run the compliance checker to see exactly what is missing:
+
+```
+@sop-checker check SOP compliance for ~/Projects/my-app
+```
+
+The report includes a "Path to 100%" section grouped by effort level.
 
 ---
 
@@ -181,13 +166,19 @@ agent-sop/
   README.md                              # This file
   .claude/
     agents/
-      sop-checker.md                     # Compliance checker agent definition
+      sop-checker.md                     # Compliance checker agent
+      code-reviewer.md                   # Code review agent
+      security-reviewer.md              # Security review agent
+      planner.md                         # Build planning agent
+      e2e-runner.md                      # E2E testing agent
   docs/
     agent-memory.md                      # Cross-session context for this project
     feature-map.md                       # Shipped documents and roadmap
     sop/
       claude-agent-sop.md               # The core SOP document
       compliance-checklist.md           # Canonical compliance checks and scoring
+      security.md                        # Security guidance
+      hooks.md                           # Hooks guidance with reference implementations
     templates/
       claude-md-template.md             # CLAUDE.md template (base, any project)
       claude-md-template-code.md        # CLAUDE.md template (code projects)
@@ -201,4 +192,4 @@ agent-sop/
 
 ## Status
 
-Phase 0 (foundation) in progress. Core SOP, both CLAUDE.md templates, implementation guide, and compliance checker are shipped. Templates for agent-memory, backlog, and build plans are next.
+Phase 0 (foundation) in progress. 12 items shipped (P1-P2, P11-P20). Templates for agent-memory, backlog, and build plans are next (P3-P5), followed by walkthrough and migration guides (P6-P7).
