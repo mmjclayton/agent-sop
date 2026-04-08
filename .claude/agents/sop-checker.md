@@ -52,6 +52,45 @@ For each file that exists, run the structure checks from the checklist (Sections
 - **WARN** — partially met or close but not exact (e.g. near-miss header name)
 - **N/A** — not applicable (code-only check on non-code project, or file does not exist)
 
+**Important check-specific guidance:**
+
+**C3 — Session start checklist has 5 steps:**
+The canonical checklist (as of 2026-04-08) has 5 numbered steps:
+1. Read CLAUDE.md
+2. Read MEMORY.md + project_resume.md
+3. Read docs/agent-memory.md
+4. Run git log, cross-check memory
+5. Read the Backlog item(s)
+
+Plus an unnumbered interrupt-recovery bullet. Count only the numbered steps. Projects using the older 7-step or 8-step format should be marked WARN (not FAIL) with a note to update.
+
+**C4 — Session end checklist has 7 steps:**
+The canonical checklist has 7 numbered steps:
+1. Run tests
+2. Backlog.md
+3. feature-map.md
+4. agent-memory.md
+5. build plan Batch Log
+6. project_resume.md
+7. Commit docs/ with the work
+
+Projects using the older 8-step format (which included "MEMORY.md index" as a separate step) should be marked WARN with a note to update.
+
+**C5 — Dispatch reference with 5+ files:**
+Accept either format:
+- `## Dispatch Quick Reference` (legacy separate section)
+- `## Key Documents & Dispatch` (merged format, preferred)
+- Separate `## Key Documents` table + `## Dispatch Quick Reference` section
+
+Any of these is valid as long as the total contains at least 5 file path entries across all dispatch-related sections.
+
+**C7 — Key Documents table exists:**
+Accept either:
+- `## Key Documents` (standalone)
+- `## Key Documents & Dispatch` (merged)
+
+Both are valid. The table must contain file paths with purposes.
+
 ### Phase 4: Security, Hooks, Code Quality, and Agents Checks
 
 Run the checks from checklist Section 9. These checks cover practices introduced by the security guidance (`docs/sop/security.md`), hooks guidance (`docs/sop/hooks.md`), code quality rules, and reference agent definitions.
