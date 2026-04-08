@@ -23,22 +23,48 @@ This library defines a standard operating procedure that gives every Claude Code
 
 ## Token Efficiency
 
-The SOP is designed to minimise context window consumption while giving agents full project awareness. Every file, section, and rule has been measured and trimmed.
+The SOP is designed to minimise context window consumption while giving agents full project awareness. Every file, section, and rule has been measured and trimmed. All measurements below were taken against this repository running on **Claude Opus 4.6 (1M context)**.
+
+### Context windows by model
+
+| Model | Context window |
+|-------|---------------|
+| Opus 4.6, Sonnet 4.6 | 1,000,000 tokens |
+| Haiku 4.5, Sonnet 4, Opus 4.5 | 200,000 tokens |
 
 ### Session start cost
 
-The 5-step session start checklist reads CLAUDE.md, agent-memory.md, project_resume.md, recent git history, and the current Backlog item. Measured token costs for these reads:
+The 5-step session start checklist reads CLAUDE.md, agent-memory.md, project_resume.md, recent git history, and the current Backlog item. Measured costs per file:
 
-| Scenario | Raw tokens | With 1.7x loading overhead | % of 200k context |
-|----------|-----------|---------------------------|-------------------|
-| Fresh project (from templates) | ~1,500 | ~2,600 | 1.3% |
-| Mature project (this repo, 40+ decisions, 17 shipped items) | ~3,100 | ~5,200 | 2.6% |
+| File | Lines | Words | Est. tokens (low) | Est. tokens (high) |
+|------|-------|-------|-------------------|-------------------|
+| CLAUDE.md | 144 | 823 | 1,070 | 1,525 |
+| docs/agent-memory.md | 120 | 1,360 | 1,768 | 2,487 |
+| git log --oneline -10 | 10 | 101 | 131 | 184 |
+| One Backlog item (typical) | 11 | 54 | 70 | 96 |
+| project_resume.md | ~15 | ~80 | 104 | 125 |
+| **Session start total** | **~300** | **~2,418** | **~3,143** | **~4,417** |
 
-Token counts are approximated at 1.3 tokens per word. The 1.7x loading overhead reflects the cost of tool calls, file reading, and processing that Claude Code incurs when loading content into context.
+Low estimate uses words x 1.3; high estimate uses characters / 4. No public offline Claude tokeniser exists, so the true count falls between these bounds. Realistic midpoint: **~3,500 raw tokens**.
+
+Claude Code adds a 1.7x overhead when reading files (line number formatting, tool call framing). This is confirmed by community measurements (GitHub issue [anthropics/claude-code#20223](https://github.com/anthropics/claude-code/issues/20223), which measured 1.7 to 1.75x in practice). With this overhead, the effective session start cost is **~5,200 to 5,900 tokens**.
+
+| Scenario | Raw tokens | Effective (1.7x) | % of 1M context | % of 200k context |
+|----------|-----------|-------------------|-----------------|-------------------|
+| Fresh project (from templates, ~1,191 words) | ~1,500 | ~2,600 | 0.3% | 1.3% |
+| Mature project (this repo, 40+ decisions) | ~3,500 | ~5,900 | 0.6% | 3.0% |
+
+For comparison, Claude Code's own system prompt and tool definitions consume an estimated 7,000 to 25,000 tokens before any CLAUDE.md is loaded (per community measurements at bswen.com and blog.vincentqiao.com). The SOP's session start overhead is a modest addition on top of baseline costs you cannot control.
+
+After the first turn in a session, Anthropic's prompt caching applies a 90% discount (0.1x) on cache hits, reducing the recurring per-turn cost of loaded files to ~520 to 590 effective tokens.
+
+### Library size vs session reads
+
+The full SOP library (17 files across docs/sop/, docs/templates/, docs/examples/, .claude/agents/) totals 3,634 lines and approximately 28,000 to 36,000 tokens. The session start checklist reads only ~300 lines, roughly **11% of the library**. The remaining 89% is accessed on demand through the dispatch table and line-range hints. A naive "read everything" approach would cost 9x more and consume 15 to 18% of a 200k context window before any work begins.
 
 ### How the overhead stays low
 
-**CLAUDE.md size cap.** Per-session sections are capped at 200 lines (~2,000 tokens). Reference sections (Auth, Database, Design System) are read on demand, not every session. The base template is 151 lines; the code template is 270 lines including all reference sections.
+**CLAUDE.md size cap.** Per-session sections are capped at 200 lines (~2,000 tokens), consistent with Anthropic's official recommendation to keep CLAUDE.md under 200 lines. Reference sections (Auth, Database, Design System) are read on demand, not every session. The base template is 151 lines; the code template is 270 lines including all reference sections.
 
 **Merged dispatch table.** Key Documents and Dispatch Quick Reference were originally two separate sections with overlapping file listings. Merging them into a single table eliminated the duplication. This was part of a dedicated optimisation pass (commit `71a34e0`) that removed 100 net lines across templates.
 
