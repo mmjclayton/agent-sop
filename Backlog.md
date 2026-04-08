@@ -55,40 +55,40 @@ Publish the code-project variant as `docs/templates/claude-md-template-code.md`.
 ---
 
 ### P3 — Agent memory template
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-08] [Feature]`
 
 Publish agent-memory.md template as `docs/templates/agent-memory-template.md`.
 
 **Acceptance criteria:**
-- File exists at `docs/templates/agent-memory-template.md`
-- Contains all 8 sections: Key Documents, Key Source Files, In-Flight Work, Decisions Made, Gotchas, Preferences, Completed Work, Archived
-- Each section has a comment explaining what belongs there (including expanded Gotchas definition)
+- File exists at `docs/templates/agent-memory-template.md` - DONE
+- Contains all 8 sections: Key Documents, Key Source Files, In-Flight Work, Decisions Made, Gotchas, Preferences, Completed Work, Archived - DONE
+- Each section has a comment explaining what belongs there (including expanded Gotchas definition) - DONE
 
 ---
 
 ### P4 — Backlog template
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-08] [Feature]`
 
 Publish Backlog.md template as `docs/templates/backlog-template.md`.
 
 **Acceptance criteria:**
-- File exists at `docs/templates/backlog-template.md`
-- Includes tag taxonomy header
-- Includes example P-numbered item with all fields: status, type, description, ACs, out of scope, open questions
-- Includes Shipped Archive section
+- File exists at `docs/templates/backlog-template.md` - DONE
+- Includes tag taxonomy header - DONE
+- Includes example P-numbered item with all fields: status, type, description, ACs, out of scope, open questions - DONE
+- Includes Shipped Archive section - DONE
 
 ---
 
 ### P5 — Build plan template
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-08] [Feature]`
 
 Publish phase build plan template as `docs/templates/build-plan-template.md`.
 
 **Acceptance criteria:**
-- File exists at `docs/templates/build-plan-template.md`
-- Contains all 7 sections per SOP spec
-- Batch Log section notes append-only format with date and PR/commit format
-- Open Questions notes answered questions stay with [RESOLVED] marker
+- File exists at `docs/templates/build-plan-template.md` - DONE
+- Contains all 7 sections per SOP spec - DONE
+- Batch Log section notes append-only format with date and PR/commit format - DONE
+- Open Questions notes answered questions stay with [RESOLVED] marker - DONE
 
 ---
 
@@ -283,3 +283,6 @@ Added 6 new compliance checks across a new Section 9: S1 (no secrets, Critical),
 - P18 — Expand code template sections — SHIPPED 2026-04-08
 - P19 — Continuous learning pattern — SHIPPED 2026-04-08
 - P20 — Compliance checklist update — SHIPPED 2026-04-08
+- P3 — Agent memory template — SHIPPED 2026-04-08
+- P4 — Backlog template — SHIPPED 2026-04-08
+- P5 — Build plan template — SHIPPED 2026-04-08

@@ -20,6 +20,9 @@ Last updated: 2026-04-08
 | P18 | Expanded code template sections | `docs/templates/claude-md-template-code.md` | 2026-04-08 |
 | P19 | Continuous learning pattern | `docs/sop/claude-agent-sop.md` (Section 12) | 2026-04-08 |
 | P20 | Compliance checklist update (6 new checks) | `docs/sop/compliance-checklist.md` + `.claude/agents/sop-checker.md` | 2026-04-08 |
+| P3 | Agent memory template | `docs/templates/agent-memory-template.md` | 2026-04-08 |
+| P4 | Backlog template | `docs/templates/backlog-template.md` | 2026-04-08 |
+| P5 | Build plan template | `docs/templates/build-plan-template.md` | 2026-04-08 |
 
 ---
 
@@ -29,9 +32,6 @@ Last updated: 2026-04-08
 
 | P# | Document | Path |
 |----|----------|------|
-| P3 | Agent memory template | `docs/templates/agent-memory-template.md` |
-| P4 | Backlog template | `docs/templates/backlog-template.md` |
-| P5 | Build plan template | `docs/templates/build-plan-template.md` |
 | P6 | New project walkthrough | `docs/examples/new-project-walkthrough.md` |
 | P7 | Migration guide | `docs/examples/existing-project-migration.md` |
 
