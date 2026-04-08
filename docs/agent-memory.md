@@ -35,6 +35,8 @@ See CLAUDE.md Key Documents table.
 - 2026-04-08: README must use Australian English, no em dashes. Hyphens minimised in prose; colons, periods, and conjunctions preferred.
 - 2026-04-08: ECC attribution credits affaan-m (github.com/affaan-m/everything-claude-code), not Anthropic. ECC is a community project.
 - 2026-04-08: Token efficiency claims in README must be verified with measured data. Two estimation methods used (words x 1.3, chars / 4) because no public offline Claude tokeniser exists.
+- 2026-04-08: Claude Code custom slash commands require YAML frontmatter with a `description` field to be recognised. Without it they appear in the list but fail with "unknown skill" when invoked.
+- 2026-04-08: Project-level commands (`.claude/commands/`) appear as `/project:command-name`. User-level commands (`~/.claude/commands/`) appear as `/command-name` without prefix. For commands that should be available everywhere, install at user level.
 - 2026-04-07: File structure — SOPs in `docs/sop/`, templates in `docs/templates/`, examples in `docs/examples/`.
 - 2026-04-07: This project follows its own SOP — including additive-only writes and session checklists.
 - 2026-04-07: P1 and P2 shipped as part of the initial scaffold (docs already existed from prior Cowork session).
@@ -93,6 +95,7 @@ See CLAUDE.md Key Documents table.
 
 ## Completed Work
 
+- 2026-04-08: P22 — Session slash commands shipped. `/restart-sop` and `/update-sop` in `.claude/commands/`. All SOP docs updated to reference as mandatory. Installed at user level for all projects.
 - 2026-04-08: P21 — Setup script shipped at `setup.sh`. Bash onboarding script with --code and --force flags. README updated to recommend as primary setup path.
 - 2026-04-08: README rewritten: removed all em dashes, added verified token efficiency section (measured per-file costs, model-specific context windows, library-vs-session ratio), ECC attribution corrected to affaan-m.
 - 2026-04-08: P6 — New project walkthrough shipped at `docs/examples/new-project-walkthrough.md`. Uses concrete Taskflow example.

@@ -283,6 +283,21 @@ Bash onboarding script (`setup.sh`) that copies the standard file set into a tar
 
 ---
 
+### P22 — Session slash commands (/restart-sop, /update-sop)
+`[SHIPPED - 2026-04-08] [Feature]`
+
+Two Claude Code slash commands that automate the session start and end checklists.
+
+**Acceptance criteria:**
+- `.claude/commands/restart-sop.md` exists with YAML frontmatter - DONE
+- `.claude/commands/update-sop.md` exists with YAML frontmatter - DONE
+- Commands execute the full session checklists from the SOP - DONE
+- setup.sh copies commands into target projects - DONE
+- README, core SOP, both templates, and implementation guide reference commands as mandatory - DONE
+- Commands installed at user level (`~/.claude/commands/`) for all projects - DONE
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
@@ -305,3 +320,4 @@ Bash onboarding script (`setup.sh`) that copies the standard file set into a tar
 - P6 — New project walkthrough — SHIPPED 2026-04-08
 - P7 — Existing project migration guide — SHIPPED 2026-04-08
 - P21 — Setup script for new projects — SHIPPED 2026-04-08
+- P22 — Session slash commands — SHIPPED 2026-04-08

@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-04-08c
+Last updated: 2026-04-08d
 
 ---
 
@@ -26,6 +26,7 @@ Last updated: 2026-04-08c
 | P6 | New project walkthrough | `docs/examples/new-project-walkthrough.md` | 2026-04-08 |
 | P7 | Migration guide | `docs/examples/existing-project-migration.md` | 2026-04-08 |
 | P21 | Setup script | `setup.sh` | 2026-04-08 |
+| P22 | Session slash commands | `.claude/commands/{restart-sop,update-sop}.md` | 2026-04-08 |
 
 ---
 

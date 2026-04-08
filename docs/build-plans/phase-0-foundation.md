@@ -78,6 +78,7 @@ agent-sop/
 - 2026-04-08: Batch 0.7 — P6-P7 shipped. New project walkthrough (concrete Taskflow example), existing project migration checklist. README updated with ECC attribution, new examples table. All tracking files updated. Commit c4620b6.
 - 2026-04-08: Batch 0.8 — README quality pass. Removed all em dashes, corrected ECC attribution to affaan-m. Added verified token efficiency section with per-file measurements, model-specific context windows, and library-vs-session ratio. Commits ba5ea4c-b3235da.
 - 2026-04-08: Batch 0.9 — P21 shipped. Setup script (`setup.sh`) for onboarding new projects. Supports --code and --force flags. README updated to recommend script as primary setup path. Commit b36dd89.
+- 2026-04-08: Batch 0.10 — P22 shipped. `/restart-sop` and `/update-sop` slash commands with YAML frontmatter. setup.sh updated to copy commands. All SOP docs (core SOP, both templates, README, implementation guide) updated to reference commands as mandatory. Installed at user level for all projects. Commits 0d682b8-3e8d340.
 
 ---
 

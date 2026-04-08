@@ -119,8 +119,8 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 *Append-only. New entries at top. Include commit refs.*
 
-### 2026-04-08: P6-P7, P21 — Guides and setup script (commits c4620b6-b36dd89)
-New project walkthrough (P6), migration checklist (P7), setup.sh onboarding script (P21). README rewritten: em dashes removed, verified token efficiency section, ECC attribution corrected to affaan-m.
+### 2026-04-08: P6-P7, P21-P22 — Guides, setup script, slash commands (commits c4620b6-3e8d340)
+New project walkthrough (P6), migration checklist (P7), setup.sh onboarding script (P21), /restart-sop and /update-sop slash commands (P22). README rewritten: em dashes removed, verified token efficiency section, ECC attribution corrected to affaan-m. Commands installed at user level for all projects.
 
 ### 2026-04-08: P14-P20 — ECC-informed expansion (commits f928a42-present)
 Security guidance, hooks guidance with 6 reference implementations, code quality rules, 4 reference agents (code-reviewer, security-reviewer, planner, e2e-runner), expanded code template sections (Auth, Database, Key Commands, Design System), continuous learning pattern, and 6 new compliance checks. Adapted from everything-claude-code reference repo.
