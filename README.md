@@ -221,7 +221,7 @@ Phase 0 (foundation) in progress. 17 items shipped (P1-P5, P6-P7, P11-P20). Next
 
 ## Acknowledgements
 
-Several concepts in this SOP were informed by or adapted from [Everything Claude Code](https://github.com/anthropics/ecc) (ECC), Anthropic's reference collection of skills, rules, agents, and hooks for Claude Code. Specific areas where ECC influenced our approach:
+Several concepts in this SOP were informed by or adapted from [Everything Claude Code](https://github.com/affaan-m/everything-claude-code) (ECC) by [affaan-m](https://github.com/affaan-m), a comprehensive collection of skills, rules, agents, and hooks for Claude Code. Specific areas where ECC influenced our approach:
 
 - **Security guidance** (`docs/sop/security.md`) — adapted from ECC's security rules covering prompt injection, secret scanning, and MCP trust boundaries
 - **Hooks guidance** (`docs/sop/hooks.md`) — reference implementations inspired by ECC's hook patterns for SessionStart, PostToolUse, and Stop events
@@ -232,11 +232,3 @@ Several concepts in this SOP were informed by or adapted from [Everything Claude
 
 This SOP is not a fork of ECC. It is an independent, opinionated operating procedure that incorporates proven patterns from the ECC ecosystem alongside original work on session checklists, backlog management, cross-file consistency, and measurable compliance scoring.
 
----
-
-## Repository Description and Tags
-
-**Description:** Standard operating procedures for Claude Code agents — file structure, session checklists, persistent memory, security, hooks, compliance scoring, and templates for any project type.
-
-**Topics/Tags:**
-`claude-code` `claude` `ai-agents` `sop` `developer-tools` `ai-coding` `llm-agents` `code-quality` `session-management` `agent-memory` `compliance` `templates`
