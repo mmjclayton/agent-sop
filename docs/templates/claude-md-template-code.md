@@ -229,7 +229,9 @@ After shipping: update Backlog.md + docs/feature-map.md
 
 Memory files live at `~/.claude/projects/[project-hash]/memory/`.
 
-### Session start checklist
+### Session start: run `/restart-sop`
+
+**Every session, no exceptions.** The `/restart-sop` command automates this checklist. If the command is not available, execute manually:
 
 1. Read CLAUDE.md.
 2. Read `MEMORY.md` + `project_resume.md`.
@@ -239,9 +241,9 @@ Memory files live at `~/.claude/projects/[project-hash]/memory/`.
 
 If In-Flight Work is populated or `project_resume.md` has no What's Next — previous session was interrupted. Read the build plan Batch Log before starting new work.
 
-### Session end checklist
+### Session end: run `/update-sop`
 
-**Never delete without a trace. Update in place, mark superseded, or archive.**
+**Every session, no exceptions.** The `/update-sop` command automates this checklist. If the command is not available, execute manually. Never delete without a trace. Update in place, mark superseded, or archive.
 
 1. Run tests — run the full test suite. Fix failures before proceeding.
 2. `Backlog.md` — update status tags in place, append new items.

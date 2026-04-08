@@ -17,7 +17,8 @@ Last updated: 2026-04-08
 - Context: wrap up and run session end checklist at 60% capacity. Do not push to 95%.
 - Auto-memory: unreliable - do not depend on it. `docs/agent-memory.md` is the source of truth.
 
-**Session start (every session, no exceptions):**
+**Session start: run `/restart-sop` (every session, no exceptions).**
+If the command is not available, execute manually:
 1. Read CLAUDE.md
 2. Read `MEMORY.md` + `project_resume.md`
 3. Read `docs/agent-memory.md`
@@ -25,7 +26,8 @@ Last updated: 2026-04-08
 5. Read the Backlog item(s) for this session
 - If In-Flight Work is populated or `project_resume.md` has no What's Next — previous session was interrupted. Read the build plan Batch Log before starting anything new.
 
-**Session end (every session, no exceptions):**
+**Session end: run `/update-sop` (every session, no exceptions).**
+If the command is not available, execute manually:
 1. Run tests (code projects) — fix failures before proceeding
 2. `Backlog.md` — update status tags in place, append new items
 3. `docs/feature-map.md` — append shipped items
@@ -326,6 +328,8 @@ Never delete without a trace. Update in place, mark superseded, or archive. See 
 
 **Every agent, every session, every project. No exceptions.**
 
+**Run `/restart-sop` at the start of every session.** This slash command (installed via `.claude/commands/restart-sop.md`) automates the full checklist below. If the command is not available, execute the steps manually.
+
 ```
 1. Read CLAUDE.md
 2. Read MEMORY.md + project_resume.md
@@ -341,7 +345,7 @@ Never delete without a trace. Update in place, mark superseded, or archive. See 
 
 ## 6. Session End Checklist
 
-**Complete before closing any session. Never-delete-without-a-trace applies to every step.**
+**Run `/update-sop` at the end of every session.** This slash command (installed via `.claude/commands/update-sop.md`) automates the full checklist below. If the command is not available, execute the steps manually. Never-delete-without-a-trace applies to every step.
 
 ```
 1. Run tests (code projects) — fix failures before proceeding
@@ -353,7 +357,7 @@ Never delete without a trace. Update in place, mark superseded, or archive. See 
 7. Commit docs/ changes with the work
 ```
 
-**Context compaction threshold:** When context reaches approximately 60% capacity, wrap up the current batch and complete the session end checklist before continuing. Do not push to 95% - compaction at that point causes context loss and unreliable behaviour in the remainder of the session. Treat 60% as the session boundary signal, not a warning to ignore.
+**Context compaction threshold:** When context reaches approximately 60% capacity, wrap up the current batch and run `/update-sop` (or complete the session end checklist manually) before continuing. Do not push to 95% — compaction at that point causes context loss and unreliable behaviour in the remainder of the session. Treat 60% as the session boundary signal, not a warning to ignore.
 
 ---
 

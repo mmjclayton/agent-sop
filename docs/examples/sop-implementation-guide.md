@@ -288,9 +288,9 @@ These are not required for basic SOP compliance but are recommended for code pro
 
 ## Ongoing rules
 
-**Every session start:** run the 5-step start checklist. No exceptions.
+**Every session start:** run `/restart-sop`. This slash command executes the full 5-step start checklist. No exceptions. If the command is not available, execute the steps manually.
 
-**Every session end:** run the 7-step end checklist. For code projects, step 1 is running tests. No exceptions. Wrap up at 60% context capacity — do not push to 95%.
+**Every session end:** run `/update-sop`. This slash command executes the full 7-step end checklist, including running tests for code projects. No exceptions. Wrap up at 60% context capacity, not 95%. If the command is not available, execute the steps manually.
 
 **When files disagree:** code/git > CLAUDE.md > Backlog.md > build-plan > feature-map > agent-memory > resume point. Trust what you observe over what memory says.
 
