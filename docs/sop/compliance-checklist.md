@@ -69,16 +69,16 @@ If none match: non-code project. Code-only checks are marked below and scored as
 |----|-------|-----------------|
 | C1 | Agent SOP section exists | `## Agent SOP` header referencing the SOP document |
 | C2 | Session & Memory Hygiene section exists | `## Session` header (match flexibly) |
-| C3 | Session start checklist has 7 steps | Numbered list under session start heading |
-| C4 | Session end checklist has 8 steps | Numbered list under session end heading, step 1 is test gate for code projects |
-| C5 | Dispatch Quick Reference exists with 5+ files | `## Dispatch` header, table with at least 5 file path entries |
+| C3 | Session start checklist has 5 steps | Numbered list under session start heading (5 steps per canonical SOP) |
+| C4 | Session end checklist has 7 steps | Numbered list under session end heading, step 1 is test gate for code projects |
+| C5 | Dispatch reference exists with 5+ files | `## Dispatch` or `## Key Documents & Dispatch` header, table with at least 5 file path entries |
 
 ### Important
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
 | C6 | Build Plans section exists | `## Build Plans` header with link(s) to phase files |
-| C7 | Key Documents table exists | `## Key Documents` header with a markdown table |
+| C7 | Key Documents table exists | `## Key Documents` or `## Key Documents & Dispatch` header with a markdown table |
 | C8 | Current Priority Items section exists | `## Current Priority` header with P-numbered items |
 | C9 | Backlog Management section exists | `## Backlog Management` header with tag taxonomy |
 | C10 | Stack section exists and populated | `## Stack` header with content (not just placeholders) |

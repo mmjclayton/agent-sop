@@ -1,6 +1,6 @@
 # Claude Code Agent SOP
 **Standard Operating Procedure — All Projects**
-Last updated: 2026-04-07 (research findings incorporated)
+Last updated: 2026-04-08
 
 ---
 
@@ -33,6 +33,25 @@ Last updated: 2026-04-07 (research findings incorporated)
 5. `docs/build-plans/phase-N.md` — append to Batch Log
 6. `project_resume.md` — overwrite with current state (snapshot, not a log)
 7. Commit `docs/` changes with the work
+
+**Section index (for targeted reads — update line ranges when sections change):**
+
+| Section | Lines |
+|---------|-------|
+| Non-Negotiable Rules (Section 0) | 39-76 |
+| Standard File Set (Section 1) | 85-129 |
+| File Ownership Rules (Section 2) | 132-144 |
+| File Structure Specs (Section 3) | 147-241 |
+| Versioning Rules (Section 4) | 293-306 |
+| Session Checklists (Sections 5-6) | 309-348 |
+| Update Triggers (Section 7) | 351-368 |
+| Backlog Tag Taxonomy (Section 8) | 371-401 |
+| P-Number System (Section 9) | 404-411 |
+| Issue Tracker Sync (Section 10) | 414-423 |
+| Dispatch Quick Reference (Section 11) | 426-435 |
+| Optional Patterns (Section 12) | 438-520 |
+| New Project Setup (Section 13) | 523-542 |
+| Common Mistakes (Section 14) | 545-562 |
 
 ---
 
@@ -159,15 +178,16 @@ Claude Code has two memory systems. They serve different purposes and must not o
 ## Build Plans — READ FIRST
 [Links to current phase files with status emoji]
 
-## Key Documents
-[Table: Document | Path | Purpose]
+## Key Documents & Dispatch
+[Table: Area | File | Purpose — minimum 5 entries]
 [Include line-range hints for large files, e.g. "CSS tokens — client/src/index.css (lines 1-80)"]
+[Test command + after-shipping reminder]
 
 ## Current Priority Items
-[P-numbered items by tier: Very High / High / Medium]
+[OPEN/IN PROGRESS items only — shipped items tracked in Backlog.md]
 
 ## Backlog Management
-[Tag taxonomy, GitHub sync rules, automation criteria]
+[Tag taxonomy + rules. Process details in the SOP, not here.]
 
 ## Stack
 [Frontend / Backend / Hosting / CI — include live URL]
@@ -183,10 +203,6 @@ Claude Code has two memory systems. They serve different purposes and must not o
 
 ## Session & Memory Hygiene
 [Start checklist / End checklist]
-
-## Dispatch Quick Reference
-[REQUIRED: minimum 5 named entry-point files with paths.
-Updated at the start of each phase to reflect current work.]
 
 ## Recent Work
 [Append-only. New sessions at top. Format: Date, PR numbers, 2-3 line summary.]
@@ -312,17 +328,14 @@ Never delete without a trace. Update in place, mark superseded, or archive. See 
 
 ```
 1. Read CLAUDE.md
-2. Read ~/.claude/projects/[hash]/memory/MEMORY.md (auto-memory index)
-3. Read project_resume.md — current snapshot of where the project stands
-   - If In-Flight Work is populated, project_resume.md has no What's Next entry, or git shows
-     uncommitted changes, the previous session was likely interrupted. Read the build plan
-     Batch Log and the in-progress Backlog item before starting any new work.
-4. Read docs/agent-memory.md — permanent decisions, gotchas, in-flight work
-5. Run: git log --oneline -10
-6. Cross-check memory claims against git/code state — trust what you observe, not what memory says
-7. Read the specific Backlog.md item(s) for this session
-8. Read the relevant source files from the Key Source Files table in agent-memory.md
+2. Read MEMORY.md + project_resume.md
+3. Read docs/agent-memory.md
+4. Run git log --oneline -10, cross-check memory against current file state
+5. Read the Backlog item(s) for this session
 ```
+
+- If In-Flight Work is populated or `project_resume.md` has no What's Next — previous session was interrupted. Read the build plan Batch Log before starting anything new.
+- Source files from the Key Source Files table in `agent-memory.md` are read as work begins, not as a checklist ceremony.
 
 ---
 
@@ -331,17 +344,13 @@ Never delete without a trace. Update in place, mark superseded, or archive. See 
 **Complete before closing any session. Never-delete-without-a-trace applies to every step.**
 
 ```
-1. Run tests (code projects) — run the project's test suite. Do not proceed if tests fail. Fix failures or document them as blockers.
-2. Backlog.md — update status tags and item bodies in place, append new items. Never remove items.
-3. docs/feature-map.md — append shipped features, move roadmap items between tiers. Never remove.
-4. docs/agent-memory.md:
-   - In-Flight Work: move completed entries to ## Completed Work with date and PR number.
-   - Decisions Made: append new decisions with date. Mark superseded ones and move to ## Archived.
-   - Gotchas: append new lessons, invariants, or utility function notes. Mark stale and move to ## Archived.
-5. docs/build-plans/phase-N.md — append to Batch Log with date and PR numbers. Never rewrite existing log entries.
-6. project_resume.md — overwrite with current session state: what was done, what is next, blockers.
-7. MEMORY.md index — append new memory file entries. Never remove existing lines.
-8. Commit docs/ changes in the same commit as the work that prompted them.
+1. Run tests (code projects) — fix failures before proceeding
+2. Backlog.md — update status tags in place, append new items
+3. docs/feature-map.md — append shipped items
+4. docs/agent-memory.md — append decisions/gotchas, move completed to ## Completed Work
+5. docs/build-plans/phase-N.md — append to Batch Log
+6. project_resume.md — overwrite with current state (snapshot, not a log)
+7. Commit docs/ changes with the work
 ```
 
 **Context compaction threshold:** When context reaches approximately 60% capacity, wrap up the current batch and complete the session end checklist before continuing. Do not push to 95% - compaction at that point causes context loss and unreliable behaviour in the remainder of the session. Treat 60% as the session boundary signal, not a warning to ignore.
@@ -423,15 +432,16 @@ Never delete without a trace. Update in place, mark superseded, or archive. See 
 
 ---
 
-## 11. Dispatch Quick Reference (Required Section)
+## 11. Key Documents & Dispatch (Required Section)
 
-Every project's CLAUDE.md must include a Dispatch Quick Reference section. Requirements:
+Every project's CLAUDE.md must include a Key Documents & Dispatch section (or separate Key Documents + Dispatch Quick Reference sections). Requirements:
 
 - Minimum 5 named entry-point files with full relative paths
 - Updated at the start of each phase — not just at project setup
-- Structured as: 1. Read these docs first, 2. Key source files, 3. Test command, 4. Update docs when done
+- Include line-range hints for large files (e.g. "CSS tokens — client/src/index.css (lines 1-80)")
+- Include test command and after-shipping reminder
 
-This section is what allows an agent dropped into the middle of a project to orient in under 2 minutes.
+This section is what allows an agent dropped into the middle of a project to orient in under 2 minutes. Merging Key Documents and Dispatch into one table eliminates duplicate file listings and saves tokens per session.
 
 ---
 

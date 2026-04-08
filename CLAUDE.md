@@ -16,15 +16,20 @@ This project IS the Agent SOP library. All agents working on this project still 
 
 ---
 
-## Key Documents — READ THESE
+## Key Documents & Dispatch
 
-| Document | Path | Purpose |
-|----------|------|---------|
-| Agent Memory | `docs/agent-memory.md` | Permanent cross-session context |
+| Area | File | Purpose |
+|------|------|---------|
+| Agent Memory | `docs/agent-memory.md` | Cross-session decisions, gotchas |
 | Feature Map | `docs/feature-map.md` | Shipped documents + roadmap |
-| Backlog | `Backlog.md` | Single source of truth for all work items |
-| Core SOP | `docs/sop/claude-agent-sop.md` (lines 1-35 for Quick Reference) | The main SOP document |
-| CLAUDE.md Template | `docs/templates/claude-md-template.md` | Template for new projects |
+| Backlog | `Backlog.md` | Single source of truth for work items |
+| Core SOP | `docs/sop/claude-agent-sop.md` (lines 7-55) | Quick Reference Card + section index |
+| Build Plan | `docs/build-plans/phase-0-foundation.md` | Current phase |
+| Compliance | `docs/sop/compliance-checklist.md` | Audit checks + scoring |
+| Security | `docs/sop/security.md` | Security guidance |
+| Hooks | `docs/sop/hooks.md` | Hook types + reference implementations |
+| Templates | `docs/templates/claude-md-template.md` | Base template for new projects |
+| SOP Checker | `.claude/agents/sop-checker.md` | Compliance audit agent |
 
 ---
 
@@ -96,42 +101,24 @@ git add -A && git commit -m "docs: description"
 Memory files live at `~/.claude/projects/[project-hash]/memory/`.
 
 ### Session start checklist
-1. Read `MEMORY.md` index.
-2. Read `project_resume.md` — current snapshot of where the project stands.
+1. Read CLAUDE.md.
+2. Read `MEMORY.md` + `project_resume.md`.
 3. Read `docs/agent-memory.md`.
-4. Read current `docs/build-plans/` phase file.
-5. Run `git log --oneline -10`.
-6. Cross-check memory against current file state — trust what you observe.
-7. Read the specific Backlog.md item(s) for this session.
+4. Run `git log --oneline -10`, cross-check memory against current file state.
+5. Read the specific Backlog.md item(s) for this session.
+
+If In-Flight Work is populated or `project_resume.md` has no What's Next — previous session was interrupted. Read the build plan Batch Log before starting new work.
 
 ### Session end checklist
 **Never delete without a trace. Update in place, mark superseded, or archive.**
 
 1. Run tests (code projects) — fix failures before proceeding.
-2. `Backlog.md` — update status tags and item bodies in place, append new items.
-3. `docs/feature-map.md` — append shipped documents.
+2. `Backlog.md` — update status tags in place, append new items.
+3. `docs/feature-map.md` — append shipped items.
 4. `docs/agent-memory.md` — append decisions/gotchas, move completed to Completed Work.
 5. `docs/build-plans/phase-N.md` — append to Batch Log.
-6. `project_resume.md` — overwrite with current session state.
-7. `MEMORY.md` index — append new entries.
-8. Commit all docs changes in the same commit as the work.
-
----
-
-## Dispatch Quick Reference
-
-| Area | File |
-|------|------|
-| Core SOP | `docs/sop/claude-agent-sop.md` |
-| CLAUDE.md template | `docs/templates/claude-md-template.md` |
-| Agent memory | `docs/agent-memory.md` |
-| Backlog | `Backlog.md` |
-| Current build plan | `docs/build-plans/phase-0-foundation.md` |
-| Feature map | `docs/feature-map.md` |
-| Compliance checklist | `docs/sop/compliance-checklist.md` |
-| Security guidance | `docs/sop/security.md` |
-| Hooks guidance | `docs/sop/hooks.md` |
-| SOP checker agent | `.claude/agents/sop-checker.md` |
+6. `project_resume.md` — overwrite with current state.
+7. Commit docs/ changes with the work.
 
 ---
 

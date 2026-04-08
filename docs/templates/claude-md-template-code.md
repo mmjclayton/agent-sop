@@ -23,17 +23,22 @@ Current phase files:
 
 ---
 
-## Key Documents — READ THESE
+## Key Documents & Dispatch
 
-| Document | Path | Purpose |
-|----------|------|---------|
-| Agent Memory | `docs/agent-memory.md` | Permanent cross-session context — decisions, gotchas, data model invariants. All agents read and update this. |
-| Feature Map | `docs/feature-map.md` | Complete inventory of shipped features + prioritised roadmap |
+*Minimum 5 entries. Update at the start of each phase.*
+
+| Area | File | Purpose |
+|------|------|---------|
+| Agent Memory | `docs/agent-memory.md` | Cross-session decisions, gotchas, invariants |
+| Feature Map | `docs/feature-map.md` | Shipped features + roadmap |
 | Backlog | `Backlog.md` | Single source of truth for all work items |
-| Build Plans | `docs/build-plans/*.md` | Phase-level architecture decisions |
+| Build Plans | `docs/build-plans/*.md` | Phase architecture, batch logs |
 | Brand Voice | `.claude/brand-voice.md` | Copy rules, tone, terminology |
 | Schema | `[path/to/schema]` | Database schema |
-| CSS Tokens | `[path/to/styles]` (lines N-N) | CSS custom properties — always include line range |
+| CSS Tokens | `[path/to/styles]` (lines N-N) | CSS custom properties — include line range |
+
+Test: `[test command]`
+After shipping: update Backlog.md + docs/feature-map.md
 
 ### Current Priority Items (as of YYYY-MM-DD)
 
@@ -50,53 +55,22 @@ Current phase files:
 
 ## Backlog Management
 
-`Backlog.md` at the repo root is the single source of truth. GitHub Issues mirror it but are downstream. Never create a GitHub issue that does not exist in `Backlog.md`.
-
-**Canonical status rule:** `Backlog.md` holds the live status. Build-plan files describe the work. If they disagree, `Backlog.md` wins.
+`Backlog.md` is the single source of truth. If it disagrees with build plans, `Backlog.md` wins. Issues are lazy-created: only when work moves to `[IN PROGRESS]`.
 
 ### Tag taxonomy
 
 - Status (first): `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[SHIPPED - YYYY-MM-DD]`, `[VERIFIED - YYYY-MM-DD]`, `[WON'T]`
 - Type (second): `[Feature]`, `[Iteration]`, `[Bug]`, `[Refactor]`
-- Optional: `[has-open-questions]`, `[ok-for-automation]` (mutually exclusive)
-- `[WON'T]` format: `[WON'T] [Type] — Reason: [one-line explanation or superseding P-number]`
+- Optional: `[has-open-questions]`, `[ok-for-automation]`
+- `[WON'T]` format: `[WON'T] [Type] — Reason: [explanation or superseding P-number]`
 - `[VERIFIED]` means: tested in production on the live URL
 
-### Issue tracker sync
+### Rules
 
-Issues are lazy-created: create the issue only when an item moves to `[IN PROGRESS]`.
-Close the issue in the same PR that ships the work.
-
-### Automation pipeline
-
-Items tagged `[ok-for-automation]` can be routed to the auto-pipeline. All must be true:
-- Small blast radius (one file/component/route)
-- At least 2 concrete acceptance criteria
-- Names the specific file/component
-- No `[has-open-questions]` tag
-- Reversible
-
-### Starting work on an item
-
-1. Read the full item including ACs, Out of Scope, and Open Questions.
-2. Update status to `[IN PROGRESS]` in `Backlog.md` and sync the issue tracker.
-3. Create a branch named `<type>/<short-slug>`.
-4. Ask for answers to Open Questions when you reach a decision point - do not guess.
-
-### Completing work on an item
-
-1. Verify each acceptance criterion against the running app.
-2. Update heading to `[SHIPPED - YYYY-MM-DD]`.
-3. Close the issue tracker item.
-4. Do all Backlog.md edits in the same commit/PR as the work.
-
-### Never do
-
-- Never create an issue without a corresponding Backlog.md entry.
-- Never mark `[VERIFIED]` without testing in a running app.
-- Never mark `[SHIPPED]` without CI green and merge to main.
 - Never delete items from Backlog.md.
-- Never reverse the tag order — status first, type second.
+- Never mark `[SHIPPED]` without CI green and merge to main.
+- Never mark `[VERIFIED]` without testing in a running app.
+- Status first, type second. Never reverse.
 
 ---
 
@@ -257,47 +231,25 @@ Memory files live at `~/.claude/projects/[project-hash]/memory/`.
 
 ### Session start checklist
 
-1. Read `MEMORY.md` index.
-2. Read `project_resume.md` — where the last session left off.
-   - If In-Flight Work is populated or What's Next is missing — previous session was interrupted. Read the build plan before starting new work.
+1. Read CLAUDE.md.
+2. Read `MEMORY.md` + `project_resume.md`.
 3. Read `docs/agent-memory.md`.
-4. Read current `docs/build-plans/` phase file.
-5. Run `git log --oneline -10`.
-6. Cross-check memory claims against git/code state — trust what you observe, not what memory says.
-7. Read the specific Backlog.md item(s) for this session.
+4. Run `git log --oneline -10`, cross-check memory against current file state.
+5. Read the specific Backlog.md item(s) for this session.
+
+If In-Flight Work is populated or `project_resume.md` has no What's Next — previous session was interrupted. Read the build plan Batch Log before starting new work.
 
 ### Session end checklist
 
-**Never delete without a trace. Update in place, mark superseded, or move to Archived/Completed.**
+**Never delete without a trace. Update in place, mark superseded, or archive.**
 
 1. Run tests — run the full test suite. Fix failures before proceeding.
-2. `Backlog.md` — update status tags and item bodies in place, append new items. Never remove items.
-3. `docs/feature-map.md` — append shipped features, move roadmap items between tiers.
-4. `docs/agent-memory.md` — append decisions/gotchas, move completed entries to `## Completed Work`.
-5. `docs/build-plans/phase-N.md` — append to Batch Log with date and PR numbers.
-6. `project_resume.md` — overwrite with current session state: what was done, what is next, blockers.
-7. `MEMORY.md` index — append new entries.
-8. Commit `docs/` changes in the same commit as the work.
-
----
-
-## Dispatch Quick Reference
-
-*Required. Minimum 5 named files. Update at the start of each phase.*
-
-1. Read CLAUDE.md - then read the specific Backlog.md item - then read relevant source files below.
-2. Key entry points for current work:
-
-| Area | File |
-|------|------|
-| [Area 1] | `[full/relative/path/to/file]` |
-| [Area 2] | `[full/relative/path/to/file]` |
-| [Area 3] | `[full/relative/path/to/file]` |
-| [Area 4] | `[full/relative/path/to/file]` |
-| [Area 5] | `[full/relative/path/to/file]` |
-
-3. Run `[test command]` before and after every change.
-4. Update Backlog.md and docs/feature-map.md when work ships.
+2. `Backlog.md` — update status tags in place, append new items.
+3. `docs/feature-map.md` — append shipped items.
+4. `docs/agent-memory.md` — append decisions/gotchas, move completed to `## Completed Work`.
+5. `docs/build-plans/phase-N.md` — append to Batch Log.
+6. `project_resume.md` — overwrite with current state.
+7. Commit `docs/` changes with the work.
 
 ---
 
