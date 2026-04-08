@@ -213,9 +213,17 @@ Added Code Quality Rules section to `docs/templates/claude-md-template-code.md` 
 ---
 
 ### P17 — Reference agent definitions
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-08] [Feature]`
 
-Create 4 reference agents in `.claude/agents/`: code-reviewer, security-reviewer, planner, e2e-runner.
+Created 4 reference agents in `.claude/agents/`: code-reviewer.md, security-reviewer.md, planner.md, e2e-runner.md.
+
+**Acceptance criteria:**
+- 4 agent files exist in `.claude/agents/` - DONE
+- Format matches existing sop-checker.md (YAML frontmatter with name, description, tools, model) - DONE
+- code-reviewer: read-only, structured severity output - DONE
+- security-reviewer: OWASP Top 10, secret detection, read-only - DONE
+- planner: produces structured build plans, read-only - DONE
+- e2e-runner: Playwright tests, artifact capture - DONE
 
 ---
 
@@ -252,3 +260,4 @@ Add new compliance checks for security, hooks, code quality, and agent availabil
 - P14 — Security guidance document — SHIPPED 2026-04-08
 - P15 — Hooks guidance document — SHIPPED 2026-04-08
 - P16 — Code quality rules in code template — SHIPPED 2026-04-08
+- P17 — Reference agent definitions — SHIPPED 2026-04-08
