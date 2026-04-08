@@ -267,6 +267,22 @@ Added 6 new compliance checks across a new Section 9: S1 (no secrets, Critical),
 
 ---
 
+### P21 — Setup script for new projects
+`[SHIPPED - 2026-04-08] [Feature]`
+
+Bash onboarding script (`setup.sh`) that copies the standard file set into a target project directory.
+
+**Acceptance criteria:**
+- Script exists at repo root as `setup.sh`, executable - DONE
+- Copies CLAUDE.md, Backlog.md, agent-memory.md, feature-map.md, build plan, core SOP doc - DONE
+- Supports `--code` flag for code project template - DONE
+- Supports `--force` flag to overwrite existing files - DONE
+- Skips existing files by default with clear messaging - DONE
+- Prints next steps including compliance checker command - DONE
+- README updated to recommend the script as the primary setup path - DONE
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
@@ -288,3 +304,4 @@ Added 6 new compliance checks across a new Section 9: S1 (no secrets, Critical),
 - P5 — Build plan template — SHIPPED 2026-04-08
 - P6 — New project walkthrough — SHIPPED 2026-04-08
 - P7 — Existing project migration guide — SHIPPED 2026-04-08
+- P21 — Setup script for new projects — SHIPPED 2026-04-08

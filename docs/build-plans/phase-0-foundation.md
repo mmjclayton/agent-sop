@@ -75,21 +75,26 @@ agent-sop/
 - 2026-04-08: Batch 0.4 — P14-P20 shipped. Security guidance, hooks guidance, code quality rules, 4 reference agents, expanded code template sections, continuous learning pattern, 6 new compliance checks. Adapted from ECC reference repo. Commits f928a42-28dc771.
 - 2026-04-08: Batch 0.5 — Token optimisation. SOP line-range index, unified checklists (5 start / 7 end), merged Key Documents + Dispatch, trimmed template Backlog Management. Net -100 lines. Compliance checks C3/C4/C5/C7 updated. sop-checker agent updated. Commits 71a34e0-fd29ee9.
 - 2026-04-08: Batch 0.6 — P3-P5 shipped. Standalone templates for agent-memory, backlog, and build plan. Implementation guide and README updated. Commits a812881-606e49e.
-- 2026-04-08: Batch 0.7 — P6-P7 shipped. New project walkthrough (concrete Taskflow example), existing project migration checklist. README updated with ECC attribution, repo description and tags, new examples table. All tracking files updated.
+- 2026-04-08: Batch 0.7 — P6-P7 shipped. New project walkthrough (concrete Taskflow example), existing project migration checklist. README updated with ECC attribution, new examples table. All tracking files updated. Commit c4620b6.
+- 2026-04-08: Batch 0.8 — README quality pass. Removed all em dashes, corrected ECC attribution to affaan-m. Added verified token efficiency section with per-file measurements, model-specific context windows, and library-vs-session ratio. Commits ba5ea4c-b3235da.
+- 2026-04-08: Batch 0.9 — P21 shipped. Setup script (`setup.sh`) for onboarding new projects. Supports --code and --force flags. README updated to recommend script as primary setup path. Commit b36dd89.
 
 ---
 
 ## Deploy Checklist
 
 Before marking Phase 0 shipped:
-- [ ] All P1-P5 documents exist at their specified paths and are complete
-- [ ] Backlog.md statuses updated for all shipped items
-- [ ] feature-map.md updated with all shipped documents
-- [ ] README.md accurate and up to date
-- [ ] Initial GitHub repo created and pushed
+- [x] All P1-P5 documents exist at their specified paths and are complete
+- [x] Backlog.md statuses updated for all shipped items
+- [x] feature-map.md updated with all shipped documents
+- [x] README.md accurate and up to date
+- [x] Initial GitHub repo created and pushed
+- [x] P6-P7 example guides shipped
+- [x] P21 setup script shipped
+- [ ] Owner review and verification of all shipped documents
 
 ---
 
 ## Open Questions
 
-- 2026-04-07: Create GitHub repo before or after Phase 0 completes? [UNRESOLVED]
+- 2026-04-07: Create GitHub repo before or after Phase 0 completes? [RESOLVED - 2026-04-08: created during Phase 0, pushed incrementally as work shipped]

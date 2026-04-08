@@ -31,7 +31,10 @@ See CLAUDE.md Key Documents table.
 ## Decisions Made
 
 - 2026-04-07: Project name is `agent-sop`. Short, descriptive, works as a GitHub repo name.
-- 2026-04-07: Markdown only. No build process, no code, no dependencies.
+- 2026-04-07: Markdown only. No build process, no code, no dependencies. (Note: setup.sh added 2026-04-08 as a shell script, but the SOP library content itself remains markdown-only.)
+- 2026-04-08: README must use Australian English, no em dashes. Hyphens minimised in prose; colons, periods, and conjunctions preferred.
+- 2026-04-08: ECC attribution credits affaan-m (github.com/affaan-m/everything-claude-code), not Anthropic. ECC is a community project.
+- 2026-04-08: Token efficiency claims in README must be verified with measured data. Two estimation methods used (words x 1.3, chars / 4) because no public offline Claude tokeniser exists.
 - 2026-04-07: File structure — SOPs in `docs/sop/`, templates in `docs/templates/`, examples in `docs/examples/`.
 - 2026-04-07: This project follows its own SOP — including additive-only writes and session checklists.
 - 2026-04-07: P1 and P2 shipped as part of the initial scaffold (docs already existed from prior Cowork session).
@@ -90,9 +93,11 @@ See CLAUDE.md Key Documents table.
 
 ## Completed Work
 
+- 2026-04-08: P21 — Setup script shipped at `setup.sh`. Bash onboarding script with --code and --force flags. README updated to recommend as primary setup path.
+- 2026-04-08: README rewritten: removed all em dashes, added verified token efficiency section (measured per-file costs, model-specific context windows, library-vs-session ratio), ECC attribution corrected to affaan-m.
 - 2026-04-08: P6 — New project walkthrough shipped at `docs/examples/new-project-walkthrough.md`. Uses concrete Taskflow example.
 - 2026-04-08: P7 — Existing project migration guide shipped at `docs/examples/existing-project-migration.md`. Checklist format, 7 steps.
-- 2026-04-08: README updated with ECC attribution, repo description/tags, new examples and templates tables.
+- 2026-04-08: README updated with ECC attribution, new examples and templates tables.
 - 2026-04-08: P3 — Agent memory template shipped at `docs/templates/agent-memory-template.md`.
 - 2026-04-08: P4 — Backlog template shipped at `docs/templates/backlog-template.md`.
 - 2026-04-08: P5 — Build plan template shipped at `docs/templates/build-plan-template.md`.

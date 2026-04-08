@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-04-08b
+Last updated: 2026-04-08c
 
 ---
 
@@ -25,6 +25,7 @@ Last updated: 2026-04-08b
 | P5 | Build plan template | `docs/templates/build-plan-template.md` | 2026-04-08 |
 | P6 | New project walkthrough | `docs/examples/new-project-walkthrough.md` | 2026-04-08 |
 | P7 | Migration guide | `docs/examples/existing-project-migration.md` | 2026-04-08 |
+| P21 | Setup script | `setup.sh` | 2026-04-08 |
 
 ---
 

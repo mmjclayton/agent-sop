@@ -119,8 +119,8 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 *Append-only. New entries at top. Include commit refs.*
 
-### 2026-04-08: P6-P7 — Walkthrough and migration guides
-New project walkthrough with concrete Taskflow example, existing project migration checklist, README updated with ECC attribution and repo description/tags.
+### 2026-04-08: P6-P7, P21 — Guides and setup script (commits c4620b6-b36dd89)
+New project walkthrough (P6), migration checklist (P7), setup.sh onboarding script (P21). README rewritten: em dashes removed, verified token efficiency section, ECC attribution corrected to affaan-m.
 
 ### 2026-04-08: P14-P20 — ECC-informed expansion (commits f928a42-present)
 Security guidance, hooks guidance with 6 reference implementations, code quality rules, 4 reference agents (code-reviewer, security-reviewer, planner, e2e-runner), expanded code template sections (Auth, Database, Key Commands, Design System), continuous learning pattern, and 6 new compliance checks. Adapted from everything-claude-code reference repo.

@@ -282,7 +282,7 @@ agent-sop/
 
 ## Status
 
-Phase 0 (foundation) in progress. 17 items shipped (P1 through P7, P11 through P20). Next up: domain-specific variants for web apps (P8), marketing (P9), and data/analytics (P10).
+Phase 0 (foundation) in progress. 18 items shipped (P1 through P7, P11 through P21). Next up: domain-specific variants for web apps (P8), marketing (P9), and data/analytics (P10).
 
 ---
 
