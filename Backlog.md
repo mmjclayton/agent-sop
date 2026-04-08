@@ -187,9 +187,16 @@ Agent security guidance at `docs/sop/security.md`. Covers prompt injection aware
 ---
 
 ### P15 — Hooks guidance document
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-08] [Feature]`
 
-Hooks guidance at `docs/sop/hooks.md`. Explains hook types and provides 6 reference implementations.
+Hooks guidance at `docs/sop/hooks.md`. Explains hook types and provides 6 reference implementations: SessionStart auto-read, SessionEnd/PreCompact checklist trigger, pre-commit quality gate, git push review, post-edit type check, pattern extraction on Stop.
+
+**Acceptance criteria:**
+- File exists at `docs/sop/hooks.md` - DONE
+- Covers all 6 hook types (PreToolUse, PostToolUse, SessionStart, SessionEnd, PreCompact, Stop) - DONE
+- 6 reference implementations with JSON config examples - DONE
+- Combined hooks configuration example - DONE
+- Security note about project-scope hooks - DONE
 
 ---
 
@@ -238,3 +245,4 @@ Add new compliance checks for security, hooks, code quality, and agent availabil
 - P12 — SOP v2: owner feedback iteration — SHIPPED 2026-04-07
 - P13 — SOP Compliance Checker Agent — SHIPPED 2026-04-07
 - P14 — Security guidance document — SHIPPED 2026-04-08
+- P15 — Hooks guidance document — SHIPPED 2026-04-08
