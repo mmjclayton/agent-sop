@@ -317,9 +317,23 @@ A/B testing framework to measure Agent SOP effectiveness. Runs identical tasks a
 ### P24 — Multi-agent optimisation guide
 `[OPEN] [Feature]`
 
-Guidance for multiple agents working in the same repo efficiently. Token cost management, context sharing, conflict avoidance, worktree patterns.
+Standalone guide at `docs/sop/multi-agent.md` for multiple agents working the same repo. Consolidates and extends existing coverage (Section 0 contention, Section 16 context routing, Section 17 Managed Agents) into a single reference.
 
-**Open questions:** Scope TBD after benchmark results inform what matters most.
+**Scope (informed by benchmark rounds 1-2):**
+- Worktree isolation patterns (when to use, setup/teardown)
+- Token budget allocation across parallel agents (coordinator vs specialist)
+- Context sharing: what each agent reads vs what stays local
+- Conflict avoidance: file locking conventions, branch strategies, merge sequencing
+- Common Mistakes for multi-agent (based on Section 0 contention rules)
+- Managed Agents API patterns (permission policies, outcome grading)
+
+**Acceptance criteria:**
+- `docs/sop/multi-agent.md` exists as standalone guide
+- Consolidates Section 0, 16, 17 content without duplicating (single source of truth)
+- Core SOP section index updated with cross-reference
+- Both templates updated with multi-agent section scaffold
+- Compliance checklist updated with multi-agent checks
+- All tracking files updated (Backlog, feature-map, agent-memory, CLAUDE.md)
 
 ---
 

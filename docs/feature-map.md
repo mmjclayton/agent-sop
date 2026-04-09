@@ -50,7 +50,7 @@ Last updated: 2026-04-09
 
 | P# | Document | Path |
 |----|----------|------|
-| P24 | Multi-agent optimisation guide | TBD |
+| P24 | Multi-agent optimisation guide | `docs/sop/multi-agent.md` |
 | P8 | Web app variant | `docs/sop/variants/web-app.md` |
 | P9 | Marketing variant | `docs/sop/variants/marketing.md` |
 | P10 | Data/analytics variant | `docs/sop/variants/data-analytics.md` |

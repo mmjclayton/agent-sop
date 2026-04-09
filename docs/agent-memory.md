@@ -30,6 +30,8 @@ See CLAUDE.md Key Documents table.
 
 ## Decisions Made
 
+- 2026-04-09: Graphify knowledge graph tool evaluated for agent-sop and hst-tracker. Not adopted. For agent-sop: corpus too small, dispatch table already covers navigation. For hst-tracker: SOP dispatch + Common Mistakes already handles 90% of agent navigation. A hand-written ARCHITECTURE.md would deliver more value than an auto-generated graph for codebases the owner understands.
+- 2026-04-09: P24 (multi-agent optimisation) scoped with concrete acceptance criteria. Justified as community value even if not immediately needed for solo serial-agent workflow.
 - 2026-04-07: Project name is `agent-sop`. Short, descriptive, works as a GitHub repo name.
 - 2026-04-07: Markdown only. No build process, no code, no dependencies. (Note: setup.sh added 2026-04-08 as a shell script, but the SOP library content itself remains markdown-only.)
 - 2026-04-08: README must use Australian English, no em dashes. Hyphens minimised in prose; colons, periods, and conjunctions preferred.

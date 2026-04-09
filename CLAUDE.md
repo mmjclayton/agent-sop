@@ -120,6 +120,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 *Append-only. New entries at top. Include commit refs.*
 
+### 2026-04-09: Research session — graphify analysis, P24 scoping
+Evaluated safishamsi/graphify for use alongside agent-sop and hst-tracker. Conclusion: not valuable for agent-sop (too small, too well-structured), moderate value for hst-tracker but SOP dispatch already covers navigation. Recommended ARCHITECTURE.md over graphify for hst-tracker. Fleshed out P24 acceptance criteria with concrete scope informed by benchmark data.
+
 ### 2026-04-09: P23-P28 — Benchmark framework, optimisations, Managed Agents, digest changes
 P23: A/B benchmark framework with 8 task specs, runner script, blind scoring. Two rounds against hst-tracker. Round 1 (precise prompts): SOP +8%. Round 2 (vague prompts, sharpened SOP): SOP +33%. P25: Incorporated findings into SOP Section 15 (Benchmark-Proven Practices), both templates (Common Mistakes + intent-rich dispatch), compliance checklist (BP1-BP4), implementation guide, README. Also committed sharpened CLAUDE.md to hst-tracker with Common Mistakes section.
 
