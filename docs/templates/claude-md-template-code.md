@@ -25,17 +25,19 @@ Current phase files:
 
 ## Key Documents & Dispatch
 
-*Minimum 5 entries. Update at the start of each phase.*
+*Minimum 5 entries. Use intent-based descriptions ("when you need to..."). Update at the start of each phase.*
 
-| Area | File | Purpose |
-|------|------|---------|
-| Agent Memory | `docs/agent-memory.md` | Cross-session decisions, gotchas, invariants |
-| Feature Map | `docs/feature-map.md` | Shipped features + roadmap |
-| Backlog | `Backlog.md` | Single source of truth for all work items |
-| Build Plans | `docs/build-plans/*.md` | Phase architecture, batch logs |
-| Brand Voice | `.claude/brand-voice.md` | Copy rules, tone, terminology |
-| Schema | `[path/to/schema]` | Database schema |
-| CSS Tokens | `[path/to/styles]` (lines N-N) | CSS custom properties — include line range |
+| When you need to... | Start at | Notes |
+|---------------------|----------|-------|
+| Read cross-session context | `docs/agent-memory.md` | Decisions, gotchas, invariants |
+| Check or update work items | `Backlog.md` | Single source of truth for all items |
+| Check shipped features or roadmap | `docs/feature-map.md` | Shipped inventory + priority tiers |
+| Read phase architecture | `docs/build-plans/*.md` | Batch logs, locked decisions |
+| Check copy/tone rules | `.claude/brand-voice.md` | Brand voice, terminology |
+| Change the data model | `[path/to/schema]` | Always create a migration. Follow schema change protocol. |
+| Change colours, spacing, layout | `[path/to/styles]` (lines N-N) | CSS tokens. Never hardcode hex values. |
+| [Change X] | `[path]` | [what to know when you arrive — name related components, gotchas] |
+| [Change Y] | `[path]` | [include context the file path alone does not convey] |
 
 Test: `[test command]`
 After shipping: update Backlog.md + docs/feature-map.md
@@ -206,6 +208,79 @@ After shipping: update Backlog.md + docs/feature-map.md
 - Functions should do one thing. Prefer small, focused functions over large monolithic ones
 - Split at 50 lines. If a function exceeds 50 lines, extract helpers
 - Prefer early returns over deep nesting (max 4 levels)
+
+---
+
+## Common Mistakes — Read Before Coding
+
+*Project-specific gotchas. This section directly prevents production bugs (benchmark-proven, SOP Section 15). Update as new gotchas are discovered.*
+
+### Data Model
+- [e.g. "[SharedModel] is GLOBAL. Never filter by userId. [ScopedModel] is user-scoped."]
+- [e.g. "[Field] is derived at read time, not stored. Never add a column for it."]
+- [e.g. "[Table.column] is scoped to [constraint], not globally unique. Use findFirst with both fields."]
+
+### Client
+- [e.g. "[ComponentA] is its own file at [path], not inside [ComponentB]. Extracted on [date]."]
+- [e.g. "The default view is [key]. When referring to 'home' in code, use [key]."]
+- [e.g. "[Pill/Button/Card] component exists at [path]. Check before creating similar components."]
+- [e.g. "[N]px minimum touch targets on all interactive elements."]
+
+### Naming Conventions (CRITICAL — prevents production bugs)
+*List any naming convention an agent might guess wrong. Benchmark data shows guessed token/class names cause production breakage.*
+- [e.g. "CSS token prefix is `--color-bg-*` for backgrounds, `--color-text-*` for text. NOT `--color-surface-*`."]
+- [e.g. "CSS class pattern: `.workout-status-*` for status badges, `.set-log-*` for set-level styles."]
+- [e.g. "API routes: `/api/logger/*` for workout, `/api/builder/*` for program builder. No `/api/workout/*`."]
+- [e.g. "Component files: PascalCase.jsx. Utility files: camelCase.js. Test files: *.test.jsx."]
+
+### Server
+- [e.g. "Every query filters by [req.userId] via [relation]. Never query without it."]
+- [e.g. "[utilityFunction()] does [thing]. Use it for [purpose], do not create your own."]
+- [e.g. "All async route handlers have try-catch. New routes must follow the same pattern."]
+
+### Testing
+- [e.g. "Integration tests use a real database, not mocks. Test DB is [name]."]
+- [e.g. "Test mode uses [auth bypass]. Auth is tested separately."]
+
+### Brand Voice
+- [e.g. "Direct, dry, precise. No exclamation marks in UI copy. See [path] for full guide."]
+
+---
+
+## Definition of Done
+
+*Self-evaluate against the relevant rubric before committing. If any criterion is not met, iterate before shipping. Compatible with Claude Managed Agents' `user.define_outcome` API.*
+
+### Bug fix
+- Root cause identified from reading the actual code — do not infer root cause from documentation alone
+- Fix is minimal: change the broken logic, do not remove working mechanisms
+- Fix applied to ALL instances of the pattern (grep for similar occurrences)
+- No regressions — full test suite passes
+- New test covers the specific bug scenario
+
+### Feature
+- All acceptance criteria from the Backlog item are met
+- Server endpoint has integration tests (real DB, not mocks)
+- Client component has unit tests for logic
+- UI follows design system (CSS tokens, touch targets, responsive breakpoints)
+- Brand voice followed in all user-facing copy (check `.claude/brand-voice.md`)
+- No console.log or debug artifacts
+- Backlog.md and feature-map.md updated in the same commit
+
+### Refactor
+- Behaviour is unchanged — all existing tests pass without modification
+- If tests needed updating, the change was in assertions matching new implementation (not weakening tests)
+- No unrelated files modified
+- New pattern is consistent with existing codebase conventions
+- Dead code from the old pattern is removed (not commented out)
+
+### Test writing
+- Tests cover actual behaviour, not just the happy path
+- Edge cases: null/undefined, empty collections, boundary values
+- Test names describe behaviour under test (not implementation)
+- Tests follow existing patterns (describe blocks, naming, helpers)
+- No production code modified
+- All tests pass
 
 ---
 

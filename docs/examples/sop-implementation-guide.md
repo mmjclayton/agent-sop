@@ -29,17 +29,18 @@ Create these files in order. Fill in project-specific details — do not leave t
 Required sections:
 - **Agent SOP** — reference to the SOP and the two non-negotiable rules, plus conflict precedence
 - **Build Plans — READ FIRST** — link to `docs/build-plans/phase-0-foundation.md`
-- **Key Documents & Dispatch** — single table with paths to all standard files (minimum 5 entries), test command, and after-shipping reminder
+- **Key Documents & Dispatch** — intent-based table ("When you need to...") with paths and contextual notes (minimum 5 entries), test command, and after-shipping reminder
 - **Current Priority Items** — OPEN/IN PROGRESS items only, grouped by priority tier
 - **Backlog Management** — tag taxonomy and rules (process details live in the SOP, not here)
 - **Stack** — technologies, hosting, CI, live URL (or n/a)
 - **Key Commands** — the 3-5 most-used shell commands for this project
+- **Common Mistakes** — project-specific gotchas that prevent wrong turns. Name specific files, models, tokens, and conventions. This is the highest-value section for agent quality (benchmark-proven, SOP Section 15).
 - **Rules for Automated Builds** — numbered rules, must include "never delete without a trace" and "update Backlog.md and feature-map.md when work ships"
 - **Session & Memory Hygiene** — start checklist (5 steps) and end checklist (7 steps, test gate is step 1 for code projects)
 - **Recent Work** — append-only, new entries at top, always include PR/commit refs
 - **Deprioritised** — items moved here from priority lists, never removed
 
-For code projects, also add: **Auth**, **Database**, **Design System**, **Code Quality Rules** sections.
+For code projects, also add: **Auth**, **Database**, **Design System**, **Code Quality Rules** sections, and structure Common Mistakes with subsections (Data Model, Client, Server, Testing, Brand Voice).
 
 Keep per-session sections under 200 lines / 2,000 tokens. Reference sections (Auth, DB, Design System, Code Quality) may extend beyond.
 

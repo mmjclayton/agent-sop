@@ -1,6 +1,6 @@
 # Claude Code Agent SOP
 **Standard Operating Procedure — All Projects**
-Last updated: 2026-04-08
+Last updated: 2026-04-09
 
 ---
 
@@ -53,7 +53,10 @@ If the command is not available, execute manually:
 | Dispatch Quick Reference (Section 11) | 426-435 |
 | Optional Patterns (Section 12) | 438-520 |
 | New Project Setup (Section 13) | 523-542 |
-| Common Mistakes (Section 14) | 545-562 |
+| Common Mistakes (Section 14) | 545-577 |
+| Benchmark-Proven Practices (Section 15) | 579-680 |
+| Multi-Agent Context Routing (Section 16) | 682-770 |
+| Managed Agents Integration (Section 17) | 772-850 |
 
 ---
 
@@ -113,7 +116,7 @@ Every project must have the following files. Create them at project initialisati
 |------|------|-------|---------|
 | Project instructions | `CLAUDE.md` | Human + Agent | Stack, conventions, dispatch reference, rules. Master context file. |
 | Backlog | `Backlog.md` | Human + Agent | Single source of truth for all work items. |
-| Agent memory | `docs/agent-memory.md` | Agent | Permanent cross-session context: decisions, gotchas, data model invariants, preferences. Read and updated every session. |
+| Agent memory | `docs/agent-memory.md` | Agent | Permanent cross-session context: decisions, gotchas, data model invariants, preferences. Read and updated every session. **Optional for projects with fewer than 10 sessions** — CLAUDE.md is the mandatory context source; agent-memory becomes valuable once decisions accumulate. |
 | Feature map | `docs/feature-map.md` | Agent | Inventory of shipped features and prioritised roadmap. |
 | Build plans | `docs/build-plans/phase-N-[name].md` | Agent | Phase-level architecture, batch logs, deploy checklists. One file per phase. |
 
@@ -147,6 +150,8 @@ Claude Code has two memory systems. They serve different purposes and must not o
 **Filename rule:** The resume file is always named `project_resume.md`. Do not use project-specific prefixes (e.g. `project_loadout_resume.md`). Projects using a prefixed name should rename to `project_resume.md` as part of their SOP migration.
 
 **Distinction:** `docs/agent-memory.md` is permanent cross-session context (architectural decisions, data model invariants, named utility functions, patterns) — committed to git, visible to all contributors. `project_resume.md` is a point-in-time snapshot (where the project stands, what is next) — local, overwritten each session. Different purpose, different audience. Never confuse them.
+
+**API primitive:** The Claude API `memory_20250818` tool is the underlying mechanism for file-backed persistent notes. The SOP's `docs/agent-memory.md` is the manual, git-committed equivalent. For Managed Agents API sessions, use memory stores instead (see Section 17). When using tool-result clearing, always exclude the memory tool from clearing — see `docs/sop/context-management.md`.
 
 ---
 
@@ -250,7 +255,7 @@ Append only. Mark stale entries [SUPERSEDED - YYYY-MM-DD] and move to ## Archive
 
 **Template variants:** Two CLAUDE.md templates exist in `docs/templates/`: `claude-md-template-base.md` for any project type (markdown, scripts, docs), and `claude-md-template-code.md` for full-stack code projects (adds Auth, Database, Design System, and code-specific build rules). Always start from the base template and add the code sections only if needed.
 
-**CLAUDE.md size limit:** Keep the per-session sections of CLAUDE.md under 200 lines / 2,000 tokens. Per-session sections are everything an agent reads every session: Agent SOP, Build Plans, Key Documents, Priority Items, Backlog Management, Key Commands, Rules for Automated Builds, Session & Memory Hygiene, Dispatch Quick Reference, and Recent Work. Project-specific reference sections (Auth, Database, Design System, and similar) may extend beyond the 200-line target — these are consulted on demand, not read every session, so their context cost is incurred only when relevant. If per-session sections are growing beyond the limit, move detail into `docs/agent-memory.md`, build plans, or source-file comments.
+**CLAUDE.md size limit:** Keep the per-session sections of CLAUDE.md under 200 lines / 2,000 tokens for non-code projects, or **300 lines / 3,000 tokens for code projects that include a Common Mistakes section** (benchmark data shows the extra ~100 lines for Common Mistakes pays for itself in fewer wrong turns and prevented production bugs). Per-session sections are everything an agent reads every session: Agent SOP, Build Plans, Key Documents, Priority Items, Backlog Management, Key Commands, Common Mistakes, Rules for Automated Builds, Session & Memory Hygiene, Dispatch Quick Reference, and Recent Work. Project-specific reference sections (Auth, Database, Design System, and similar) may extend beyond the target — these are consulted on demand, not read every session, so their context cost is incurred only when relevant. If per-session sections are growing beyond the limit, move detail into `docs/agent-memory.md`, build plans, or source-file comments.
 
 **Token overhead:** Every file read by an agent costs approximately 1.7x its raw token count (loading and processing overhead). This is why the size limit matters and why the Dispatch Quick Reference enforces a minimum rather than a maximum. Keep referenced files lean and targeted. Line-range hints (e.g. "CSS tokens - client/src/index.css lines 1-80") reduce overhead significantly for large files.
 
@@ -340,6 +345,14 @@ Never delete without a trace. Update in place, mark superseded, or archive. See 
 
 - If In-Flight Work is populated or `project_resume.md` has no What's Next — previous session was interrupted. Read the build plan Batch Log before starting anything new.
 - Source files from the Key Source Files table in `agent-memory.md` are read as work begins, not as a checklist ceremony.
+
+**Lightweight start (for small, scoped tasks):**
+Tasks tagged `[ok-for-automation]` or single-file changes with fewer than 2 acceptance criteria may use a reduced checklist:
+```
+1. Read CLAUDE.md (specifically: Common Mistakes + Dispatch sections)
+2. Read the Backlog item for this task
+```
+Skip agent-memory.md, build plans, and MEMORY.md/project_resume.md. The lightweight start saves ~3-4K tokens per session. Use the full checklist for any task that touches multiple files, requires data model knowledge, or involves architectural decisions.
 
 ---
 
@@ -438,14 +451,30 @@ Never delete without a trace. Update in place, mark superseded, or archive. See 
 
 ## 11. Key Documents & Dispatch (Required Section)
 
-Every project's CLAUDE.md must include a Key Documents & Dispatch section (or separate Key Documents + Dispatch Quick Reference sections). Requirements:
+Every project's CLAUDE.md must include a Key Documents & Dispatch section. Requirements:
 
+- **Intent-based format required.** Use "When you need to..." column headers, not "Area | File". Benchmark data shows intent-based dispatch reduces tool calls by 50% on complex tasks (agents go directly to the right file instead of exploring). The old "Area | File" format is deprecated.
 - Minimum 5 named entry-point files with full relative paths
+- Notes column must include contextual guidance (related components, gotchas, constraints)
 - Updated at the start of each phase — not just at project setup
 - Include line-range hints for large files (e.g. "CSS tokens — client/src/index.css (lines 1-80)")
 - Include test command and after-shipping reminder
 
-This section is what allows an agent dropped into the middle of a project to orient in under 2 minutes. Merging Key Documents and Dispatch into one table eliminates duplicate file listings and saves tokens per session.
+**Correct format:**
+```
+| When you need to... | Start at | Notes |
+|---------------------|----------|-------|
+| Change X | `path/to/file` | Related component is Y. Watch out for Z. |
+```
+
+**Deprecated format (do not use):**
+```
+| Area | File |
+|------|------|
+| X | `path/to/file` |
+```
+
+This section is what allows an agent dropped into the middle of a project to orient in under 2 minutes.
 
 ---
 
@@ -532,6 +561,57 @@ Claude Code hooks can automate pattern detection. A `Stop` hook can evaluate eac
 - External API issues or transient errors
 - Information already documented in CLAUDE.md or the codebase
 
+### Outcome rubrics (self-evaluation before shipping)
+
+An outcome rubric defines what "done" looks like for a task type. The agent evaluates its own work against the rubric before committing. Benchmark data shows rubric-based evaluation catches quality gaps that checklist-based approaches miss — the rubric forces the agent to verify results against specific criteria rather than simply confirming steps were followed.
+
+**Add a `## Definition of Done` section to CLAUDE.md** with per-task-type rubrics. The agent reads the relevant rubric before committing and self-evaluates. If any criterion is not met, it iterates before shipping.
+
+Example rubrics by task type:
+
+**Bug fix:**
+```markdown
+- Root cause identified from reading the actual code — do not infer root cause from documentation alone
+- Fix is minimal: change the broken logic, do not remove working mechanisms
+- Fix applied to ALL instances of the pattern (grep for similar occurrences)
+- No regressions — full test suite passes
+- New test covers the specific bug scenario
+- Fix uses existing project utilities where they exist (check Common Mistakes section)
+- Commit message explains the root cause, not just what changed
+```
+
+**Feature:**
+```markdown
+- All acceptance criteria from the Backlog item are met
+- Server endpoint has integration tests (real DB, not mocks)
+- Client component has unit tests for logic
+- UI follows design system (CSS tokens, touch targets, responsive breakpoints)
+- Brand voice followed in all user-facing copy
+- No console.log or debug artifacts
+- Backlog.md and feature-map.md updated in the same commit
+```
+
+**Refactor:**
+```markdown
+- Behaviour is unchanged — all existing tests pass without modification
+- If tests needed updating, the change was in test assertions matching new implementation (not weakening tests)
+- No unrelated files modified
+- New pattern is consistent with existing codebase conventions
+- Dead code from the old pattern is removed (not commented out)
+```
+
+**Test writing:**
+```markdown
+- Tests cover the actual behaviour of the code, not just the happy path
+- Edge cases tested: null/undefined inputs, empty collections, boundary values
+- Test names describe the behaviour under test (not the implementation)
+- Tests follow existing patterns in the test file (describe blocks, naming, helpers)
+- No production code modified
+- All tests pass
+```
+
+These rubrics work with Claude Managed Agents' `user.define_outcome` API (which provisions an independent grader), but are equally effective as self-evaluation prompts in Claude Code sessions — the agent reads the rubric from CLAUDE.md and checks its own work before committing.
+
 ---
 
 ## 13. Applying This SOP to a New Project
@@ -574,3 +654,294 @@ Claude Code hooks can automate pattern detection. A `Stop` hook can evaluate eac
 | Storing derived facts in memory (test counts, line numbers, versions) | Goes stale immediately, misleads future agents | Store the rule, not the measurement — check at runtime |
 | Skipping tests before committing (code projects) | Broken code ships, next session starts with failures | Run the test suite as step 1 of session-end checklist |
 | Skipping session end checklist for "small changes" | Small changes compound into context debt | No exceptions |
+
+---
+
+## 15. Benchmark-Proven Practices
+
+*The following practices are backed by A/B benchmark data (SOP vs no-SOP agents on identical tasks). They produced a 33% quality improvement on vague, context-dependent tasks. See `docs/benchmark/results/` for full methodology and data.*
+
+### 15.1 Common Mistakes Section (Required for Code Projects)
+
+Every code project's CLAUDE.md must include a `## Common Mistakes` section with project-specific gotcha callouts. This is the single highest-value section for agent quality — it directly prevented production bugs in benchmark testing.
+
+**Structure the section by area:**
+
+```
+## Common Mistakes — Read Before Coding
+
+### Data Model
+- [Model X] is GLOBAL. Never filter by userId. [Model Y] is user-scoped.
+- [Field] is derived, not stored. Never add a column for it.
+- [Table.column] is scoped to [constraint], not globally unique.
+
+### Client
+- [Component A] is its own file, not inside [Component B].
+- The default view is [view name]. When referring to "home", it is [key].
+- [Component] exists at [path]. Check for it before creating a similar one.
+- CSS colours must use [token prefix] tokens only. Never hardcode hex.
+
+### Server
+- Every query filters by [user field] via [relation]. Never query without it.
+- [Utility function] does [thing]. Use it, do not create your own.
+
+### Testing
+- Tests use [real DB / mocks]. Test DB is [name].
+
+### Brand Voice
+- [One-line summary of tone]. See [path] for full guide.
+```
+
+**What makes a good gotcha entry:**
+- States what NOT to do and why (negative guidance prevents errors)
+- **States what IS correct** (not just the anti-pattern — benchmark data shows agents can misinterpret "don't do X" as "remove the mechanism entirely" without a positive alternative)
+- Names specific files, functions, models, or CSS tokens
+- Explains the consequence of getting it wrong
+- Is discoverable by reading code, but easily missed under time pressure
+
+**Example of a weak entry (anti-pattern only):**
+```
+Tonnage is derived, not stored. Calculated from weight x reps x countTwice flags.
+```
+
+**Example of a strong entry (anti-pattern + correct pattern):**
+```
+Tonnage is derived, not stored. The bilateral multiplier Math.max(wMult, rMult) is the correct formula — do not remove it. Historical bug (B1) was wMult * rMult (4x) instead of Math.max (2x).
+```
+
+The weak entry led a benchmark agent to remove the multiplier entirely. The strong entry prevents that misinterpretation.
+
+**What does NOT belong:**
+- General best practices (use the Code Quality Rules section)
+- Derived facts that go stale (test counts, line numbers)
+- Information already obvious from reading the schema or code
+
+### 15.2 Intent-Rich Dispatch (Required)
+
+The Key Documents & Dispatch section must use **intent-based descriptions**, not just file paths. Agents given "when you need to change X, start at Y" navigate directly to the right files. Agents given only file paths waste tool calls exploring.
+
+**Pattern:**
+
+```
+| When you need to... | Start at | Notes |
+|---------------------|----------|-------|
+| Change workout logging | `WorkoutLogger.jsx` | State machine. ExerciseCard is separate file. |
+| Change the data model | `schema.prisma` | Always create a migration. Follow protocol. |
+| Change colours/spacing | `index.css` (lines 1-80) | 80+ CSS tokens. Never hardcode hex. |
+```
+
+**Compare with the weaker pattern (file-path only):**
+
+```
+| Area | File |
+|------|------|
+| Workout logger | `WorkoutLogger.jsx` |
+| Schema | `schema.prisma` |
+| CSS | `index.css` |
+```
+
+The intent-based version tells the agent what to do when they arrive. The file-path version only tells them where to go.
+
+### 15.3 Vague Prompt Resilience
+
+The SOP should be designed to help agents succeed when prompts are vague and product-level ("fix the tonnage bug", "add skip exercise"), not just when prompts are precise ("modify line 42 of file X"). In benchmarks, precise prompts masked context deficiencies — both SOP and baseline agents scored similarly. Vague prompts exposed a 33% quality gap.
+
+**Implication for CLAUDE.md authors:** write context that answers the questions a developer would ask when handed a vague task:
+- "Where does this logic live?" (intent-rich dispatch)
+- "What should I NOT do?" (common mistakes)
+- "What already exists that I should reuse?" (named components, utilities, tokens)
+- "What are the non-obvious constraints?" (data model gotchas, brand voice rules)
+
+### 15.4 Benchmark Safety Rules
+
+When running A/B benchmarks or any agent testing against a real codebase:
+
+- **Never push to main or any shared branch.** Benchmark agents work on throwaway branches in git worktrees only.
+- **Never access production or staging databases.** Benchmark agents use test databases or no database.
+- **Never deploy.** No CI triggers, no Render/Vercel deploys, no pushing to remote.
+- **Clean up after every round.** Remove worktrees and branches when scoring is complete.
+- **Run strictly sequentially.** Never overlap agent batches on the same worktrees. Setup round N, run all agents, wait for completion, score, cleanup, then setup round N+1. Concurrent batches cause worktree contamination.
+
+**Managed Agents API safety (when using `api.anthropic.com/v1/agents`):**
+When benchmarks run via Managed Agents sessions instead of local Claude Code, use permission policies to enforce safety at the API level:
+- `bash`: `always_allow` (agents need to run tests)
+- `write` and `edit`: `always_allow` (agents need to modify code)
+- Git push operations: restrict via system prompt ("never push to remote") or use a read-only GitHub token that lacks push permissions
+- Mount repositories with read-only tokens when testing code review or analysis tasks
+- Use isolated environments per session — each Managed Agent session gets its own container, eliminating the worktree contamination problem entirely
+
+---
+
+## 16. Multi-Agent Context Routing
+
+When multiple agents work in parallel on the same project, not every agent needs the full SOP context. Routing the right context to each agent based on task type saves 15-25% of token spend while maintaining quality on the tasks that matter.
+
+### Context tiers
+
+| Task type | Context needed | What to load |
+|-----------|---------------|-------------|
+| Bug fix (multi-file) | Full | CLAUDE.md + agent-memory.md + build plan |
+| Feature (multi-file) | Full | CLAUDE.md + agent-memory.md + build plan |
+| Refactor (cross-cutting) | Full | CLAUDE.md + agent-memory.md |
+| CSS fix (single property) | Partial | CLAUDE.md Common Mistakes + Design System only |
+| Test writing | Minimal | Source file under test only. CLAUDE.md optional. |
+| Utility creation | Minimal | CLAUDE.md Common Mistakes only (for naming conventions) |
+| Documentation | Minimal | Backlog item only |
+
+### Routing rules
+
+1. **Default to full context.** When in doubt, load everything. The cost of unnecessary context (~5K tokens) is lower than the cost of a wrong turn (rework, production bugs).
+2. **Use minimal context only when the task is tagged `[ok-for-automation]`** or is explicitly a single-file, self-contained change.
+3. **Test-writing agents should NOT read CLAUDE.md.** Benchmark data shows SOP context adds no quality to test writing and may introduce caution that weakens assertions.
+4. **Every agent, regardless of tier, must follow the session end checklist** if it modifies committed files.
+
+### Conflict avoidance
+
+- Each agent works on a **separate branch** and merges sequentially.
+- Agents on the same codebase must not modify the same files. Assign files explicitly in the task prompt.
+- If two agents need to modify the same file, run them sequentially, not in parallel.
+- Documentation conflicts (agent-memory.md, Backlog.md) resolve by appending both entries.
+- Code conflicts require human review. Flag in agent-memory.md Gotchas.
+
+### Managed Agents API implementation
+
+When using the Claude Managed Agents API (`api.anthropic.com/v1/agents`), the context routing table maps directly to agent configurations:
+
+**Coordinator agent** (full context):
+```json
+{
+  "name": "Engineering Lead",
+  "model": "claude-sonnet-4-6",
+  "system": "[Full CLAUDE.md content including Common Mistakes, Dispatch, Definition of Done]",
+  "tools": [{"type": "agent_toolset_20260401"}],
+  "callable_agents": [
+    {"type": "agent", "id": "REVIEWER_ID", "version": 1},
+    {"type": "agent", "id": "TEST_WRITER_ID", "version": 1},
+    {"type": "agent", "id": "RESEARCHER_ID", "version": 1}
+  ]
+}
+```
+
+**Code reviewer** (read-only, partial context):
+```json
+{
+  "name": "Code Reviewer",
+  "model": "claude-sonnet-4-6",
+  "system": "[Common Mistakes + Design System + Definition of Done rubrics only]",
+  "tools": [{
+    "type": "agent_toolset_20260401",
+    "default_config": {"enabled": false},
+    "configs": [
+      {"name": "read", "enabled": true},
+      {"name": "grep", "enabled": true},
+      {"name": "glob", "enabled": true},
+      {"name": "bash", "enabled": true}
+    ]
+  }]
+}
+```
+
+**Test writer** (minimal context, write access):
+```json
+{
+  "name": "Test Writer",
+  "model": "claude-sonnet-4-6",
+  "system": "Write tests. Read the source file under test first. Follow existing test patterns.",
+  "tools": [{"type": "agent_toolset_20260401"}]
+}
+```
+
+**Key patterns:**
+- The coordinator has `callable_agents` — specialists do not (only one level of delegation).
+- All agents share the same container and filesystem but run in isolated threads with separate context.
+- Threads are persistent: the coordinator can send follow-up messages to a specialist that retains its prior context.
+- Attach `memory_store` resources for persistent cross-session learnings. Map `docs/agent-memory.md` sections to memory store paths: Common Mistakes → read-only store, Decisions Made → read-write store.
+- Use `user.define_outcome` with rubrics from the Definition of Done section for quality-gated work — a separate grader evaluates the output and sends feedback for iteration.
+
+---
+
+## 17. Managed Agents Integration Guide
+
+This section maps SOP concepts to the Claude Managed Agents API (`api.anthropic.com/v1/agents`, beta `managed-agents-2026-04-01`). Use this when transitioning a project from Claude Code sessions to the Managed Agents API, or when building products on top of Managed Agents that follow the SOP.
+
+### Memory store mapping
+
+The SOP's file-based memory system maps to Managed Agents memory stores:
+
+| SOP file | Memory store | Access | Notes |
+|----------|-------------|--------|-------|
+| `docs/agent-memory.md` Decisions + Gotchas | Shared project store (read-write) | `read_write` | All agents read; coordinator writes learnings |
+| CLAUDE.md Common Mistakes | Reference store (read-only) | `read_only` | Loaded by all agents, never modified by agents |
+| `project_resume.md` | Not needed | N/A | Sessions have built-in event history via `getEvents()` — resume from any checkpoint |
+| `docs/feature-map.md` | Not needed | N/A | Track in the repo; agents read via filesystem |
+
+Structure memory stores as many small files (max 100KB each), not a few large ones. Use path prefixes for organisation: `/common-mistakes/data-model.md`, `/common-mistakes/client.md`, `/decisions/2026-04.md`.
+
+### Skills vs CLAUDE.md sections
+
+Managed Agents skills load on demand when relevant to the task. For most projects, keep Common Mistakes and Dispatch in the system prompt (always loaded) rather than as skills. Skills are better suited for:
+- Large reference material (API docs, design system specs > 300 lines)
+- Domain-specific workflows that apply to some tasks but not others
+- Content that changes independently of the agent configuration
+
+A maximum of 20 skills per session applies across all agents in a multi-agent setup.
+
+### Session lifecycle vs SOP checklists
+
+| SOP concept | Managed Agents equivalent |
+|-------------|--------------------------|
+| Session start checklist | System prompt includes CLAUDE.md content; memory stores loaded automatically |
+| Session end checklist | Agent writes learnings to memory store; event log persists all activity |
+| `project_resume.md` snapshot | `getEvents()` — retrieve any prior session's full event history |
+| Context compaction at 60% | Managed by the harness automatically (built-in prompt caching and compaction) |
+| Never delete without a trace | Append-only event log is the native model — events cannot be deleted |
+
+### Outcomes for quality-gated work
+
+The `user.define_outcome` event pairs a task description with a rubric (markdown). A separate grader evaluates the output and returns per-criterion feedback. The agent iterates until the rubric is satisfied or `max_iterations` is reached.
+
+Map the SOP's Definition of Done rubrics directly to outcome rubrics:
+1. Upload the rubric via the Files API (`POST /v1/files`)
+2. Send `user.define_outcome` with the rubric file reference
+3. The grader evaluates independently (separate context window, no bias from the agent's implementation)
+4. Results surface as `span.outcome_evaluation_end` events with `satisfied`, `needs_revision`, or `max_iterations_reached`
+
+This is the API-native version of the self-evaluation pattern described in Section 12. The key advantage: the grader runs in a separate context window, avoiding the confirmation bias inherent in self-evaluation.
+
+---
+
+## 18. SOP Evolution Loop
+
+The SOP is a living document. Use benchmark data to iteratively improve it — not gut feeling.
+
+### The loop
+
+```
+1. Run A/B benchmark (SOP vs no-SOP) on real tasks
+2. Identify where SOP helped, hurt, or had no effect
+3. Fix what hurt, keep what helped, cut what had no effect
+4. Re-run benchmark to verify the fix worked
+5. Repeat
+```
+
+### Proven principles (from 5 benchmark rounds, 40+ agent runs)
+
+| Principle | Evidence |
+|-----------|----------|
+| **Gotcha entries must state what IS correct, not just the anti-pattern** | Ambiguous tonnage entry caused 2/2 wrong fixes. Fixed entry caused 1/1 correct fix. |
+| **Less context is better than ambiguous context** | Definition of Done rubric added weight without quality. Removing it eliminated over-correction. |
+| **Intent-rich dispatch saves tool calls** | "When you need to change X, start at Y" vs file-path tables: ~50% fewer exploration tool calls. |
+| **The SOP's value is a higher floor, not a higher ceiling** | When baseline doesn't fail catastrophically, results are equivalent. SOP insures against bad rolls. |
+| **Baseline quality is stochastic** | Same task, same codebase: baseline crashed in R2, matched SOP in R4. The SOP removes this variance. |
+
+### What to benchmark
+
+- **Vague prompts** (how real work arrives), not precise specs
+- **Context-dependent tasks** (require project knowledge), not self-contained ones
+- **Multiple rounds** for statistical confidence — single rounds are misleading
+
+### What to cut
+
+If a section of CLAUDE.md doesn't improve benchmark outcomes, remove it. Every line costs tokens. The optimal CLAUDE.md is the minimum set of context that prevents the specific failures you've observed.
+
+See `docs/guides/sop-hill-climbing.md` for the detailed methodology.

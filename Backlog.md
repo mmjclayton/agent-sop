@@ -298,6 +298,87 @@ Two Claude Code slash commands that automate the session start and end checklist
 
 ---
 
+### P23 — SOP Benchmark Framework
+`[SHIPPED - 2026-04-09] [Feature]`
+
+A/B testing framework to measure Agent SOP effectiveness. Runs identical tasks against hst-tracker with two conditions: full SOP context vs bare repo. Uses git worktrees for isolation.
+
+**Acceptance criteria:**
+- Framework doc at `docs/benchmark/README.md` with methodology, scoring rubric, limitations - DONE
+- 4 task specs in `docs/benchmark/tasks/` covering refactor, test writing, feature - DONE
+- Runner script at `docs/benchmark/run-benchmark.sh` (setup, run, score, cleanup) - DONE
+- Baseline stub doc at `docs/benchmark/nosop-stub.md` - DONE
+- Non-destructive: uses worktrees, never touches main, no DB access
+- Results template in `docs/benchmark/results/`
+- At least one full benchmark run completed with scored results
+
+---
+
+### P24 — Multi-agent optimisation guide
+`[OPEN] [Feature]`
+
+Guidance for multiple agents working in the same repo efficiently. Token cost management, context sharing, conflict avoidance, worktree patterns.
+
+**Open questions:** Scope TBD after benchmark results inform what matters most.
+
+---
+
+### P25 — Incorporate benchmark findings into SOP
+`[SHIPPED - 2026-04-09] [Iteration]`
+
+Update all SOP documents to incorporate benchmark-proven practices: Common Mistakes section (required for code projects), intent-rich dispatch pattern, vague prompt resilience guidance.
+
+**Acceptance criteria:**
+- Core SOP Section 15 added (Benchmark-Proven Practices) with 3 subsections - DONE
+- Base template updated with Common Mistakes scaffold and intent-rich dispatch - DONE
+- Code template updated with code-specific Common Mistakes examples and intent-rich dispatch - DONE
+- Compliance checklist updated with 4 new checks (BP1-BP4) across Section 10 - DONE
+- Implementation guide updated to reference Common Mistakes as required - DONE
+- README updated with benchmark results section and findings - DONE
+- SOP section index updated - DONE
+
+---
+
+### P26 — Benchmark-driven SOP optimisations
+`[SHIPPED - 2026-04-09] [Iteration]`
+
+Applied all optimisations derived from benchmark data analysis:
+1. Common Mistakes mandatory for code projects (was recommended)
+2. CLAUDE.md per-session limit raised to 300 lines for code projects with Common Mistakes
+3. Intent-only dispatch format enforced (old Area|File deprecated)
+4. Lightweight session start for [ok-for-automation] tasks
+5. Multi-agent context routing (Section 16): task-type → context tier → agent config
+6. agent-memory.md optional for projects with fewer than 10 sessions
+7. Benchmark safety rules: no push to main, worktree-only, sequential batches
+8. Naming convention gotcha requirement in Common Mistakes template
+
+---
+
+### P27 — Managed Agents integration and outcome rubrics
+`[SHIPPED - 2026-04-09] [Feature]`
+
+Integrated Claude Managed Agents API patterns into the SOP. Six components:
+1. Outcome rubrics (Definition of Done) — self-evaluation before shipping, per-task-type rubrics in CLAUDE.md templates and SOP Section 12
+2. Permission policy safety guidance for benchmarks — API-level enforcement via tool configs
+3. Multi-agent callable patterns in Section 16 — coordinator + specialist configs with tool restrictions
+4. Managed Agents benchmark harness design — isolated containers, mounted repos, user.define_outcome scoring
+5. Section 17 Managed Agents Integration Guide — memory store mapping, skills guidance, session lifecycle mapping, outcome rubrics
+6. Reference notes for low-impact items (memory stores, skills as lazy context, append-only events)
+
+---
+
+### P28 — Research digest implementation (v2.1.97, context management, evolution loop)
+`[SHIPPED - 2026-04-09] [Feature]`
+
+5 changes from the weekly research digest:
+1. sop-checker S3: no --dangerously-skip-permissions flag
+2. docs/sop/context-management.md: compaction, clearing, memory API reference
+3. Memory API note in SOP Section 1
+4. SOP Section 18: Evolution loop with benchmark-proven principles
+5. docs/guides/sop-hill-climbing.md: iterative improvement methodology
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
@@ -321,3 +402,8 @@ Two Claude Code slash commands that automate the session start and end checklist
 - P7 — Existing project migration guide — SHIPPED 2026-04-08
 - P21 — Setup script for new projects — SHIPPED 2026-04-08
 - P22 — Session slash commands — SHIPPED 2026-04-08
+- P23 — SOP Benchmark Framework — SHIPPED 2026-04-09
+- P25 — Incorporate benchmark findings into SOP — SHIPPED 2026-04-09
+- P26 — Benchmark-driven SOP optimisations — SHIPPED 2026-04-09
+- P27 — Managed Agents integration and outcome rubrics — SHIPPED 2026-04-09
+- P28 — Research digest implementation — SHIPPED 2026-04-09

@@ -25,17 +25,17 @@ Current phase files:
 
 ## Key Documents & Dispatch
 
-*Minimum 5 entries. Update at the start of each phase.*
+*Minimum 5 entries. Use intent-based descriptions. Update at the start of each phase.*
 
-| Area | File | Purpose |
-|------|------|---------|
-| Agent Memory | `docs/agent-memory.md` | Cross-session decisions, gotchas, invariants |
-| Feature Map | `docs/feature-map.md` | Shipped features + roadmap |
-| Backlog | `Backlog.md` | Single source of truth for all work items |
-| Build Plans | `docs/build-plans/*.md` | Phase architecture, batch logs |
-| Brand Voice | `.claude/brand-voice.md` | Copy rules, tone, terminology |
-| [Area] | `[path]` | [purpose] |
-| [Area] | `[path]` (lines N-N) | [purpose — include line range for large files] |
+| When you need to... | Start at | Notes |
+|---------------------|----------|-------|
+| Read cross-session context | `docs/agent-memory.md` | Decisions, gotchas, invariants |
+| Check shipped features or roadmap | `docs/feature-map.md` | Shipped inventory + priority tiers |
+| Check or update work items | `Backlog.md` | Single source of truth for all items |
+| Read phase architecture | `docs/build-plans/*.md` | Batch logs, locked decisions |
+| Check copy/tone rules | `.claude/brand-voice.md` | Brand voice, terminology |
+| [Change X] | `[path]` | [what to know when you arrive] |
+| [Change Y] | `[path]` (lines N-N) | [include line range for large files] |
 
 Test: `[test command]`
 After shipping: update Backlog.md + docs/feature-map.md
@@ -91,6 +91,43 @@ After shipping: update Backlog.md + docs/feature-map.md
 ```
 
 *For code projects: see `claude-md-template-code.md` for dev, test, and migration command patterns.*
+
+---
+
+## Common Mistakes — Read Before Working
+
+*Project-specific gotchas that prevent wrong turns. Update as new gotchas are discovered.*
+
+- [State what NOT to do and why. Name specific files, components, or conventions.]
+- [Example: "[File X] is separate from [File Y]. Do not look for X inside Y."]
+- [Example: "The default view is [key]. 'Home' means [key], not [other key]."]
+- [Example: "[Thing] is derived, not stored. Never add a column for it."]
+
+*See SOP Section 15 for full guidance on writing effective gotcha callouts.*
+
+---
+
+## Definition of Done
+
+*Self-evaluate against the relevant rubric before committing. If any criterion is not met, iterate before shipping.*
+
+### Bug fix
+- Root cause identified from reading the actual code — do not infer from documentation alone
+- Fix is minimal: change the broken logic, do not remove working mechanisms
+- Fix applied to ALL instances (grep for similar occurrences)
+- No regressions — existing tests pass
+
+### Feature
+- All acceptance criteria from the Backlog item are met
+- No debug artifacts (console.log, TODO without P-number)
+- Backlog.md and feature-map.md updated in the same commit
+
+### Refactor
+- Behaviour unchanged — all existing tests pass without modification
+- No unrelated files modified
+- Dead code from old pattern removed
+
+*For code projects: see `claude-md-template-code.md` for expanded rubrics with test and design system criteria.*
 
 ---
 

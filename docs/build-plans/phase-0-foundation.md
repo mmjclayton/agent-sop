@@ -79,6 +79,7 @@ agent-sop/
 - 2026-04-08: Batch 0.8 — README quality pass. Removed all em dashes, corrected ECC attribution to affaan-m. Added verified token efficiency section with per-file measurements, model-specific context windows, and library-vs-session ratio. Commits ba5ea4c-b3235da.
 - 2026-04-08: Batch 0.9 — P21 shipped. Setup script (`setup.sh`) for onboarding new projects. Supports --code and --force flags. README updated to recommend script as primary setup path. Commit b36dd89.
 - 2026-04-08: Batch 0.10 — P22 shipped. `/restart-sop` and `/update-sop` slash commands with YAML frontmatter. setup.sh updated to copy commands. All SOP docs (core SOP, both templates, README, implementation guide) updated to reference commands as mandatory. Installed at user level for all projects. Commits 0d682b8-3e8d340.
+- 2026-04-09: Batch 0.11 — P23-P28 shipped. A/B benchmark framework (5 rounds, 40+ agent runs). Key findings: Common Mistakes + Intent Dispatch = optimal config (+33% at peak). Gotcha entries must state what IS correct. Definition of Done removed (hurt bug fixes). Managed Agents integration (Sections 16-17). Research digest: context-management.md, S3 check, Section 18 evolution loop, hill-climbing guide. Commands updated with lightweight start + DoD self-evaluation. 28 P-items total.
 
 ---
 

@@ -24,7 +24,7 @@ See CLAUDE.md Key Documents table.
 
 ## In-Flight Work
 
-*(none)* -- P14-P20 shipped 2026-04-08, moved to Completed Work.
+*(none)* -- P23 round 2 complete 2026-04-09, moved to Completed Work.
 
 ---
 
@@ -71,6 +71,9 @@ See CLAUDE.md Key Documents table.
 - 2026-04-08: Code quality rules are language-agnostic defaults in the code template. Projects should add language-specific rules via `.claude/rules/` files.
 - 2026-04-08: 4 reference agents (code-reviewer, security-reviewer, planner, e2e-runner) added. All match sop-checker format (YAML frontmatter). code-reviewer and security-reviewer are read-only; planner is read-only; e2e-runner has write access.
 - 2026-04-08: Continuous learning pattern added to SOP Section 12. Extraction cadence: per-session (gotchas), every 5 sessions (audit), at 3+ repeats (promote to rule).
+- 2026-04-09: Benchmark framework uses git worktrees in hst-tracker for isolation. Baseline condition strips CLAUDE.md (replaced with 4-line stub), removes docs/sop/, docs/agent-memory.md, .claude/agents/, .claude/commands/, .claude/skills/, brand-voice, style-guides. SOP condition is untouched. Both get identical task prompts. Scoring is blind (reviewer does not know which is which).
+- 2026-04-09: Four benchmark tasks chosen: Pill refactor (pattern-following), import preset tests (test writing), page titles (feature), server utils tests (edge case coverage). All safe without DB access.
+- 2026-04-09: P24 (multi-agent optimisation) scoped but deferred until benchmark results show what matters most.
 - 2026-04-08: 6 new compliance checks in Section 9: S1 (secrets, Critical), S2 (security doc), Q1/Q2 (code quality, code-only), H1 (hooks), G1 (agents). Total checks now 63 (non-code) / 70 (code).
 - 2026-04-07: SOP Compliance Checker agent created (P13). Checklist at `docs/sop/compliance-checklist.md`, agent at `.claude/agents/sop-checker.md`. ~59 checks (non-code) / ~64 checks (code) across 8 categories. Three-tier scoring: Critical (cap at 49), Important (5pts), Recommended (2pts).
 - 2026-04-07: Self-compliance fixes applied — 8-step session end checklist, [BLOCKED] in tag taxonomy, conflict precedence inline, commit refs in Recent Work and Batch Log, line-range hints in Key Documents. Score: 49 → 100.
@@ -95,6 +98,11 @@ See CLAUDE.md Key Documents table.
 
 ## Completed Work
 
+- 2026-04-09: P28 — Research digest: S3 skip-permissions check, context-management.md (compaction/clearing/memory API), memory API note in Section 1, Section 18 SOP evolution loop, sop-hill-climbing.md guide. 8 digest suggestions evaluated; 5 implemented, 8 skipped (would add tokens without proven quality improvement).
+- 2026-04-09: P27 — Managed Agents integration. Outcome rubrics (Definition of Done) added to SOP Section 12 and both templates. Permission policy safety for benchmarks. Multi-agent callable patterns in Section 16 with coordinator/specialist configs. Section 17 Managed Agents Integration Guide (memory store mapping, skills guidance, session lifecycle, outcome grading). Benchmark README updated with Managed Agents harness design.
+- 2026-04-09: P26 — Benchmark-driven optimisations applied. Common Mistakes mandatory for code projects. 300-line limit for code CLAUDE.md. Intent-only dispatch enforced (Area|File deprecated). Lightweight start for [ok-for-automation]. Multi-agent context routing (Section 16). agent-memory.md optional <10 sessions. Benchmark safety rules (no push to main). Naming convention gotcha requirement.
+- 2026-04-09: P25 — Benchmark findings incorporated into SOP. New Section 15 (Benchmark-Proven Practices): Common Mistakes requirement, intent-rich dispatch pattern, vague prompt resilience. Both templates updated. 4 new compliance checks (BP1-BP4). README updated with results. Implementation guide updated.
+- 2026-04-09: P23 — SOP Benchmark Framework shipped with two rounds. Round 1 (precise prompts): SOP 68/72 vs Baseline 62/72 (+8%). Round 2 (vague prompts, sharpened SOP): SOP 78/84 vs Baseline 50/84 (+33%). Key finding: "Common Mistakes" section prevented 2 production bugs. Intent-rich dispatch outperforms file-path lists. Vague prompts amplify SOP advantage dramatically. Full results at docs/benchmark/results/.
 - 2026-04-08: P22 — Session slash commands shipped. `/restart-sop` and `/update-sop` in `.claude/commands/`. All SOP docs updated to reference as mandatory. Installed at user level for all projects.
 - 2026-04-08: P21 — Setup script shipped at `setup.sh`. Bash onboarding script with --code and --force flags. README updated to recommend as primary setup path.
 - 2026-04-08: README rewritten: removed all em dashes, added verified token efficiency section (measured per-file costs, model-specific context windows, library-vs-session ratio), ECC attribution corrected to affaan-m.

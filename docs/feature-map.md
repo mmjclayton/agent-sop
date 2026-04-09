@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-04-08d
+Last updated: 2026-04-09
 
 ---
 
@@ -36,10 +36,21 @@ Last updated: 2026-04-08d
 
 *All high-priority items shipped.*
 
+### Recently Shipped
+
+| P# | Document | Path | Shipped |
+|----|----------|------|---------|
+| P23 | SOP Benchmark Framework | `docs/benchmark/` | 2026-04-09 |
+| P25 | Benchmark findings incorporated | SOP Section 15, templates, checklist, README | 2026-04-09 |
+| P26 | Benchmark-driven optimisations | SOP Sections 1,5,11,15,16; templates; checklist | 2026-04-09 |
+| P27 | Managed Agents integration + outcome rubrics | SOP Sections 12,15,16,17; both templates; benchmark README | 2026-04-09 |
+| P28 | Research digest (context mgmt, evolution, security) | SOP Section 18; docs/sop/context-management.md; docs/guides/sop-hill-climbing.md; compliance S3 | 2026-04-09 |
+
 ### Medium Priority
 
 | P# | Document | Path |
 |----|----------|------|
+| P24 | Multi-agent optimisation guide | TBD |
 | P8 | Web app variant | `docs/sop/variants/web-app.md` |
 | P9 | Marketing variant | `docs/sop/variants/marketing.md` |
 | P10 | Data/analytics variant | `docs/sop/variants/data-analytics.md` |

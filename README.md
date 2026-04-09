@@ -174,7 +174,7 @@ The SOP includes an automated compliance checker agent. Run it from a Claude Cod
 
 ### What it checks
 
-~70 checks across 9 categories:
+~74 checks across 10 categories:
 
 | Category | What it verifies |
 |----------|-----------------|
@@ -187,6 +187,7 @@ The SOP includes an automated compliance checker agent. Run it from a Claude Cod
 | project_resume.md | Correct naming, snapshot format, required sections |
 | Cross-File Consistency | Shipped items in both Backlog and feature map |
 | Security, Hooks, Quality, Agents | Secret scanning, security docs, file limits, coverage threshold, hooks, agents |
+| Benchmark-Proven Practices | Common Mistakes section, intent-rich dispatch, subsections |
 
 ### Scoring
 
@@ -197,6 +198,39 @@ The SOP includes an automated compliance checker agent. Run it from a Claude Cod
 | Recommended | 2 each | Advisory |
 
 90 to 100: fully compliant. 70 to 89: largely compliant. 50 to 69: partially compliant. 0 to 49: non-compliant.
+
+---
+
+## Benchmark Results
+
+The SOP has been A/B tested against a baseline (no SOP context) using blind-scored agent pairs on identical tasks. Two rounds of benchmarks were run against a production React/Express codebase (hst-tracker, ~15K lines, 7 models, 486 tests).
+
+### Round 1: Precise prompts (detailed task instructions)
+
+| Metric | SOP | Baseline | Delta |
+|--------|-----|----------|-------|
+| Aggregate score | 68/72 (94%) | 62/72 (86%) | **SOP +8%** |
+| Wins | 2 | 1 | 1 draw |
+| Token overhead | +16% | baseline | |
+
+### Round 2: Vague prompts (product-level instructions, sharpened SOP)
+
+| Metric | SOP | Baseline | Delta |
+|--------|-----|----------|-------|
+| Aggregate score | 78/84 (93%) | 50/84 (60%) | **SOP +33%** |
+| Wins | 3 | 0 | 1 draw |
+| Token overhead | +24% | baseline | |
+| Production bugs prevented | 2 | 0 | |
+
+### Key findings
+
+1. **"Common Mistakes" is the highest-value section.** It directly prevented 2 production bugs in round 2 (wrong CSS tokens, wrong function modified).
+2. **Intent-rich dispatch outperforms file-path lists.** "When you need to change X, start at Y" navigates agents directly. File paths alone cause blind exploration.
+3. **Vague prompts amplify the gap.** Precise prompts mask context deficiencies. Product-level prompts (how real work arrives) expose them.
+4. **The SOP raises the quality floor, not the ceiling.** Both agents can produce excellent code. The SOP prevents catastrophic misses.
+5. **Token overhead pays for itself.** SOP used 24% more tokens but produced 56% higher scores. On one task, SOP used fewer tokens than baseline while producing a correct result.
+
+Full methodology, task specs, and scoring data: `docs/benchmark/`
 
 ---
 
@@ -286,6 +320,12 @@ agent-sop/
       sop-implementation-guide.md       # Agent-facing setup instructions
       new-project-walkthrough.md        # Human-readable new project guide
       existing-project-migration.md     # Migration checklist for existing projects
+    benchmark/
+      README.md                          # Benchmark methodology and scoring rubric
+      run-benchmark.sh                   # Worktree setup, execution, scoring, cleanup
+      nosop-stub.md                      # What gets stripped from baseline condition
+      tasks/                             # 8 task specs (4 precise, 4 vague)
+      results/                           # Round 1 and round 2 scored results
     build-plans/
       phase-0-foundation.md             # Current phase
 ```
@@ -294,7 +334,7 @@ agent-sop/
 
 ## Status
 
-Phase 0 (foundation) in progress. 18 items shipped (P1 through P7, P11 through P21). Next up: domain-specific variants for web apps (P8), marketing (P9), and data/analytics (P10).
+Phase 0 (foundation) in progress. 25 items shipped (P1 through P7, P11 through P25). Benchmark framework (P23) completed with two rounds of A/B testing. Next up: P24 (multi-agent optimisation), domain-specific variants (P8-P10).
 
 ---
 

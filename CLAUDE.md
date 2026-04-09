@@ -33,9 +33,10 @@ This project IS the Agent SOP library. All agents working on this project still 
 
 ---
 
-## Current Priority Items (as of 2026-04-08)
+## Current Priority Items (as of 2026-04-09)
 
 **Next:**
+- P24 — Multi-agent optimisation guide (informed by P23 benchmark results)
 - P8 — Web app domain variant `[has-open-questions]`
 - P9 — Marketing domain variant `[has-open-questions]`
 - P10 — Data/analytics domain variant `[has-open-questions]`
@@ -118,6 +119,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 ## Recent Work
 
 *Append-only. New entries at top. Include commit refs.*
+
+### 2026-04-09: P23-P28 — Benchmark framework, optimisations, Managed Agents, digest changes
+P23: A/B benchmark framework with 8 task specs, runner script, blind scoring. Two rounds against hst-tracker. Round 1 (precise prompts): SOP +8%. Round 2 (vague prompts, sharpened SOP): SOP +33%. P25: Incorporated findings into SOP Section 15 (Benchmark-Proven Practices), both templates (Common Mistakes + intent-rich dispatch), compliance checklist (BP1-BP4), implementation guide, README. Also committed sharpened CLAUDE.md to hst-tracker with Common Mistakes section.
 
 ### 2026-04-08: P6-P7, P21-P22 — Guides, setup script, slash commands (commits c4620b6-3e8d340)
 New project walkthrough (P6), migration checklist (P7), setup.sh onboarding script (P21), /restart-sop and /update-sop slash commands (P22). README rewritten: em dashes removed, verified token efficiency section, ECC attribution corrected to affaan-m. Commands installed at user level for all projects.
