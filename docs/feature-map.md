@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-04-09
+Last updated: 2026-04-13
 
 ---
 
@@ -27,6 +27,8 @@ Last updated: 2026-04-09
 | P7 | Migration guide | `docs/examples/existing-project-migration.md` | 2026-04-08 |
 | P21 | Setup script | `setup.sh` | 2026-04-08 |
 | P22 | Session slash commands | `.claude/commands/{restart-sop,update-sop}.md` | 2026-04-08 |
+| P29 | Pre-launch README polish + LICENSE + min version note | `README.md`, `LICENSE`, `setup.sh` | 2026-04-13 |
+| P30 | Research digest review (verdict only) | `Backlog.md`, `docs/agent-memory.md` | 2026-04-13 |
 
 ---
 

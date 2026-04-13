@@ -120,6 +120,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 *Append-only. New entries at top. Include commit refs.*
 
+### 2026-04-13: P29-P30 — Pre-launch README polish + research digest review (commits be449ac, 605cf60)
+P29: MIT LICENSE added (was missing — blocker for reuse), compliance check count corrected to 75/66, Status section rewritten for outside readers, agent-driven setup paths generalised to placeholder, badges and TOC added, Claude Code v2.1.101+ requirement noted in README and setup.sh. P30: Reviewed weekly research digest (4 sources verified directly — AgentKit date in digest was wrong). Tier 1 slate cut from 4 items to 1 on "sharpening > adding" filter; only the version note shipped. Decision logged: research digests bias toward additions; default filter is "what does this remove or sharpen".
+
 ### 2026-04-09: Research session — graphify analysis, P24 scoping
 Evaluated safishamsi/graphify for use alongside agent-sop and hst-tracker. Conclusion: not valuable for agent-sop (too small, too well-structured), moderate value for hst-tracker but SOP dispatch already covers navigation. Recommended ARCHITECTURE.md over graphify for hst-tracker. Fleshed out P24 acceptance criteria with concrete scope informed by benchmark data.
 

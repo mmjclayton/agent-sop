@@ -30,6 +30,9 @@ See CLAUDE.md Key Documents table.
 
 ## Decisions Made
 
+- 2026-04-13: Research digests bias toward "things to add". Future digest reviews must default to "what does this remove or sharpen" rather than "what could we add". Adding 4 items that don't sharpen anything is exactly what the benchmark warned against (Round 2 won by sharpening, not adding). When re-evaluating Tier 1 slate from the 2026-04-13 digest, 3 of 4 items dropped on this filter; only the Claude Code v2.1.101+ version note shipped.
+- 2026-04-13: Source verification is mandatory before acting on research digests. The 2026-04-13 digest cited OpenAI AgentKit as April 2026 (it actually launched October 2025) — the digest's "Already addressed? No" framing was misleading. Always WebFetch / WebSearch sources before treating findings as actionable.
+- 2026-04-13: Conservative claim policy — never claim "100% accuracy" or unverified benchmark scores. Use "deterministic / reproducible" (defensible: same input → same output) instead. Always run benchmarks before claiming scores in README.
 - 2026-04-09: Graphify knowledge graph tool evaluated for agent-sop and hst-tracker. Not adopted. For agent-sop: corpus too small, dispatch table already covers navigation. For hst-tracker: SOP dispatch + Common Mistakes already handles 90% of agent navigation. A hand-written ARCHITECTURE.md would deliver more value than an auto-generated graph for codebases the owner understands.
 - 2026-04-09: P24 (multi-agent optimisation) scoped with concrete acceptance criteria. Justified as community value even if not immediately needed for solo serial-agent workflow.
 - 2026-04-07: Project name is `agent-sop`. Short, descriptive, works as a GitHub repo name.

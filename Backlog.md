@@ -314,6 +314,46 @@ A/B testing framework to measure Agent SOP effectiveness. Runs identical tasks a
 
 ---
 
+### P29 — Pre-launch README polish + LICENSE + minimum version note
+`[SHIPPED - 2026-04-13] [Infra]`
+
+Pre-traffic audit and polish for the public agent-sop repo. Six items:
+1. MIT LICENSE file added (was missing — blocker for reuse).
+2. Compliance check count corrected to 75 (66 non-code) — was inconsistent (~70/~74).
+3. Status section rewritten for outside readers; removed internal P-number jargon.
+4. Agent-driven setup paths generalised to `<AGENT_SOP_PATH>` placeholder.
+5. Badges added at top of README (license, Claude Code version, benchmark, status).
+6. Table of contents added under intro.
+
+Also added Requirements section recommending Claude Code v2.1.101+ (memory leak,
+permission, --resume fixes), with non-blocking version check in setup.sh.
+
+Commits be449ac (version note) and 605cf60 (README polish + LICENSE).
+
+---
+
+### P30 — Research digest review (2026-04-13) — verdict only, no implementation bundle
+`[SHIPPED - 2026-04-13] [Iteration]`
+
+Reviewed weekly research digest covering Trustworthy Agents framework,
+Claude Code v2.1.101 changelog, Claude Code source-leak architecture patterns,
+and OpenAI AgentKit. All 4 sources verified directly via WebFetch/WebSearch
+(AgentKit date in digest was wrong — actual launch was Oct 2025, not Apr 2026).
+
+Initial Tier 1 slate (4 items) reduced to 1 after honest re-evaluation:
+adding without sharpening violates the benchmark-proven principle that
+sharpening wins. Only the Claude Code v2.1.101+ version note shipped (P29).
+All other suggestions rejected (3 new compliance checks — duplicates existing
+guidance; cargo-culted "do not rubber-stamp" prompt — untested; AgentKit
+competitive section — distraction; version check in sop-checker — over-engineered;
+compaction failure rule — too rare to justify).
+
+**Lesson:** Research digests bias toward "things to add". Default position
+should be "what does this remove or sharpen". Apply this filter before
+proposing changes from future digests.
+
+---
+
 ### P24 — Multi-agent optimisation guide
 `[OPEN] [Feature]`
 
