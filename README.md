@@ -2,6 +2,23 @@
 
 Standard operating procedures for Claude Code agents. Consistent structure, persistent context, measurable compliance.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-v2.1.101+-orange.svg)](https://code.claude.com/docs/en/changelog)
+[![Benchmark](https://img.shields.io/badge/A%2FB_benchmarked-+33%25_vs_baseline-brightgreen.svg)](#benchmark-results)
+[![Status](https://img.shields.io/badge/status-active-success.svg)](#status)
+
+---
+
+## Contents
+
+- [The Problem](#the-problem) and [The Solution](#the-solution)
+- [Token Efficiency](#token-efficiency)
+- [What's Included](#whats-included)
+- [Session Checklists](#session-checklists)
+- [Compliance Checker](#compliance-checker)
+- [Benchmark Results](#benchmark-results)
+- [Getting Started](#getting-started)
+
 ---
 
 ## The Problem
@@ -91,7 +108,7 @@ The full SOP library (17 files across docs/sop/, docs/templates/, docs/examples/
 | Core SOP | `docs/sop/claude-agent-sop.md` | The main SOP: file structure, rules, checklists, update triggers |
 | Security Guidance | `docs/sop/security.md` | Prompt injection, secret scanning, MCP trust, sandboxing |
 | Hooks Guidance | `docs/sop/hooks.md` | Hook types and 6 reference implementations |
-| Compliance Checklist | `docs/sop/compliance-checklist.md` | ~70 checks with scoring weights |
+| Compliance Checklist | `docs/sop/compliance-checklist.md` | 75 checks (66 for non-code) with scoring weights |
 
 ### Templates
 
@@ -174,7 +191,7 @@ The SOP includes an automated compliance checker agent. Run it from a Claude Cod
 
 ### What it checks
 
-~74 checks across 10 categories:
+75 checks across 10 categories (66 for non-code projects):
 
 | Category | What it verifies |
 |----------|-----------------|
@@ -264,16 +281,16 @@ After running the script, open each file and replace the `[bracket placeholders]
 
 **Human walkthrough.** Read `docs/examples/new-project-walkthrough.md` for a step-by-step guide using a concrete example project. Good for understanding what each file does and why before creating anything.
 
-**Agent-driven setup.** Paste this into a Claude Code session on your project:
+**Agent-driven setup.** Clone this repo to a path of your choice, then paste the following into a Claude Code session on your project (replace `<AGENT_SOP_PATH>` with the absolute path to your clone):
 
 ```
-I want you to implement the Agent SOP in this project. The SOP repo is at ~/Projects/agent-sop.
+I want you to implement the Agent SOP in this project. The SOP repo is at <AGENT_SOP_PATH>.
 
-1. Read ~/Projects/agent-sop/docs/sop/claude-agent-sop.md (the full SOP)
-2. Read ~/Projects/agent-sop/docs/examples/sop-implementation-guide.md (step-by-step setup)
+1. Read <AGENT_SOP_PATH>/docs/sop/claude-agent-sop.md (the full SOP)
+2. Read <AGENT_SOP_PATH>/docs/examples/sop-implementation-guide.md (step-by-step setup)
 3. Choose the right CLAUDE.md template:
-   - Base (non-code): ~/Projects/agent-sop/docs/templates/claude-md-template.md
-   - Code projects: ~/Projects/agent-sop/docs/templates/claude-md-template-code.md
+   - Base (non-code): <AGENT_SOP_PATH>/docs/templates/claude-md-template.md
+   - Code projects: <AGENT_SOP_PATH>/docs/templates/claude-md-template-code.md
 
 Then follow the implementation guide to create all standard files in THIS project.
 Fill in all sections with real project-specific content. Do not leave template placeholders.
@@ -338,7 +355,11 @@ agent-sop/
 
 ## Status
 
-Phase 0 (foundation) in progress. 25 items shipped (P1 through P7, P11 through P25). Benchmark framework (P23) completed with two rounds of A/B testing. Next up: P24 (multi-agent optimisation), domain-specific variants (P8-P10).
+**Active and ready to use.** The core SOP, templates, slash commands, compliance checker, and reference agents are all shipped. The library has been A/B benchmarked against a baseline on a real production codebase (see [Benchmark Results](#benchmark-results)).
+
+Active development continues on multi-agent coordination patterns and domain-specific variants for web apps, marketing, and data/analytics projects. Roadmap and full work history live in [`Backlog.md`](Backlog.md).
+
+Issues, suggestions, and benchmark contributions welcome.
 
 ---
 
