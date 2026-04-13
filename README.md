@@ -236,6 +236,10 @@ Full methodology, task specs, and scoring data: `docs/benchmark/`
 
 ## Getting Started
 
+### Requirements
+
+Claude Code **v2.1.101 or later**. Earlier versions have a long-session memory leak, permission rule bypasses, and `--resume` chain recovery bugs that affect SOP workflows. Check with `claude --version`.
+
 ### Quick setup (recommended)
 
 Clone this repo, then run the setup script against your project:

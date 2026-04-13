@@ -140,6 +140,22 @@ echo ""
 echo "Agent SOP Setup"
 echo "==============="
 echo ""
+
+# ── Check Claude Code version (recommend 2.1.101+) ────────────────────────────
+
+if command -v claude >/dev/null 2>&1; then
+    CLAUDE_VERSION="$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || true)"
+    if [ -n "$CLAUDE_VERSION" ]; then
+        REQUIRED="2.1.101"
+        LOWEST="$(printf '%s\n%s\n' "$CLAUDE_VERSION" "$REQUIRED" | sort -V | head -n1)"
+        if [ "$LOWEST" != "$REQUIRED" ]; then
+            echo "Warning: Claude Code $CLAUDE_VERSION detected. Agent SOP recommends $REQUIRED+"
+            echo "         (memory leak, permission, and --resume fixes)."
+            echo ""
+        fi
+    fi
+fi
+
 echo "Target:   $TARGET"
 if [ "$USE_CODE_TEMPLATE" = true ]; then
     echo "Template: code project"
