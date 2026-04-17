@@ -35,13 +35,19 @@ This project IS the Agent SOP library. All agents working on this project still 
 
 ---
 
-## Current Priority Items (as of 2026-04-09)
+## Current Priority Items (as of 2026-04-17)
 
 **Next:**
 - P24 — Multi-agent optimisation guide (informed by P23 benchmark results)
+- P33 — Managed Agents integration guide (deferred — revive when a project uses Managed Agents API)
 - P8 — Web app domain variant `[has-open-questions]`
 - P9 — Marketing domain variant `[has-open-questions]`
 - P10 — Data/analytics domain variant `[has-open-questions]`
+
+**Follow-ups flagged from 2026-04-17 session:**
+- Section 14 Common Mistakes table → guide (next low-risk trim candidate, ~-12 instructions)
+- Config `exclude` field for per-project file skipping (gap found during hst-tracker audit — security.md filename collision)
+- Karpathy-skills before/after examples pattern (Common Mistakes pedagogy — deferred from P34)
 
 ---
 

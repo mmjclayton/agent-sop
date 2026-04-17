@@ -341,26 +341,34 @@ agent-sop/
     commands/
       restart-sop.md                     # /restart-sop — session start checklist
       update-sop.md                      # /update-sop — session end checklist
+      update-agent-sop.md                # /update-agent-sop — sync with upstream
     agents/
       sop-checker.md                     # Compliance checker agent
       code-reviewer.md                   # Code review agent
-      security-reviewer.md              # Security review agent
+      security-reviewer.md               # Security review agent
       planner.md                         # Build planning agent
       e2e-runner.md                      # E2E testing agent
   docs/
     agent-memory.md                      # Cross-session context for this project
     feature-map.md                       # Shipped documents and roadmap
     sop/
-      claude-agent-sop.md               # The core SOP document
-      compliance-checklist.md           # Canonical compliance checks and scoring
-      security.md                        # Security guidance
-      hooks.md                           # Hooks guidance with reference implementations
+      claude-agent-sop.md                # The core SOP document
+      compliance-checklist.md            # Canonical compliance checks and scoring
+      security.md                        # Core security rules
+      sandboxing.md                      # Container / network isolation (autonomous runs)
+      harness-configuration.md           # Hooks + context primitives (clearing, compaction, memory)
+    guides/
+      optional-patterns.md               # Patterns for large projects (claude-progress.txt, sub-agents, rubrics)
+      multi-agent-context-routing.md     # Context tiers for parallel-agent work
+      managed-agents-integration.md      # Deferred — Managed Agents API mapping
+      sop-hill-climbing.md               # Benchmark-driven SOP improvement methodology
     templates/
-      claude-md-template.md             # CLAUDE.md template (base, any project)
-      claude-md-template-code.md        # CLAUDE.md template (code projects)
-      agent-memory-template.md          # Agent memory template
-      backlog-template.md               # Backlog template
-      build-plan-template.md            # Build plan template
+      claude-md-template.md              # CLAUDE.md template (base, any project)
+      claude-md-template-code.md         # CLAUDE.md template (code projects)
+      agent-memory-template.md           # Agent memory template
+      backlog-template.md                # Backlog template
+      build-plan-template.md             # Build plan template
+      agent-sop-config-template.json     # Schema for ~/.claude/agent-sop.config.json
     examples/
       sop-implementation-guide.md       # Agent-facing setup instructions
       new-project-walkthrough.md        # Human-readable new project guide
@@ -379,7 +387,7 @@ agent-sop/
 
 ## Status
 
-**Active and ready to use.** The core SOP, templates, slash commands, compliance checker, and reference agents are all shipped. The library has been A/B benchmarked against a baseline on a real production codebase (see [Benchmark Results](#benchmark-results)).
+**Active and ready to use.** The core SOP, templates, slash commands, compliance checker, reference agents, and cross-project sync mechanism (`/update-agent-sop`) are all shipped. The library has been A/B benchmarked against a baseline on a real production codebase (see [Benchmark Results](#benchmark-results)).
 
 Active development continues on multi-agent coordination patterns and domain-specific variants for web apps, marketing, and data/analytics projects. Roadmap and full work history live in [`Backlog.md`](Backlog.md).
 
