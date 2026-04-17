@@ -40,13 +40,13 @@ This library defines a standard operating procedure that gives every Claude Code
 
 ## Token Efficiency
 
-The SOP is designed to minimise context window consumption while giving agents full project awareness. Every file, section, and rule has been measured and trimmed. All measurements below were taken against this repository running on **Claude Opus 4.6 (1M context)**.
+The SOP is designed to minimise context window consumption while giving agents full project awareness. Every file, section, and rule has been measured and trimmed. Measurements below were re-taken on **2026-04-17 against this repository** (post-P32-P36 state) on **Claude Opus 4.7 (1M context)**.
 
 ### Context windows by model
 
 | Model | Context window |
 |-------|---------------|
-| Opus 4.6, Sonnet 4.6 | 1,000,000 tokens |
+| Opus 4.7, Opus 4.6, Sonnet 4.6 | 1,000,000 tokens |
 | Haiku 4.5, Sonnet 4, Opus 4.5 | 200,000 tokens |
 
 ### Session start cost
@@ -55,37 +55,37 @@ The 5-step session start checklist reads CLAUDE.md, agent-memory.md, project_res
 
 | File | Lines | Words | Est. tokens (low) | Est. tokens (high) |
 |------|-------|-------|-------------------|-------------------|
-| CLAUDE.md | 144 | 823 | 1,070 | 1,525 |
-| docs/agent-memory.md | 120 | 1,360 | 1,768 | 2,487 |
+| CLAUDE.md | 174 | 1,562 | 2,030 | 2,922 |
+| docs/agent-memory.md | 148 | 2,641 | 3,433 | 4,872 |
 | git log --oneline -10 | 10 | 101 | 131 | 184 |
 | One Backlog item (typical) | 11 | 54 | 70 | 96 |
 | project_resume.md | ~15 | ~80 | 104 | 125 |
-| **Session start total** | **~300** | **~2,418** | **~3,143** | **~4,417** |
+| **Session start total** | **~358** | **~4,438** | **~5,770** | **~8,200** |
 
-Low estimate uses words x 1.3; high estimate uses characters / 4. No public offline Claude tokeniser exists, so the true count falls between these bounds. Realistic midpoint: **~3,500 raw tokens**.
+Low estimate uses words x 1.3; high estimate uses characters / 4. No public offline Claude tokeniser exists, so the true count falls between these bounds. Realistic midpoint: **~7,000 raw tokens**.
 
-Claude Code adds a 1.7x overhead when reading files (line number formatting, tool call framing). This is confirmed by community measurements (GitHub issue [anthropics/claude-code#20223](https://github.com/anthropics/claude-code/issues/20223), which measured 1.7 to 1.75x in practice). With this overhead, the effective session start cost is **~5,200 to 5,900 tokens**.
+Claude Code adds a 1.7x overhead when reading files (line number formatting, tool call framing). This is confirmed by community measurements (GitHub issue [anthropics/claude-code#20223](https://github.com/anthropics/claude-code/issues/20223), which measured 1.7 to 1.75x in practice). With this overhead, the effective session start cost is **~9,800 to 14,000 tokens**.
 
 | Scenario | Raw tokens | Effective (1.7x) | % of 1M context | % of 200k context |
 |----------|-----------|-------------------|-----------------|-------------------|
-| Fresh project (from templates, ~1,191 words) | ~1,500 | ~2,600 | 0.3% | 1.3% |
-| Mature project (this repo, 40+ decisions) | ~3,500 | ~5,900 | 0.6% | 3.0% |
+| Fresh project (from templates, ~1,294 words) | ~1,700 | ~2,900 | 0.3% | 1.5% |
+| Mature project (this repo, 40+ decisions, P32-P36 shipped) | ~5,770 | ~9,800 | 1.0% | 4.9% |
 
 For comparison, Claude Code's own system prompt and tool definitions consume an estimated 7,000 to 25,000 tokens before any CLAUDE.md is loaded (per community measurements at bswen.com and blog.vincentqiao.com). The SOP's session start overhead is a modest addition on top of baseline costs you cannot control.
 
-After the first turn in a session, Anthropic's prompt caching applies a 90% discount (0.1x) on cache hits, reducing the recurring per-turn cost of loaded files to ~520 to 590 effective tokens.
+After the first turn in a session, Anthropic's prompt caching applies a 90% discount (0.1x) on cache hits, reducing the recurring per-turn cost of loaded files to ~980 to 1,400 effective tokens.
 
 ### Library size vs session reads
 
-The full SOP library (17 files across docs/sop/, docs/templates/, docs/examples/, .claude/agents/) totals 3,634 lines and approximately 28,000 to 36,000 tokens. The session start checklist reads only ~300 lines, roughly **11% of the library**. The remaining 89% is accessed on demand through the dispatch table and line-range hints. A naive "read everything" approach would cost 9x more and consume 15 to 18% of a 200k context window before any work begins.
+The full SOP library (25 files across `docs/sop/`, `docs/guides/`, `docs/templates/`, `docs/examples/`, `.claude/agents/`, `.claude/commands/`) totals 4,419 lines and approximately 36,000 to 47,000 tokens. The session start checklist reads only ~358 lines, roughly **8% of the library**. The remaining 92% is accessed on demand through the dispatch table and line-range hints. A naive "read everything" approach would cost ~12x more and consume 18 to 24% of a 200k context window raw (30 to 40% with the 1.7x read overhead) before any work begins.
 
 ### How the overhead stays low
 
-**CLAUDE.md size cap.** Per-session sections are capped at 200 lines (~2,000 tokens), consistent with Anthropic's official recommendation to keep CLAUDE.md under 200 lines. Reference sections (Auth, Database, Design System) are read on demand, not every session. The base template is 151 lines; the code template is 270 lines including all reference sections.
+**CLAUDE.md size cap.** Per-session sections are capped at 200 lines (~2,000 tokens), consistent with Anthropic's official recommendation to keep CLAUDE.md under 200 lines. Reference sections (Auth, Database, Design System) are read on demand, not every session. The base template is 190 lines; the code template is 347 lines including all reference sections.
 
 **Merged dispatch table.** Key Documents and Dispatch Quick Reference were originally two separate sections with overlapping file listings. Merging them into a single table eliminated the duplication. This was part of a dedicated optimisation pass (commit `71a34e0`) that removed 100 net lines across templates.
 
-**Line-range hints.** The dispatch table supports line-range annotations (e.g. `index.css (lines 1-80)`). When an agent follows a hint, it reads 80 lines instead of the entire file. The core SOP itself includes a section index with line ranges so agents can read specific sections (~40 lines for session checklists) rather than all 572 lines.
+**Line-range hints.** The dispatch table supports line-range annotations (e.g. `index.css (lines 1-80)`). When an agent follows a hint, it reads 80 lines instead of the entire file. The core SOP itself supports targeted reads by section — ~45 lines for the session checklists (Sections 5-6) rather than all 632 lines.
 
 **Snapshot resume, not a log.** `project_resume.md` is overwritten each session (~15 lines). Earlier designs used an append-only log that grew without bound. The snapshot model keeps the resume file at a constant size regardless of how many sessions have passed.
 
@@ -93,7 +93,7 @@ The full SOP library (17 files across docs/sop/, docs/templates/, docs/examples/
 
 **No duplication across files.** The single-source-of-truth rule means each fact lives in exactly one file. `agent-memory.md` points to the CLAUDE.md dispatch table rather than duplicating it. Work item status lives only in Backlog.md, not in build plans or memory.
 
-**Unified checklists.** Session start (5 steps) and session end (7 steps) are defined once in the SOP and referenced by templates. Earlier versions had slightly different step counts in different files, which meant agents had to read multiple sources to reconcile. One canonical version means one read.
+**Unified checklists.** Session start (5 numbered steps plus a Step 0 SOP staleness check) and session end (7 steps) are defined once in the SOP and referenced by templates. Earlier versions had slightly different step counts in different files, which meant agents had to read multiple sources to reconcile. One canonical version means one read.
 
 **60% context threshold.** The SOP instructs agents to wrap up at 60% context capacity rather than pushing to 95%. This prevents the degraded performance and unreliable behaviour that occurs when context approaches its limit, and ensures the session end checklist can run cleanly.
 
@@ -140,13 +140,21 @@ The full SOP library (17 files across docs/sop/, docs/templates/, docs/examples/
 
 ---
 
-## Two Non-Negotiable Rules
+## Six Non-Negotiable Rules
 
-These cannot be overridden by any project-specific configuration:
+These cannot be overridden by any project-specific configuration. Each is tagged with the failure mode it prevents.
 
-1. **Never delete without a trace.** Update in place, mark `[SUPERSEDED]`, or move to `## Archived`. In-place edits are expected. Silent removal is not.
+1. **Never delete without a trace. Never add without reason.** *Prevents lost history and unjustified content creeping in.* Update in place, mark `[SUPERSEDED]`, or move to `## Archived`. Every changed line must trace directly to the user's request — no drive-by refactors, no speculative abstractions, no "while I'm here" additions.
 
-2. **One source of truth.** Each information type lives in exactly one file. When files disagree, explicit precedence resolves it: code/git, then CLAUDE.md, then Backlog.md, then build plan, then feature map, then agent memory, then resume point.
+2. **One source of truth.** *Prevents drift and contradiction from duplicated facts.* Each information type lives in exactly one file. When files disagree, explicit precedence resolves it: code/git, then CLAUDE.md, then Backlog.md, then build plan, then feature map, then agent memory, then resume point.
+
+3. **No opinion. State facts.** *Prevents subjective nudges disguised as recommendations.* Respond with evidence — what the code does, what the docs say, what git shows. Don't volunteer opinions or hedged framing. Offer an opinion only when explicitly asked.
+
+4. **Work back and forth before writing any plan.** *Prevents committing to the wrong direction before the user sees it.* Surface open questions and a rough outline first. Wait for the user's response. Only write the formal plan once the questions are resolved.
+
+5. **Instruction budget: ≤150 soft cap, 200 hard ceiling.** *Prevents instruction drop-out and diluted attention past ~200 items.* Any agent must operate under ≤150 distinct instructions across its combined context (SOP + CLAUDE.md + agent definition + rules + invocation prompt). Trim before adding.
+
+6. **Surface interpretations before acting.** *Prevents hidden interpretation picks surfacing later as rework.* When a request has multiple valid interpretations, list them, name the default, and ask. Don't pick silently.
 
 ---
 
@@ -159,9 +167,10 @@ These cannot be overridden by any project-specific configuration:
 | `/restart-sop` | Start of every session | Reads all context files, checks git history, flags inconsistencies, reports readiness |
 | `/update-sop` | End of every session | Updates all tracking files, writes the resume snapshot, commits |
 
-The commands are installed by the setup script into `.claude/commands/`. They can also be installed at the user level (`~/.claude/commands/`) to make them available across all projects without a prefix.
+The commands are installed by the setup script into `~/.claude/commands/` (user-scope, available across all projects without a prefix). Reference agents are installed to `~/.claude/agents/` in the same pass. Project-scope copies can still be placed at `.claude/commands/` or `.claude/agents/` to override the user-scope version when needed.
 
-**What `/restart-sop` does (5 steps):**
+**What `/restart-sop` does (6 steps):**
+0. SOP staleness check — warn if `last_update_check` exceeds the configured cadence
 1. Read CLAUDE.md
 2. Read MEMORY.md and project_resume.md
 3. Read docs/agent-memory.md
@@ -220,7 +229,7 @@ The SOP includes an automated compliance checker agent. Run it from a Claude Cod
 
 ## Benchmark Results
 
-The SOP has been A/B tested against a baseline (no SOP context) using blind-scored agent pairs on identical tasks. Two rounds of benchmarks were run against a production React/Express codebase (hst-tracker, ~15K lines, 7 models, 486 tests).
+The SOP has been A/B tested against a baseline (no SOP context) using blind-scored agent pairs on identical tasks. Two rounds of benchmarks were run against a production React/Express codebase (hst-tracker, ~15K lines, 7 models, 486 tests). Figures below reflect the pre-P32 SOP (Round 1: 2026-04-09, Round 2: 2026-04-09). The post-trim SOP (P32-P36) has not yet been re-benchmarked.
 
 ### Round 1: Precise prompts (detailed task instructions)
 
