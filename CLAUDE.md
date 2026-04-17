@@ -128,6 +128,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 *Append-only. New entries at top. Include commit refs. Older session-day entries roll up into one-liners; full detail lives in build-plan Batch Log + agent-memory.md Decisions + Backlog.md per item.*
 
+### 2026-04-17: P41 — README rewrite, License section, Acknowledgements removed, About refreshed (commits 38a3476, e36cb53)
+README compressed 465 → 119 lines. Hero reframed to "Standard operating procedures and product management discipline for Claude Code sessions" anchored on the standard file set + three slash commands. New Backlog discipline + Cross-session memory sections make the PM angle concrete. Removed: TOC, token-efficiency math wall, four-table What's Included, repository tree, expanded session-checklist + six-rules commentary, A/B benchmark badge, Acknowledgements. Added: License section. Verbatim review against ECC found no copied prose — pattern inspiration only, MIT attribution not required. Aesthetic aligned with claude-code-action and superpowers reference READMEs. GitHub About description rewritten.
+
 ### 2026-04-17: P40 — Section 14 + Section 15.4 trim, Recent Work + Decisions compaction (commit 5b36751)
 Section 14 Common Mistakes table moved to `docs/guides/sop-common-mistakes.md`; Section 15.4 Managed Agents API safety block moved into `docs/guides/managed-agents-integration.md`. Core SOP ~189 → ~178 instructions (under 150 soft cap on first measure since Rule 5 was added). Same session: CLAUDE.md Recent Work compacted (older session-days rolled into one-liners) and agent-memory.md Decisions audited (pre-2026-04-09 entries moved to Archived with a dated relocation note). Token saving from CLAUDE.md alone is the larger win.
 

@@ -354,6 +354,34 @@ proposing changes from future digests.
 
 ---
 
+### P41 — README rewrite, License section, Acknowledgements removed, GitHub About refresh
+`[SHIPPED - 2026-04-17] [Iteration]`
+
+README aligned to popular reference-repo aesthetic (claude-code-action, superpowers) and tightened to the project's actual purpose.
+
+**Deliverables:**
+
+1. **README compressed 465 → 119 lines.** Removed: TOC, the token-efficiency math wall, four-table What's Included block, repository tree, expanded session-checklist steps, expanded six-rules commentary, A/B benchmark badge.
+2. **Hero reframed.** New opening: "Standard operating procedures and product management discipline for Claude Code sessions." Anchors the project's purpose on the standard file set and three slash commands rather than abstract benefits.
+3. **New Backlog discipline + Cross-session memory sections.** Ground the PM-discipline angle in concrete file behaviour (status/type tag order, P-numbers, append-only batch logs, status-only-in-Backlog rule, snapshot vs log semantics).
+4. **License section added.** Dedicated section near bottom (badge alone is conventional but a section is more discoverable).
+5. **Acknowledgements section removed.** Verbatim review against `~/Projects/everything-claude-code` confirmed no copied prose. Structural similarities (YAML frontmatter, OWASP Top 10 enumeration, Playwright CLI listings) are public-spec / required-syntax / common patterns. Pattern inspiration does not trigger MIT attribution requirements.
+6. **All opinion-coded language stripped.** Per Section 0 Rule 3 (state facts).
+7. **GitHub About description rewritten** to match the new framing (~330 chars).
+
+**Acceptance criteria:**
+- README under 150 lines - DONE (119)
+- Hero leads with operating-practice + PM-discipline framing - DONE
+- No fabricated cross-references (e.g. `docs/token-efficiency.md` did not exist; not introduced) - DONE
+- All numbers measured fresh against current repo state - DONE
+- License section present - DONE
+- Acknowledgements removed only after verbatim review - DONE
+- Tracking files updated (Backlog, feature-map, agent-memory, build plan) - DONE
+
+**Commits:** 38a3476 (rewrite), e36cb53 (badge removal), session-end housekeeping commit pending.
+
+---
+
 ### P40 — Section 14 + Section 15.4 trim, CLAUDE.md Recent Work + agent-memory.md Decisions compaction
 `[SHIPPED - 2026-04-17] [Iteration]`
 

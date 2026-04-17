@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-04-17 (P40)
+Last updated: 2026-04-17 (P41)
 
 ---
 
@@ -37,6 +37,7 @@ Last updated: 2026-04-17 (P40)
 | P38 | R5 post-trim benchmark pilot (+16% aggregate vs baseline, 3 of 4 tasks won; directional not authoritative) + README claim audit (benchmark badge and language tightened) | `docs/benchmark/results/r5-post-trim/summary.md`, `README.md` | 2026-04-17 |
 | P39 | Measurement gap closed: session-hygiene rubric (7 new dimensions, 0/1 each), continuity benchmark methodology (dependent task pairs), longitudinal exhibit (hst-tracker artefact counts: 86 decisions / 23 batch entries / 18 Recent Work / 64 docs commits / 4,628 lines) | `docs/benchmark/README.md`, `docs/benchmark/continuity-methodology.md`, `README.md` | 2026-04-17 |
 | P40 | Section 14 Common Mistakes table extracted to guide; Section 15.4 Managed Agents API safety block extracted to managed-agents-integration guide; CLAUDE.md Recent Work compacted; agent-memory.md Decisions audited (pre-2026-04-09 entries moved to Archived). Core SOP ~189 → ~178 instructions. | `docs/guides/sop-common-mistakes.md` (new), `docs/guides/managed-agents-integration.md`, `docs/sop/claude-agent-sop.md`, `CLAUDE.md`, `docs/agent-memory.md` | 2026-04-17 |
+| P41 | README rewrite (465 → 119 lines), hero reframed to operating-practice + PM-discipline, new Backlog discipline + Cross-session memory sections, License section added, Acknowledgements removed (verbatim review confirmed pattern inspiration only — no copied prose), A/B benchmark badge removed, GitHub About description rewritten | `README.md` | 2026-04-17 |
 
 ---
 
