@@ -1,4 +1,5 @@
 ---
+sop_version: 2026-04-17
 description: Run the Agent SOP session end checklist. Updates all tracking files, writes the resume snapshot, and commits.
 ---
 

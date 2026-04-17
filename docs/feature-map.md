@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-04-13
+Last updated: 2026-04-17
 
 ---
 
@@ -29,6 +29,10 @@ Last updated: 2026-04-13
 | P22 | Session slash commands | `.claude/commands/{restart-sop,update-sop}.md` | 2026-04-08 |
 | P29 | Pre-launch README polish + LICENSE + min version note | `README.md`, `LICENSE`, `setup.sh` | 2026-04-13 |
 | P30 | Research digest review (verdict only) | `Backlog.md`, `docs/agent-memory.md` | 2026-04-13 |
+| P32 | SOP instruction-budget trim (Rules 3-5 added; ~230 → ~193 instructions in core SOP) | `docs/sop/claude-agent-sop.md`, `docs/sop/harness-configuration.md`, `docs/sop/sandboxing.md`, `docs/guides/{optional-patterns,multi-agent-context-routing,managed-agents-integration}.md` | 2026-04-17 |
+| P34 | Rule 1 extended (trace-to-request); Rule 6 added (surface interpretations); failure-mode annotations on all 6 rules | `docs/sop/claude-agent-sop.md` | 2026-04-17 |
+| P35 | Section 4 Versioning Rules removed (pure duplicate of Section 0 Rule 1) | `docs/sop/claude-agent-sop.md` | 2026-04-17 |
+| P36 | SOP sync mechanism — version markers, `/update-agent-sop` command, `setup.sh` expansion, staleness check on `/restart-sop` | `.claude/commands/update-agent-sop.md`, `.claude/commands/restart-sop.md`, `setup.sh`, `docs/templates/agent-sop-config-template.json`, `README.md`, 17 pristine-replica files | 2026-04-17 |
 
 ---
 

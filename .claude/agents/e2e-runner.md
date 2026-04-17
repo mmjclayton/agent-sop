@@ -1,4 +1,5 @@
 ---
+sop_version: 2026-04-17
 name: e2e-runner
 description: Generates and runs Playwright end-to-end tests. Validates user flows, manages flaky tests, captures artifacts. Use for critical user journeys.
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]

@@ -17,7 +17,7 @@ Standard operating procedures for Claude Code agents. Consistent structure, pers
 - [Session Checklists](#session-checklists)
 - [Compliance Checker](#compliance-checker)
 - [Benchmark Results](#benchmark-results)
-- [Getting Started](#getting-started)
+- [Getting Started](#getting-started) — [Quick setup](#quick-setup-recommended), [Keeping the SOP in sync](#keeping-the-sop-in-sync)
 
 ---
 
@@ -107,7 +107,7 @@ The full SOP library (17 files across docs/sop/, docs/templates/, docs/examples/
 |----------|------|---------|
 | Core SOP | `docs/sop/claude-agent-sop.md` | The main SOP: file structure, rules, checklists, update triggers |
 | Security Guidance | `docs/sop/security.md` | Prompt injection, secret scanning, MCP trust, sandboxing |
-| Hooks Guidance | `docs/sop/hooks.md` | Hook types and 6 reference implementations |
+| Harness Configuration | `docs/sop/harness-configuration.md` | Hook types + context primitives (clearing, compaction, memory) with reference implementations |
 | Compliance Checklist | `docs/sop/compliance-checklist.md` | 75 checks (66 for non-code) with scoring weights |
 
 ### Templates
@@ -269,13 +269,37 @@ Clone this repo, then run the setup script against your project:
 ./setup.sh /path/to/your/project --code
 ```
 
-This copies the standard file set into your project: `CLAUDE.md`, `Backlog.md`, `docs/agent-memory.md`, `docs/feature-map.md`, `docs/build-plans/phase-0-foundation.md`, and the core SOP document. Existing files are not overwritten unless you pass `--force`.
+This installs the full SOP surface:
 
-After running the script, open each file and replace the `[bracket placeholders]` with real project-specific content. Then validate:
+- **Per-project** (customised — from templates): `CLAUDE.md`, `Backlog.md`, `docs/agent-memory.md`, `docs/feature-map.md`, `docs/build-plans/phase-0-foundation.md`.
+- **Per-project** (pristine-replica — kept in sync by `/update-agent-sop`): `docs/sop/*.md` (core SOP + security + sandboxing + harness + compliance), `docs/guides/*.md` (optional patterns, multi-agent routing, managed agents, hill-climbing).
+- **User-scope** (one install, all projects benefit): `~/.claude/commands/*.md` (slash commands), `~/.claude/agents/*.md` (reference agents: sop-checker, code-reviewer, security-reviewer, planner, e2e-runner), `~/.claude/agent-sop.config.json` (update tracking).
+
+Existing files are not overwritten unless you pass `--force`.
+
+After running the script, open each per-project customised file and replace the `[bracket placeholders]` with real project-specific content. Then validate:
 
 ```
 @sop-checker check SOP compliance for /path/to/your/project
 ```
+
+### Keeping the SOP in sync
+
+The SOP evolves — this repo ships changes as new rules, cuts to reduce instruction load, or new reference agents. To pull updates into an existing project without losing any local edits:
+
+```
+/update-agent-sop
+```
+
+How it works:
+
+1. **Source resolution.** Reads the config (`~/.claude/agent-sop.config.json` or per-project `.claude/agent-sop.config.json`). Uses `local_path` if it points to a valid agent-sop checkout; otherwise pulls from GitHub raw at `mmjclayton/agent-sop`.
+2. **Three-way diff per file.** Compares upstream vs your copy vs the recorded baseline SHA. Files you haven't modified are updated automatically. Files you have modified are surfaced for reconciliation — you decide per file whether to accept upstream, keep local, or merge.
+3. **No force-overwrite.** The command never silently replaces a locally edited file. Every conflict gets a prompt.
+
+`/restart-sop` prints a one-line warning when your last sync is stale (default: 7-day cadence, configurable in the config file's `update_reminder` field: `"weekly"` | `"manual"` | `"off"`).
+
+See `docs/templates/agent-sop-config-template.json` for the full config schema.
 
 ### Other setup options
 
@@ -368,7 +392,7 @@ Issues, suggestions, and benchmark contributions welcome.
 Several concepts in this SOP were informed by or adapted from [Everything Claude Code](https://github.com/affaan-m/everything-claude-code) (ECC) by [affaan-m](https://github.com/affaan-m), a comprehensive collection of skills, rules, agents, and hooks for Claude Code. Specific areas where ECC influenced our approach:
 
 - **Security guidance** (`docs/sop/security.md`). Adapted from ECC's security rules covering prompt injection, secret scanning, and MCP trust boundaries.
-- **Hooks guidance** (`docs/sop/hooks.md`). Reference implementations inspired by ECC's hook patterns for SessionStart, PostToolUse, and Stop events.
+- **Harness configuration** (`docs/sop/harness-configuration.md`). Hooks and context primitives in one file — reference implementations for SessionStart, PostToolUse, and Stop events, plus clearing/compaction/memory-tool settings.
 - **Code quality rules** in the code template. File size limits, immutability, and error handling patterns drawn from ECC's coding-style rules.
 - **Reference agent definitions.** The code-reviewer, security-reviewer, planner, and e2e-runner agents follow patterns established by ECC's agent library.
 - **Compliance checker scoring model.** The three-tier (Critical/Important/Recommended) scoring approach with critical-failure caps.

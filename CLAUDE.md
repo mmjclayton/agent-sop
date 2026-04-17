@@ -23,11 +23,13 @@ This project IS the Agent SOP library. All agents working on this project still 
 | Agent Memory | `docs/agent-memory.md` | Cross-session decisions, gotchas |
 | Feature Map | `docs/feature-map.md` | Shipped documents + roadmap |
 | Backlog | `Backlog.md` | Single source of truth for work items |
-| Core SOP | `docs/sop/claude-agent-sop.md` (lines 7-55) | Quick Reference Card + section index |
+| Core SOP | `docs/sop/claude-agent-sop.md` | Non-negotiable rules (Section 0), file specs, session checklists |
 | Build Plan | `docs/build-plans/phase-0-foundation.md` | Current phase |
-| Compliance | `docs/sop/compliance-checklist.md` | Audit checks + scoring |
-| Security | `docs/sop/security.md` | Security guidance |
-| Hooks | `docs/sop/hooks.md` | Hook types + reference implementations |
+| Compliance | `docs/sop/compliance-checklist.md` | Audit checks + scoring (used by sop-checker agent) |
+| Security | `docs/sop/security.md` | Core security rules |
+| Sandboxing | `docs/sop/sandboxing.md` | Container / network isolation for autonomous runs |
+| Harness | `docs/sop/harness-configuration.md` | Hooks + context primitives (clearing, compaction, memory) |
+| Guides | `docs/guides/` | Optional patterns, multi-agent routing, Managed Agents (deferred), SOP hill-climbing |
 | Templates | `docs/templates/claude-md-template.md` | Base template for new projects |
 | SOP Checker | `.claude/agents/sop-checker.md` | Compliance audit agent |
 
@@ -119,6 +121,18 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 ## Recent Work
 
 *Append-only. New entries at top. Include commit refs.*
+
+### 2026-04-17: P36 — SOP sync mechanism shipped
+New `/update-agent-sop` slash command keeps consumer projects in sync with upstream. Three-way diff per file (upstream vs local vs baseline SHA); never force-overwrites locally modified files. `setup.sh` expanded to distribute the full 17-file pristine-replica surface (SOP docs + guides project-scope; slash commands + reference agents user-scope) and auto-create `~/.claude/agent-sop.config.json` with baseline SHAs. `/restart-sop` gained a Step 0 staleness warning (weekly by default, configurable via `update_reminder`). All 17 pristine-replica files now carry version markers — HTML comment for plain markdown, `sop_version:` YAML field for files with frontmatter. GitHub repo: `mmjclayton/agent-sop`.
+
+### 2026-04-17: P35 — Section 4 Versioning Rules removed
+Pure duplicate of Section 0 Rule 1 "How this works" bullets — self-declared via its own opening "See Section 0" line. Replaced with a one-line pointer. Core SOP ~197 → ~189 instructions. Zero content loss; grep confirmed no external "Section 4" references.
+
+### 2026-04-17: P34 — Karpathy-skills findings applied
+Rule 1 extended: *"Never delete without a trace. Never add without reason. Every changed line must trace directly to the user's request."* Closes the silent-add gap symmetric to silent-delete. Rule 6 added: *"Surface interpretations before acting."* Names the ambiguity-resolution pattern Rule 4 implied but didn't spell out. All six non-negotiable rules now carry an italic *Prevents:* annotation naming the failure mode each one prevents — format-only, zero instruction cost. Net: ~+4 instructions (~197 total in core SOP). Applied from the 2026-04-17 review of forrestchang/andrej-karpathy-skills.
+
+### 2026-04-17: P32 — SOP instruction-budget trim
+Added Rules 3 (no opinion, state facts), 4 (back-and-forth before planning), 5 (≤150 soft / 200 hard instruction cap) to Section 0. Audited full SOP: 392 instructions across 5 files, with `claude-agent-sop.md` alone at ~230 — breaching its own Rule 5. Cuts: Quick Reference Card removed (100% duplicate of Sections 0/5/6); Section 17 Managed Agents extracted to `docs/guides/managed-agents-integration.md` (deferred, P33); Sections 12, 16, 18 extracted to `docs/guides/`; `hooks.md` + `context-management.md` merged into `harness-configuration.md`; `security.md` collapsed, container/network-isolation content split to `sandboxing.md`; compliance-checklist left intact (tooling dependency — sop-checker agent references check IDs). Pre-trim snapshot archived at `.archive/sop-pre-trim-2026-04-17/` (gitignored). Core SOP 975→624 lines. Also reviewed forrestchang/andrej-karpathy-skills — 3 of 4 principles duplicate existing SOP coverage; "trace-to-request" phrasing and failure-mode annotations identified as candidate additions (not yet applied).
 
 ### 2026-04-13: P29-P30 — Pre-launch README polish + research digest review (commits be449ac, 605cf60)
 P29: MIT LICENSE added (was missing — blocker for reuse), compliance check count corrected to 75/66, Status section rewritten for outside readers, agent-driven setup paths generalised to placeholder, badges and TOC added, Claude Code v2.1.101+ requirement noted in README and setup.sh. P30: Reviewed weekly research digest (4 sources verified directly — AgentKit date in digest was wrong). Tier 1 slate cut from 4 items to 1 on "sharpening > adding" filter; only the version note shipped. Decision logged: research digests bias toward additions; default filter is "what does this remove or sharpen".

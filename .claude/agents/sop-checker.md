@@ -1,4 +1,5 @@
 ---
+sop_version: 2026-04-17
 name: sop-checker
 description: Audits any project folder for SOP compliance and produces a scored report with actionable recommendations. Read-only — never modifies the target project.
 ---
@@ -14,7 +15,7 @@ Before checking anything, read these files from the agent-sop repo:
 1. `docs/sop/compliance-checklist.md` — the canonical checklist with all checks, IDs, and scoring weights
 2. `docs/sop/claude-agent-sop.md` — the full SOP for reference when checks are ambiguous
 3. `docs/sop/security.md` — security guidance (for understanding S1/S2 checks)
-4. `docs/sop/hooks.md` — hooks guidance (for understanding H1 check)
+4. `docs/sop/harness-configuration.md` — hooks guidance (for understanding H1 check)
 
 The user will provide a target project path (e.g. `~/Projects/my-app`). All checks run against that path.
 
@@ -93,7 +94,7 @@ Both are valid. The table must contain file paths with purposes.
 
 ### Phase 4: Security, Hooks, Code Quality, and Agents Checks
 
-Run the checks from checklist Section 9. These checks cover practices introduced by the security guidance (`docs/sop/security.md`), hooks guidance (`docs/sop/hooks.md`), code quality rules, and reference agent definitions.
+Run the checks from checklist Section 9. These checks cover practices introduced by the security guidance (`docs/sop/security.md`), hooks guidance (`docs/sop/harness-configuration.md`), code quality rules, and reference agent definitions.
 
 **S1 — No secrets in committed files (Critical):**
 Scan tracked files for secret patterns. Run these searches against the target project:
@@ -142,7 +143,7 @@ If found, PASS. If code project and no coverage threshold, FAIL with fix: "Add t
 
 **H1 — Session hooks documented or configured (Recommended):**
 Check in order:
-1. Does `docs/sop/hooks.md` exist in the target project?
+1. Does `docs/sop/harness-configuration.md` exist in the target project?
 2. Does `.claude/settings.json` exist and contain a `"hooks"` key?
 3. Does `CLAUDE.md` mention "hooks" in the context of SessionStart, SessionEnd, or automation?
 

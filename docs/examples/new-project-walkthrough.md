@@ -439,7 +439,7 @@ If your project has user-facing text (UI copy, emails, docs), create a brand voi
 
 ### Hooks (`.claude/settings.json`)
 
-See `docs/sop/hooks.md` for 6 reference implementations. The two most valuable for a new project:
+See `docs/sop/harness-configuration.md` for 6 reference implementations. The two most valuable for a new project:
 
 1. **SessionStart** — auto-reads CLAUDE.md and agent-memory.md
 2. **PreCompact** — reminds the agent to run the session end checklist before context compaction

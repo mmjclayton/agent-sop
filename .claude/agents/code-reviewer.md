@@ -1,4 +1,5 @@
 ---
+sop_version: 2026-04-17
 name: code-reviewer
 description: Reviews code for quality, maintainability, and security issues. Read-only. Reports findings as a structured list with severity levels.
 tools: ["Read", "Grep", "Glob", "Bash"]

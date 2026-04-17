@@ -279,7 +279,7 @@ These are not required for basic SOP compliance but are recommended for code pro
 
 **Security guidance:** Copy `docs/sop/security.md` from the agent-sop repo to your project, or create a `## Security` section in CLAUDE.md covering your auth model, secret handling, and input validation.
 
-**Hooks:** Create `.claude/settings.json` with at least SessionStart (auto-load context) and PreCompact (session-end reminder) hooks. See `docs/sop/hooks.md` in the agent-sop repo for 6 reference implementations with JSON config examples.
+**Hooks:** Create `.claude/settings.json` with at least SessionStart (auto-load context) and PreCompact (session-end reminder) hooks. See `docs/sop/harness-configuration.md` in the agent-sop repo for 6 reference implementations with JSON config examples.
 
 **Review agents:** Copy `code-reviewer.md` and `security-reviewer.md` from the agent-sop repo's `.claude/agents/` to your project's `.claude/agents/` directory. Customise the stack-specific sections for your project.
 

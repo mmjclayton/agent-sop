@@ -14,12 +14,21 @@
 #             Code Quality Rules). Without this flag the base template is used.
 #   --force   Overwrite existing files. Without this flag existing files are skipped.
 #
-# What it creates:
-#   CLAUDE.md                          Project instructions (from template)
-#   Backlog.md                         Work item tracker (from template)
-#   docs/agent-memory.md               Cross-session agent memory (from template)
+# What it creates (per-project, customised — from templates):
+#   CLAUDE.md                          Project instructions
+#   Backlog.md                         Work item tracker
+#   docs/agent-memory.md               Cross-session agent memory
 #   docs/feature-map.md                Shipped features and roadmap (generated)
-#   docs/build-plans/phase-0-foundation.md  First build plan (from template)
+#   docs/build-plans/phase-0-foundation.md  First build plan
+#
+# What it syncs (per-project, pristine-replica SOP content — overwritten by /update-agent-sop):
+#   docs/sop/*.md                      Core SOP + security + sandboxing + harness + compliance
+#   docs/guides/*.md                   Optional patterns, multi-agent routing, managed agents, hill-climbing
+#
+# What it installs user-scope (one install, all projects benefit):
+#   ~/.claude/commands/*.md            Slash commands (/restart-sop, /update-sop, /update-agent-sop)
+#   ~/.claude/agents/*.md              Reference agents (sop-checker, code-reviewer, etc.)
+#   ~/.claude/agent-sop.config.json    Update tracking (source path, baseline SHAs, reminder cadence)
 #
 # After running this script, open each file and replace the bracket placeholders
 # with real project-specific content. The SOP compliance checker can validate
@@ -197,21 +206,94 @@ Last updated: $(date +%Y-%m-%d)
 
 write_if_missing "$TARGET/docs/feature-map.md" "$FEATURE_MAP_CONTENT"
 
-# ── Copy the core SOP document ────────────────────────────────────────────────
+# ── Copy pristine-replica SOP docs + guides (project-scope) ───────────────────
 
-SOP_SOURCE="$SCRIPT_DIR/docs/sop/claude-agent-sop.md"
-if [ -f "$SOP_SOURCE" ]; then
-    copy_if_missing "$SOP_SOURCE" "$TARGET/docs/sop/claude-agent-sop.md"
-fi
+for src in "$SCRIPT_DIR"/docs/sop/*.md; do
+    [ -f "$src" ] || continue
+    copy_if_missing "$src" "$TARGET/docs/sop/$(basename "$src")"
+done
 
-# ── Copy slash commands ───────────────────────────────────────────────────────
+for src in "$SCRIPT_DIR"/docs/guides/*.md; do
+    [ -f "$src" ] || continue
+    copy_if_missing "$src" "$TARGET/docs/guides/$(basename "$src")"
+done
 
-COMMANDS_DIR="$SCRIPT_DIR/.claude/commands"
-if [ -d "$COMMANDS_DIR" ]; then
-    for cmd_file in "$COMMANDS_DIR"/*.md; do
-        [ -f "$cmd_file" ] || continue
-        copy_if_missing "$cmd_file" "$TARGET/.claude/commands/$(basename "$cmd_file")"
-    done
+# ── Install slash commands and reference agents (user-scope) ──────────────────
+
+USER_CLAUDE_DIR="${HOME}/.claude"
+mkdir -p "$USER_CLAUDE_DIR/commands" "$USER_CLAUDE_DIR/agents"
+
+for src in "$SCRIPT_DIR"/.claude/commands/*.md; do
+    [ -f "$src" ] || continue
+    dest="$USER_CLAUDE_DIR/commands/$(basename "$src")"
+    if [ -f "$dest" ] && [ "$FORCE" = false ]; then
+        echo "  skip  ~/.claude/commands/$(basename "$src") (already exists, use --force)"
+    else
+        cp "$src" "$dest"
+        echo "  install  ~/.claude/commands/$(basename "$src")"
+    fi
+done
+
+for src in "$SCRIPT_DIR"/.claude/agents/*.md; do
+    [ -f "$src" ] || continue
+    dest="$USER_CLAUDE_DIR/agents/$(basename "$src")"
+    if [ -f "$dest" ] && [ "$FORCE" = false ]; then
+        echo "  skip  ~/.claude/agents/$(basename "$src") (already exists, use --force)"
+    else
+        cp "$src" "$dest"
+        echo "  install  ~/.claude/agents/$(basename "$src")"
+    fi
+done
+
+# ── Write baseline SHA config so /update-agent-sop knows what's pristine ─────
+
+CONFIG_PATH="$USER_CLAUDE_DIR/agent-sop.config.json"
+if [ ! -f "$CONFIG_PATH" ] || [ "$FORCE" = true ]; then
+    TODAY="$(date +%Y-%m-%d)"
+
+    # Compute SHA-256 for each pristine-replica file. Prefer shasum (macOS/BSD), fall back to sha256sum.
+    sha_of() {
+        if command -v shasum >/dev/null 2>&1; then
+            shasum -a 256 "$1" | awk '{print $1}'
+        else
+            sha256sum "$1" | awk '{print $1}'
+        fi
+    }
+
+    {
+        echo "{"
+        echo "  \"local_path\": \"$SCRIPT_DIR\","
+        echo "  \"github\": \"mmjclayton/agent-sop\","
+        echo "  \"update_reminder\": \"weekly\","
+        echo "  \"last_update_check\": \"$TODAY\","
+        echo "  \"baseline_shas\": {"
+
+        first=true
+        for path_pattern in \
+            "docs/sop/"*.md \
+            "docs/guides/"*.md \
+            ".claude/commands/"*.md \
+            ".claude/agents/"*.md
+        do
+            src="$SCRIPT_DIR/$path_pattern"
+            [ -f "$src" ] || continue
+            rel="${src#$SCRIPT_DIR/}"
+            sha="$(sha_of "$src")"
+            if [ "$first" = true ]; then
+                first=false
+            else
+                echo ","
+            fi
+            printf '    "%s": "%s"' "$rel" "$sha"
+        done
+        echo ""
+        echo "  }"
+        echo "}"
+    } > "$CONFIG_PATH"
+
+    echo "  create  ~/.claude/agent-sop.config.json"
+else
+    echo "  skip  ~/.claude/agent-sop.config.json (already exists, use --force)"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────
@@ -227,6 +309,9 @@ echo "     to run the session start checklist. Use /update-sop at the end."
 echo ""
 echo "  3. Validate your setup with the compliance checker:"
 echo "     @sop-checker check SOP compliance for $TARGET"
+echo ""
+echo "  4. Keep the SOP in sync as it evolves:"
+echo "     /update-agent-sop    (run weekly — /restart-sop will remind you)"
 echo ""
 if [ "$USE_CODE_TEMPLATE" = false ]; then
     echo "  Tip: if this is a code project (web app, API, CLI), re-run with --code"

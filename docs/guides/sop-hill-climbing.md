@@ -1,3 +1,4 @@
+<!-- SOP-Version: 2026-04-17 -->
 # SOP Hill-Climbing: Benchmark-Driven Improvement
 
 How to iteratively improve the Agent SOP using A/B benchmark data. This process was used to develop the SOP from +8% advantage (Round 1) through +33% (Round 2 peak), identify a regression (ambiguous gotcha), and fix it (Round 4).

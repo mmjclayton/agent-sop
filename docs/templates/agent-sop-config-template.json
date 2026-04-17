@@ -1,0 +1,36 @@
+{
+  "_comment": "Agent SOP update config. Default location: ~/.claude/agent-sop.config.json. Per-project override: .claude/agent-sop.config.json (takes precedence if present). Auto-created by setup.sh at install; /update-agent-sop writes here each sync.",
+
+  "local_path": "~/Projects/agent-sop",
+  "_local_path_note": "Path to a local agent-sop checkout. Used first. If missing or invalid, /update-agent-sop falls back to GitHub raw.",
+
+  "github": "mmjclayton/agent-sop",
+  "_github_note": "GitHub repo (OWNER/REPO). Used when local_path is unavailable. Fetches from raw.githubusercontent.com/{github}/main/{file}.",
+
+  "update_reminder": "weekly",
+  "_update_reminder_values": "weekly | manual | off. /restart-sop prints a one-line staleness warning when last_update_check is older than this cadence.",
+
+  "last_update_check": "2026-04-17",
+  "_last_update_check_note": "ISO date string or null. Updated by /update-agent-sop on each run.",
+
+  "baseline_shas": {
+    "_comment": "SHA-256 of each pristine-replica file at last sync. Used for three-way diff (baseline vs local vs upstream) to detect local modifications. Populated by setup.sh at install and updated by /update-agent-sop per file.",
+    "docs/sop/claude-agent-sop.md": "<sha256>",
+    "docs/sop/security.md": "<sha256>",
+    "docs/sop/sandboxing.md": "<sha256>",
+    "docs/sop/harness-configuration.md": "<sha256>",
+    "docs/sop/compliance-checklist.md": "<sha256>",
+    "docs/guides/optional-patterns.md": "<sha256>",
+    "docs/guides/multi-agent-context-routing.md": "<sha256>",
+    "docs/guides/managed-agents-integration.md": "<sha256>",
+    "docs/guides/sop-hill-climbing.md": "<sha256>",
+    ".claude/commands/restart-sop.md": "<sha256>",
+    ".claude/commands/update-sop.md": "<sha256>",
+    ".claude/commands/update-agent-sop.md": "<sha256>",
+    ".claude/agents/sop-checker.md": "<sha256>",
+    ".claude/agents/code-reviewer.md": "<sha256>",
+    ".claude/agents/security-reviewer.md": "<sha256>",
+    ".claude/agents/planner.md": "<sha256>",
+    ".claude/agents/e2e-runner.md": "<sha256>"
+  }
+}

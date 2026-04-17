@@ -1,3 +1,4 @@
+<!-- SOP-Version: 2026-04-17 -->
 # SOP Compliance Checklist
 
 Last updated: 2026-04-09
@@ -252,7 +253,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| H1 | Session hooks documented or configured | At least SessionStart and SessionEnd hooks mentioned in CLAUDE.md, `docs/sop/hooks.md`, or `.claude/settings.json` |
+| H1 | Session hooks documented or configured | At least SessionStart and SessionEnd hooks mentioned in CLAUDE.md, `docs/sop/harness-configuration.md`, or `.claude/settings.json` |
 | G1 | At least 2 review agents available | `.claude/agents/` contains at least 2 agent definitions (e.g. code-reviewer + security-reviewer or sop-checker + any other) |
 
 ---

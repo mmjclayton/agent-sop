@@ -354,6 +354,134 @@ proposing changes from future digests.
 
 ---
 
+### P36 — SOP sync mechanism (/update-agent-sop)
+`[SHIPPED - 2026-04-17] [Feature]`
+
+Added a distribution and update mechanism so downstream projects can keep their pristine-replica Agent SOP artefacts in sync as upstream evolves.
+
+**Components shipped:**
+1. **Version markers** on all 17 pristine-replica files — HTML comment on plain markdown, `sop_version:` YAML field inside frontmatter for agents/commands. Advisory only (SHA comparison is the authority).
+2. **`/update-agent-sop` slash command** (`.claude/commands/update-agent-sop.md`) — resolves source (local path preferred, GitHub raw fallback to `mmjclayton/agent-sop`). Three-way diff per file: unchanged local → apply silently; modified local + changed upstream → surface reconciliation; no force-overwrite.
+3. **Staleness check added to `/restart-sop`** — new Step 0 prints one-line warning when `last_update_check` exceeds `update_reminder` cadence. Non-blocking.
+4. **`setup.sh` expanded** — now copies full pristine-replica set. SOP docs + guides → project-scope. Slash commands + agents → user-scope (`~/.claude/`). Auto-creates `~/.claude/agent-sop.config.json` with baseline SHA-256 for each file.
+5. **Config schema** documented at `docs/templates/agent-sop-config-template.json`. Fields: `local_path`, `github`, `update_reminder` (weekly|manual|off), `last_update_check`, `baseline_shas`.
+6. **README updated** — new "Keeping the SOP in sync" section explains the three-way diff behaviour, config locations, and reminder cadence.
+
+**Scope decisions (from user):**
+- Distribution model: copy-based (not symlinks/submodules). Projects stay self-contained.
+- `/restart-sop` piggybacks the reminder (no separate hook).
+- Locally modified files are never force-overwritten — Claude surfaces the diff for manual reconciliation.
+- Slash commands + agents install user-scope; SOP docs + guides install project-scope.
+- First-run against an existing project (e.g. hst-tracker) bootstraps by capturing upstream SHA as baseline; any pre-existing local divergence surfaces immediately.
+
+**Acceptance criteria:**
+- `/update-agent-sop` command file exists and is documented — DONE
+- `setup.sh` distributes the full pristine-replica surface (17 files) — DONE
+- Version markers on all 17 files — DONE
+- Config schema documented — DONE
+- README has "Keeping the SOP in sync" section — DONE
+- `setup.sh` passes `bash -n` syntax check — DONE
+
+**Deferred:**
+- Running `/update-agent-sop` against hst-tracker (separate step, offer to user).
+- Public GitHub publication of `mmjclayton/agent-sop` (user decision, separate step).
+- Per-project `.claude/agent-sop.config.json` override — schema supports it, no separate docs needed.
+
+---
+
+### P35 — Section 4 Versioning Rules removed (pure duplicate)
+`[SHIPPED - 2026-04-17] [Refactor]`
+
+Section 4 consisted of an opening sentence literally stating "See Section 0" plus a 7-row table where every row restated a bullet already under Section 0 Rule 1 "How this works". Removed entirely, replaced with a one-line pointer: *"Per-file versioning rules are defined in Section 0 Rule 1 'How this works'. No separate restatement here."*
+
+**Savings:** ~8 instructions. core SOP ~197 → ~189.
+
+**Verification:** grep confirmed no external references to "Section 4" by number. Every versioning directive remains reachable via Rule 1's existing bullets. No directive silently removed — all rules live in Section 0 Rule 1.
+
+Lowest-risk cut from the P32 candidate list. Self-declared duplicate.
+
+---
+
+### P34 — Rule 1 extended; Rule 6 added; failure-mode annotations
+`[SHIPPED - 2026-04-17] [Iteration]`
+
+Applied three findings from the karpathy-skills review (P32 follow-up):
+
+1. **Rule 1 extended** — now reads "Never delete without a trace. Never add without reason." Added sentence: *"Every changed line must trace directly to the user's request. If you can't justify a line by pointing to the request that asked for it, delete it. No drive-by refactors, no speculative abstractions, no 'while I'm here' additions."*
+2. **Rule 6 added** — "Surface interpretations before acting." When a request has multiple valid interpretations, list them and ask; do not pick silently. Trivial reversible choices (variable naming) exempt.
+3. **Failure-mode annotations** added to each of the six non-negotiable rules (italic *Prevents:* line). Format-only change, zero instruction cost.
+
+**Count impact:** +~4 instructions (trace-to-request sentence, "no drive-by" line, Rule 6 statement, Rule 6 exception). claude-agent-sop.md ~193 → ~197. Still under 200 hard ceiling.
+
+**Rationale:** trace-to-request generalises Rule 1 from "don't silently delete" to "don't silently add" — closes the gap the audit flagged. Rule 6 names the interpretation-ambiguity pattern that Rule 4 implied but didn't spell out. Prevents annotations sharpen each rule's reason for existing without adding load.
+
+**Source:** forrestchang/andrej-karpathy-skills review, 2026-04-17 agent-memory entry.
+
+---
+
+### P32 — SOP instruction-budget trim
+`[SHIPPED - 2026-04-17] [Refactor]`
+
+Enforced Section 0 Rule 5 by auditing and trimming the SOP instruction set. Pre-trim total: 392 instructions across 5 SOP files; `claude-agent-sop.md` alone was ~230, breaching its own Rule 5 (200 hard ceiling).
+
+**Audit classification:**
+- CORE: 58, PROVEN: 31, CONDITIONAL: 72, DUPLICATE: 58, ASPIRATIONAL: 89, NOISE: 84
+
+**Cuts applied:**
+1. Quick Reference Card deleted (100% duplicate of Sections 0/5/6) — DONE
+2. Section 17 Managed Agents → `docs/guides/managed-agents-integration.md` (deferred → P33) — DONE
+3. Sections 12, 16, 18 → `docs/guides/{optional-patterns,multi-agent-context-routing,sop-hill-climbing}.md` — DONE
+4. Parametrise compliance-checklist.md — SKIPPED: sop-checker agent references check IDs, parametrising breaks tooling. Doesn't count against main SOP budget (loaded only by sop-checker).
+5. Merge `context-management.md` + `hooks.md` → `harness-configuration.md` — DONE
+6. Collapse `security.md` to core rules; split container/network content to `sandboxing.md` — DONE
+
+**Final measurements (instruction count):**
+| File | Pre-trim | Post-trim |
+|------|---------:|----------:|
+| claude-agent-sop.md | ~230 | ~193 |
+| compliance-checklist.md | ~84 | ~86 (skipped — tooling dependency) |
+| harness-configuration.md | n/a (merged) | ~31 |
+| sandboxing.md | n/a (split) | ~25 |
+| security.md | ~52 | ~8 |
+| hooks.md | ~13 | REMOVED (merged) |
+| context-management.md | ~13 | REMOVED (merged) |
+| **Grand total** | **~392** | **~343** |
+
+- `claude-agent-sop.md` now under 200 hard ceiling (Rule 5 no longer self-breached) — BUT ~43 over the 150 soft cap.
+- 975 → 624 lines in core SOP.
+- Pre-trim state archived in `.archive/sop-pre-trim-2026-04-17/` (gitignored).
+- Tracking files updated (Backlog, feature-map, agent-memory, CLAUDE.md, README, sop-checker agent, example guides).
+
+**Candidate follow-up (to hit ≤150 soft cap):**
+- Section 14 Common Mistakes table (~14 rows) — move examples to a guide, keep cross-refs
+- Section 15.4 Managed Agents benchmark safety (~5 rows) — move to `docs/guides/managed-agents-integration.md` (already deferred)
+- Section 1 per-file commentary (~5 rows) — compress
+- Section 8 tag taxonomy (~19 rows) — collapse to one parametric rule
+
+**Deferred to follow-up:** Evaluate karpathy-skills "trace-to-request" phrasing and failure-mode annotations for addition to Rule 1 / Common Mistakes (agent-memory entry 2026-04-17).
+
+---
+
+### P33 — Managed Agents integration guide (deferred)
+`[OPEN] [Feature] [has-open-questions]`
+
+Bring `docs/guides/managed-agents-integration.md` back into active use when a project transitions from Claude Code sessions to the Managed Agents API.
+
+**Why parked:** No current project uses Managed Agents. Content lives at `docs/guides/managed-agents-integration.md` (extracted from SOP Section 17 on 2026-04-17).
+
+**Trigger to revive:**
+- First project uses `api.anthropic.com/v1/agents`
+- Managed Agents API leaves beta
+- User explicitly requests integration work
+
+**Acceptance criteria when revived:**
+- Validate memory store mapping against current Managed Agents API
+- Validate session lifecycle mapping
+- Validate `user.define_outcome` event reference
+- Decide whether content returns to main SOP or stays as a standalone guide
+
+---
+
 ### P24 — Multi-agent optimisation guide
 `[OPEN] [Feature]`
 

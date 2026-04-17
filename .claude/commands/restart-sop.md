@@ -1,8 +1,20 @@
 ---
+sop_version: 2026-04-17
 description: Run the Agent SOP session start checklist. Reads all context files, checks git history, flags inconsistencies, and reports readiness before coding begins.
 ---
 
 Start a new session by executing the Agent SOP session start checklist. Read every file listed below, in order. Do not skip any step.
+
+## Step 0: SOP staleness check
+
+Before running the checklist, check the Agent SOP update cadence. Read `.claude/agent-sop.config.json` (project) or `~/.claude/agent-sop.config.json` (user-global). If neither exists, skip this step.
+
+Compare `last_update_check` against `update_reminder`:
+- `weekly`: warn if `last_update_check` is more than 7 days old or `null`
+- `manual`: never warn
+- `off`: never warn
+
+If stale, print: *"SOP update overdue — run `/update-agent-sop` to sync pristine-replica files."* Then continue with the checklist. Do not block.
 
 ## Determine checklist type
 

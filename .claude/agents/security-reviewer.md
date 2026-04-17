@@ -1,4 +1,5 @@
 ---
+sop_version: 2026-04-17
 name: security-reviewer
 description: Scans for OWASP Top 10 vulnerabilities, secret leaks, injection flaws, and auth issues. Read-only. Reports findings with severity and remediation steps.
 tools: ["Read", "Grep", "Glob", "Bash"]

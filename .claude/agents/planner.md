@@ -1,4 +1,5 @@
 ---
+sop_version: 2026-04-17
 name: planner
 description: Takes a feature description and produces a structured build plan with scope, batches, risks, and architecture decisions. Complements the existing build plan format in docs/build-plans/.
 tools: ["Read", "Grep", "Glob"]

@@ -1,71 +1,20 @@
+<!-- SOP-Version: 2026-04-17 -->
 # Claude Code Agent SOP
 **Standard Operating Procedure — All Projects**
-Last updated: 2026-04-09
-
----
-
-## Quick Reference Card
-
-*For agents already familiar with this SOP. If this is your first session on a project using this SOP, read the full document before using this card.*
-
-**Two non-negotiable rules (cannot be overridden by CLAUDE.md):**
-1. Never delete without a trace — update in place, mark `[SUPERSEDED]`, move to `## Archived`. In-place updates (status changes, folding answers into items, correcting errors) are expected. Silent removal is not.
-2. One source of truth — information lives in exactly one file. Conflict precedence: code/git > `Backlog.md` > build-plan > `feature-map.md` > `agent-memory.md` > `project_resume.md`.
-
-**Key limits:**
-- CLAUDE.md: per-session sections max 200 lines / 2,000 tokens. Reference sections (Auth, DB, Design System) may extend beyond. Overflow goes to `docs/agent-memory.md` or build plans.
-- Context: wrap up and run session end checklist at 60% capacity. Do not push to 95%.
-- Auto-memory: unreliable - do not depend on it. `docs/agent-memory.md` is the source of truth.
-
-**Session start: run `/restart-sop` (every session, no exceptions).**
-If the command is not available, execute manually:
-1. Read CLAUDE.md
-2. Read `MEMORY.md` + `project_resume.md`
-3. Read `docs/agent-memory.md`
-4. Run `git log --oneline -10`, cross-check memory against current file state
-5. Read the Backlog item(s) for this session
-- If In-Flight Work is populated or `project_resume.md` has no What's Next — previous session was interrupted. Read the build plan Batch Log before starting anything new.
-
-**Session end: run `/update-sop` (every session, no exceptions).**
-If the command is not available, execute manually:
-1. Run tests (code projects) — fix failures before proceeding
-2. `Backlog.md` — update status tags in place, append new items
-3. `docs/feature-map.md` — append shipped items
-4. `docs/agent-memory.md` — append decisions/gotchas, move completed to `## Completed Work`
-5. `docs/build-plans/phase-N.md` — append to Batch Log
-6. `project_resume.md` — overwrite with current state (snapshot, not a log)
-7. Commit `docs/` changes with the work
-
-**Section index (for targeted reads — update line ranges when sections change):**
-
-| Section | Lines |
-|---------|-------|
-| Non-Negotiable Rules (Section 0) | 39-76 |
-| Standard File Set (Section 1) | 85-129 |
-| File Ownership Rules (Section 2) | 132-144 |
-| File Structure Specs (Section 3) | 147-241 |
-| Versioning Rules (Section 4) | 293-306 |
-| Session Checklists (Sections 5-6) | 309-348 |
-| Update Triggers (Section 7) | 351-368 |
-| Backlog Tag Taxonomy (Section 8) | 371-401 |
-| P-Number System (Section 9) | 404-411 |
-| Issue Tracker Sync (Section 10) | 414-423 |
-| Dispatch Quick Reference (Section 11) | 426-435 |
-| Optional Patterns (Section 12) | 438-520 |
-| New Project Setup (Section 13) | 523-542 |
-| Common Mistakes (Section 14) | 545-577 |
-| Benchmark-Proven Practices (Section 15) | 579-680 |
-| Multi-Agent Context Routing (Section 16) | 682-770 |
-| Managed Agents Integration (Section 17) | 772-850 |
+Last updated: 2026-04-17
 
 ---
 
 ## Section 0: Non-Negotiable Rules
 
-These two rules override everything else in this document. Read them first. Apply them without exception.
+These six rules override everything else in this document. Read them first. Apply them without exception.
 
-**Rule 1 — Never delete without a trace.**
+**Rule 1 — Never delete without a trace. Never add without reason.**
+*Prevents: lost history from silent removals, and unjustified code or content creeping in unnoticed.*
+
 No agent may silently remove content from any project document. In-place updates are expected and necessary — changing a status tag, folding an answered question into an item body, correcting an error. The rule is about preserving history, not preventing edits.
+
+**Every changed line must trace directly to the user's request.** If you can't justify a line by pointing to the request that asked for it, delete it. No drive-by refactors, no speculative abstractions, no "while I'm here" additions.
 
 How this works:
 - Decisions, gotchas, preferences: append new entries, dated. Mark old ones `[SUPERSEDED - YYYY-MM-DD: reason]` and move to `## Archived`.
@@ -79,6 +28,8 @@ How this works:
 Git history is the backstop for in-repo files, but documents must remain human-readable records without requiring a git dig.
 
 **Rule 2 — One source of truth per information type.**
+*Prevents: drift and contradiction from duplicated facts; wasted debugging chasing stale copies.*
+
 Information lives in exactly one file. Never duplicate it. When files disagree, resolve using this precedence order:
 
 1. **Code and git state** — what the code actually does and what git shows always wins
@@ -91,7 +42,43 @@ Information lives in exactly one file. Never duplicate it. When files disagree, 
 
 If `agent-memory.md` contradicts the code, the code wins — update the memory. If `feature-map.md` is stale relative to `Backlog.md`, trust the Backlog and update the feature map.
 
-**Override hierarchy:** `CLAUDE.md` can override any project-specific convention defined in this SOP (tag taxonomy, file paths, stack-specific rules). It cannot override the two non-negotiable rules above. Never-delete-without-a-trace and single source of truth apply to every project regardless of what CLAUDE.md says.
+**Rule 3 — No opinion. State facts.**
+*Prevents: subjective choices disguised as recommendations nudging the user toward decisions they didn't make.*
+
+Respond with evidence — what the code does, what the docs say, what git shows, what tests verify. Do not volunteer opinions, preferences, subjective recommendations, or hedged framing ("probably", "I think", "it might be better to"). If evidence is missing or ambiguous, say so plainly rather than filling the gap with a guess. Offer an opinion only when the user explicitly asks for one ("what do you think", "which would you prefer", "recommend").
+
+How this works:
+- Questions about the project: answer from the files, git history, or tests. Cite the source.
+- Comparisons between options: present each option's properties as facts. Let the user choose.
+- Unknowns: say "I don't know" or "the code doesn't specify" rather than guessing.
+- Exception: when explicitly asked for a recommendation, give one — but lead with the evidence and mark the opinion as opinion.
+
+**Rule 4 — Work back and forth before writing any plan.**
+*Prevents: committing to the wrong direction before the user sees it; wasted plan work from misread goals.*
+
+Before drafting a plan — feature plan, refactor plan, migration plan, build-plan batch, or any structured proposal — surface open questions and a rough outline first. Wait for the user's response. Iterate. Only write the formal plan once the open questions are resolved.
+
+How this works:
+- Start every planning task with: (a) what you understand the goal to be, (b) open questions, (c) a rough outline of approach.
+- Do not write step-by-step plans, file lists, or task breakdowns in the first response.
+- Wait for answers. If the user corrects the goal or outline, incorporate and re-check before committing to a plan.
+- Exception: trivial changes (one-line fix, typo, rename) do not need a plan at all and are not covered by this rule.
+
+**Rule 5 — Instruction budget: ≤150 soft cap, 200 hard ceiling.**
+*Prevents: instruction drop-out, contradiction, and diluted attention past ~200 items.*
+
+Any agent — primary, subagent, or custom — must operate under a total of ≤150 distinct instructions across its combined context (this SOP, `CLAUDE.md`, agent definition files, rules files under `~/.claude/rules/`, and the invocation prompt). 200 is the absolute ceiling. Past that, instructions drop, contradict, or dilute attention.
+
+How to count: each distinct directive counts as one — numbered rules, checklist items, "always/never/must/must-not" statements, and table rows defining required behaviour. Narrative prose, examples, code blocks, and section headings do not count.
+
+How to stay under: trim before adding. Every new instruction must identify what it supersedes or why the net count is still under budget. When an agent approaches 150, consolidate overlapping rules or move reference material out of the instruction surface (into examples, guides, or linked references).
+
+**Rule 6 — Surface interpretations before acting.**
+*Prevents: hidden interpretation picks surfacing later as rework.*
+
+When a request has multiple valid interpretations — ambiguous scope, target, or output — list the interpretations, name the one you'd default to, and ask. Do not pick silently. Exception: trivial reversible choices (variable naming in a one-liner) — pick and note the choice rather than stalling.
+
+**Override hierarchy:** `CLAUDE.md` can override any project-specific convention defined in this SOP (tag taxonomy, file paths, stack-specific rules). It cannot override the six non-negotiable rules above. They apply to every project regardless of what CLAUDE.md says.
 
 **Multi-agent contention:** When multiple agents work on the same project simultaneously, each agent must work on a separate branch and merge to main sequentially. Conflict resolution depends on the file type:
 - **Documentation files** (`agent-memory.md`, `Backlog.md`, `feature-map.md`): resolve by appending both entries — never discard either agent's additions.
@@ -151,7 +138,7 @@ Claude Code has two memory systems. They serve different purposes and must not o
 
 **Distinction:** `docs/agent-memory.md` is permanent cross-session context (architectural decisions, data model invariants, named utility functions, patterns) — committed to git, visible to all contributors. `project_resume.md` is a point-in-time snapshot (where the project stands, what is next) — local, overwritten each session. Different purpose, different audience. Never confuse them.
 
-**API primitive:** The Claude API `memory_20250818` tool is the underlying mechanism for file-backed persistent notes. The SOP's `docs/agent-memory.md` is the manual, git-committed equivalent. For Managed Agents API sessions, use memory stores instead (see Section 17). When using tool-result clearing, always exclude the memory tool from clearing — see `docs/sop/context-management.md`.
+**API primitive:** The Claude API `memory_20250818` tool is the underlying mechanism for file-backed persistent notes. The SOP's `docs/agent-memory.md` is the manual, git-committed equivalent. When using tool-result clearing, always exclude the memory tool from clearing — see `docs/sop/harness-configuration.md`. For Managed Agents API integration, see `docs/guides/managed-agents-integration.md` (deferred, P33).
 
 ---
 
@@ -315,17 +302,7 @@ Last updated: YYYY-MM-DD
 
 ## 4. Versioning Rules
 
-Never delete without a trace. Update in place, mark superseded, or archive. See Section 0.
-
-| File | Versioning approach |
-|------|-------------------|
-| `CLAUDE.md` | Update in place. Deprioritised items move to `## Deprioritised`. Recent Work appended at top. |
-| `Backlog.md` | Status tags updated in place with dates. Items never deleted. |
-| `docs/agent-memory.md` | Append-only. Superseded entries marked and moved to `## Archived`. |
-| `docs/feature-map.md` | `Last updated: YYYY-MM-DD` header. Shipped features appended. Roadmap items move between tiers, never removed. |
-| `docs/build-plans/` | One file per phase. Frozen once shipped — Batch Log only. New phase = new file. |
-| `project_resume.md` | Overwrite each session. Snapshot of current state, not a log. |
-| Memory files | Update in place with `Updated: YYYY-MM-DD`. Stale: `Status: Superseded` in frontmatter. Never delete. |
+Per-file versioning rules are defined in Section 0 Rule 1 "How this works". No separate restatement here.
 
 ---
 
@@ -480,137 +457,7 @@ This section is what allows an agent dropped into the middle of a project to ori
 
 ## 12. Optional Patterns for Large Projects
 
-These patterns are optional. Add them when complexity warrants it - they are not required for standard projects.
-
-### claude-progress.txt (human-readable status file)
-
-For large features spanning multiple sessions, maintain a `claude-progress.txt` at project root. Unlike `project_resume.md` (agent-facing, prepend-only), this file is human-readable at a glance and updated in-place each session.
-
-Recommended format:
-```
-Current task: [P-number and short name]
-Status: [In Progress / Blocked / Ready for review]
-Completed: [bullet list of done steps]
-Next: [specific next action]
-Blockers: [(none) or description]
-Last updated: YYYY-MM-DD
-```
-
-Do not add `claude-progress.txt` to `.gitignore` - it is a useful artefact for project owners to check without opening Claude Code.
-
-### Sub-agent delegation (.claude/agents/)
-
-For projects where parallel work is feasible, Claude Code supports named sub-agents defined as markdown files in `.claude/agents/[name].md`. Each sub-agent receives its own system prompt and optional tool restrictions.
-
-Use cases: a `test-runner` agent that only runs test suites and reports results, a `migration-agent` that handles database schema changes, or a `docs-agent` restricted to documentation updates only.
-
-Each agent file format:
-```
----
-name: [agent-name]
-description: [one-line purpose — used by the orchestrator to decide when to delegate]
-tools: [optional comma-separated tool restrictions]
----
-
-[Agent system prompt here]
-```
-
-Sub-agents add coordination overhead. Only introduce them when a project has clearly separable workstreams that would otherwise require sequential single-agent effort.
-
-### Schema change protocol (projects with a database)
-
-Any change to the data model must follow this sequence. Do not skip steps or reorder.
-
-```
-1. Edit the schema definition (ORM model, SQL, or equivalent)
-2. Create and run the migration
-3. Update server routes / API handlers that touch the changed model
-4. Update client code that consumes the changed data
-5. Add or update tests covering the change
-6. Verify the full test suite passes
-```
-
-Add this checklist to the project's CLAUDE.md under Rules for Automated Builds. The SOP templates include it in the code variant (`claude-md-template-code.md`).
-
-### Continuous learning (pattern extraction across sessions)
-
-Agent sessions produce reusable decisions, gotchas, and patterns that are valuable beyond the current session. Continuous learning is the practice of systematically extracting these patterns and persisting them for future sessions.
-
-**What to extract:**
-- Decisions that resolved ambiguity (e.g. "use displayMuscleGroup() for all muscle group display logic")
-- Data model invariants that are not obvious from the schema
-- Framework-specific patterns that agents commonly get wrong
-- Workarounds for library or tooling quirks
-- Error resolutions that took significant debugging effort
-
-**Where to store extracted patterns:**
-- `docs/agent-memory.md` -- for facts any contributor needs (decisions, invariants, gotchas, named utility functions)
-- Auto-memory (`~/.claude/projects/.../memory/`) -- for user preferences, feedback on agent behaviour, session-specific notes
-
-**Extraction cadence:**
-- After every session: extract decisions and gotchas as part of the session end checklist (step 4)
-- Every 5 sessions: audit `docs/agent-memory.md` for stale or redundant entries. Mark outdated entries `[SUPERSEDED]` and move to `## Archived`
-- When a pattern repeats across 3+ sessions: promote it from a gotcha to a rule in CLAUDE.md or a dedicated `.claude/rules/` file
-
-**Automated extraction (optional):**
-Claude Code hooks can automate pattern detection. A `Stop` hook can evaluate each agent response for extractable patterns and prompt the agent to persist them. See `docs/sop/hooks.md` for reference implementations.
-
-**What does NOT belong in extracted patterns:**
-- Derived facts (test counts, line numbers, dependency versions) -- these go stale immediately
-- One-time fixes or typo corrections
-- External API issues or transient errors
-- Information already documented in CLAUDE.md or the codebase
-
-### Outcome rubrics (self-evaluation before shipping)
-
-An outcome rubric defines what "done" looks like for a task type. The agent evaluates its own work against the rubric before committing. Benchmark data shows rubric-based evaluation catches quality gaps that checklist-based approaches miss — the rubric forces the agent to verify results against specific criteria rather than simply confirming steps were followed.
-
-**Add a `## Definition of Done` section to CLAUDE.md** with per-task-type rubrics. The agent reads the relevant rubric before committing and self-evaluates. If any criterion is not met, it iterates before shipping.
-
-Example rubrics by task type:
-
-**Bug fix:**
-```markdown
-- Root cause identified from reading the actual code — do not infer root cause from documentation alone
-- Fix is minimal: change the broken logic, do not remove working mechanisms
-- Fix applied to ALL instances of the pattern (grep for similar occurrences)
-- No regressions — full test suite passes
-- New test covers the specific bug scenario
-- Fix uses existing project utilities where they exist (check Common Mistakes section)
-- Commit message explains the root cause, not just what changed
-```
-
-**Feature:**
-```markdown
-- All acceptance criteria from the Backlog item are met
-- Server endpoint has integration tests (real DB, not mocks)
-- Client component has unit tests for logic
-- UI follows design system (CSS tokens, touch targets, responsive breakpoints)
-- Brand voice followed in all user-facing copy
-- No console.log or debug artifacts
-- Backlog.md and feature-map.md updated in the same commit
-```
-
-**Refactor:**
-```markdown
-- Behaviour is unchanged — all existing tests pass without modification
-- If tests needed updating, the change was in test assertions matching new implementation (not weakening tests)
-- No unrelated files modified
-- New pattern is consistent with existing codebase conventions
-- Dead code from the old pattern is removed (not commented out)
-```
-
-**Test writing:**
-```markdown
-- Tests cover the actual behaviour of the code, not just the happy path
-- Edge cases tested: null/undefined inputs, empty collections, boundary values
-- Test names describe the behaviour under test (not the implementation)
-- Tests follow existing patterns in the test file (describe blocks, naming, helpers)
-- No production code modified
-- All tests pass
-```
-
-These rubrics work with Claude Managed Agents' `user.define_outcome` API (which provisions an independent grader), but are equally effective as self-evaluation prompts in Claude Code sessions — the agent reads the rubric from CLAUDE.md and checks its own work before committing.
+Large-project-only patterns (`claude-progress.txt`, sub-agent delegation, schema-change protocol, continuous learning, outcome rubrics) live in `docs/guides/optional-patterns.md`. Add them when complexity warrants — they are not required for standard projects.
 
 ---
 
@@ -774,174 +621,12 @@ When benchmarks run via Managed Agents sessions instead of local Claude Code, us
 
 ## 16. Multi-Agent Context Routing
 
-When multiple agents work in parallel on the same project, not every agent needs the full SOP context. Routing the right context to each agent based on task type saves 15-25% of token spend while maintaining quality on the tasks that matter.
-
-### Context tiers
-
-| Task type | Context needed | What to load |
-|-----------|---------------|-------------|
-| Bug fix (multi-file) | Full | CLAUDE.md + agent-memory.md + build plan |
-| Feature (multi-file) | Full | CLAUDE.md + agent-memory.md + build plan |
-| Refactor (cross-cutting) | Full | CLAUDE.md + agent-memory.md |
-| CSS fix (single property) | Partial | CLAUDE.md Common Mistakes + Design System only |
-| Test writing | Minimal | Source file under test only. CLAUDE.md optional. |
-| Utility creation | Minimal | CLAUDE.md Common Mistakes only (for naming conventions) |
-| Documentation | Minimal | Backlog item only |
-
-### Routing rules
-
-1. **Default to full context.** When in doubt, load everything. The cost of unnecessary context (~5K tokens) is lower than the cost of a wrong turn (rework, production bugs).
-2. **Use minimal context only when the task is tagged `[ok-for-automation]`** or is explicitly a single-file, self-contained change.
-3. **Test-writing agents should NOT read CLAUDE.md.** Benchmark data shows SOP context adds no quality to test writing and may introduce caution that weakens assertions.
-4. **Every agent, regardless of tier, must follow the session end checklist** if it modifies committed files.
-
-### Conflict avoidance
-
-- Each agent works on a **separate branch** and merges sequentially.
-- Agents on the same codebase must not modify the same files. Assign files explicitly in the task prompt.
-- If two agents need to modify the same file, run them sequentially, not in parallel.
-- Documentation conflicts (agent-memory.md, Backlog.md) resolve by appending both entries.
-- Code conflicts require human review. Flag in agent-memory.md Gotchas.
-
-### Managed Agents API implementation
-
-When using the Claude Managed Agents API (`api.anthropic.com/v1/agents`), the context routing table maps directly to agent configurations:
-
-**Coordinator agent** (full context):
-```json
-{
-  "name": "Engineering Lead",
-  "model": "claude-sonnet-4-6",
-  "system": "[Full CLAUDE.md content including Common Mistakes, Dispatch, Definition of Done]",
-  "tools": [{"type": "agent_toolset_20260401"}],
-  "callable_agents": [
-    {"type": "agent", "id": "REVIEWER_ID", "version": 1},
-    {"type": "agent", "id": "TEST_WRITER_ID", "version": 1},
-    {"type": "agent", "id": "RESEARCHER_ID", "version": 1}
-  ]
-}
-```
-
-**Code reviewer** (read-only, partial context):
-```json
-{
-  "name": "Code Reviewer",
-  "model": "claude-sonnet-4-6",
-  "system": "[Common Mistakes + Design System + Definition of Done rubrics only]",
-  "tools": [{
-    "type": "agent_toolset_20260401",
-    "default_config": {"enabled": false},
-    "configs": [
-      {"name": "read", "enabled": true},
-      {"name": "grep", "enabled": true},
-      {"name": "glob", "enabled": true},
-      {"name": "bash", "enabled": true}
-    ]
-  }]
-}
-```
-
-**Test writer** (minimal context, write access):
-```json
-{
-  "name": "Test Writer",
-  "model": "claude-sonnet-4-6",
-  "system": "Write tests. Read the source file under test first. Follow existing test patterns.",
-  "tools": [{"type": "agent_toolset_20260401"}]
-}
-```
-
-**Key patterns:**
-- The coordinator has `callable_agents` — specialists do not (only one level of delegation).
-- All agents share the same container and filesystem but run in isolated threads with separate context.
-- Threads are persistent: the coordinator can send follow-up messages to a specialist that retains its prior context.
-- Attach `memory_store` resources for persistent cross-session learnings. Map `docs/agent-memory.md` sections to memory store paths: Common Mistakes → read-only store, Decisions Made → read-write store.
-- Use `user.define_outcome` with rubrics from the Definition of Done section for quality-gated work — a separate grader evaluates the output and sends feedback for iteration.
+Applies only when multiple agents work in parallel on the same project. See `docs/guides/multi-agent-context-routing.md` for the context-tier table, routing rules, conflict avoidance, and Managed Agents API mapping.
 
 ---
 
-## 17. Managed Agents Integration Guide
+## 17. SOP Evolution Loop
 
-This section maps SOP concepts to the Claude Managed Agents API (`api.anthropic.com/v1/agents`, beta `managed-agents-2026-04-01`). Use this when transitioning a project from Claude Code sessions to the Managed Agents API, or when building products on top of Managed Agents that follow the SOP.
+The SOP is a living document. Use benchmark data — not gut feeling — to iteratively improve it: run A/B benchmark, identify what helped/hurt/had no effect, fix and re-run.
 
-### Memory store mapping
-
-The SOP's file-based memory system maps to Managed Agents memory stores:
-
-| SOP file | Memory store | Access | Notes |
-|----------|-------------|--------|-------|
-| `docs/agent-memory.md` Decisions + Gotchas | Shared project store (read-write) | `read_write` | All agents read; coordinator writes learnings |
-| CLAUDE.md Common Mistakes | Reference store (read-only) | `read_only` | Loaded by all agents, never modified by agents |
-| `project_resume.md` | Not needed | N/A | Sessions have built-in event history via `getEvents()` — resume from any checkpoint |
-| `docs/feature-map.md` | Not needed | N/A | Track in the repo; agents read via filesystem |
-
-Structure memory stores as many small files (max 100KB each), not a few large ones. Use path prefixes for organisation: `/common-mistakes/data-model.md`, `/common-mistakes/client.md`, `/decisions/2026-04.md`.
-
-### Skills vs CLAUDE.md sections
-
-Managed Agents skills load on demand when relevant to the task. For most projects, keep Common Mistakes and Dispatch in the system prompt (always loaded) rather than as skills. Skills are better suited for:
-- Large reference material (API docs, design system specs > 300 lines)
-- Domain-specific workflows that apply to some tasks but not others
-- Content that changes independently of the agent configuration
-
-A maximum of 20 skills per session applies across all agents in a multi-agent setup.
-
-### Session lifecycle vs SOP checklists
-
-| SOP concept | Managed Agents equivalent |
-|-------------|--------------------------|
-| Session start checklist | System prompt includes CLAUDE.md content; memory stores loaded automatically |
-| Session end checklist | Agent writes learnings to memory store; event log persists all activity |
-| `project_resume.md` snapshot | `getEvents()` — retrieve any prior session's full event history |
-| Context compaction at 60% | Managed by the harness automatically (built-in prompt caching and compaction) |
-| Never delete without a trace | Append-only event log is the native model — events cannot be deleted |
-
-### Outcomes for quality-gated work
-
-The `user.define_outcome` event pairs a task description with a rubric (markdown). A separate grader evaluates the output and returns per-criterion feedback. The agent iterates until the rubric is satisfied or `max_iterations` is reached.
-
-Map the SOP's Definition of Done rubrics directly to outcome rubrics:
-1. Upload the rubric via the Files API (`POST /v1/files`)
-2. Send `user.define_outcome` with the rubric file reference
-3. The grader evaluates independently (separate context window, no bias from the agent's implementation)
-4. Results surface as `span.outcome_evaluation_end` events with `satisfied`, `needs_revision`, or `max_iterations_reached`
-
-This is the API-native version of the self-evaluation pattern described in Section 12. The key advantage: the grader runs in a separate context window, avoiding the confirmation bias inherent in self-evaluation.
-
----
-
-## 18. SOP Evolution Loop
-
-The SOP is a living document. Use benchmark data to iteratively improve it — not gut feeling.
-
-### The loop
-
-```
-1. Run A/B benchmark (SOP vs no-SOP) on real tasks
-2. Identify where SOP helped, hurt, or had no effect
-3. Fix what hurt, keep what helped, cut what had no effect
-4. Re-run benchmark to verify the fix worked
-5. Repeat
-```
-
-### Proven principles (from 5 benchmark rounds, 40+ agent runs)
-
-| Principle | Evidence |
-|-----------|----------|
-| **Gotcha entries must state what IS correct, not just the anti-pattern** | Ambiguous tonnage entry caused 2/2 wrong fixes. Fixed entry caused 1/1 correct fix. |
-| **Less context is better than ambiguous context** | Definition of Done rubric added weight without quality. Removing it eliminated over-correction. |
-| **Intent-rich dispatch saves tool calls** | "When you need to change X, start at Y" vs file-path tables: ~50% fewer exploration tool calls. |
-| **The SOP's value is a higher floor, not a higher ceiling** | When baseline doesn't fail catastrophically, results are equivalent. SOP insures against bad rolls. |
-| **Baseline quality is stochastic** | Same task, same codebase: baseline crashed in R2, matched SOP in R4. The SOP removes this variance. |
-
-### What to benchmark
-
-- **Vague prompts** (how real work arrives), not precise specs
-- **Context-dependent tasks** (require project knowledge), not self-contained ones
-- **Multiple rounds** for statistical confidence — single rounds are misleading
-
-### What to cut
-
-If a section of CLAUDE.md doesn't improve benchmark outcomes, remove it. Every line costs tokens. The optimal CLAUDE.md is the minimum set of context that prevents the specific failures you've observed.
-
-See `docs/guides/sop-hill-climbing.md` for the detailed methodology.
+See `docs/guides/sop-hill-climbing.md` for the methodology and the five benchmark-proven principles.

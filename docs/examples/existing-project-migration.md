@@ -199,7 +199,7 @@ Create `.claude/settings.json` with hooks. The two highest-value hooks:
 1. **SessionStart** — automatically reads CLAUDE.md and agent-memory.md at the start of every session.
 2. **PreCompact** — reminds the agent to run the session end checklist before context is compressed.
 
-See `docs/sop/hooks.md` for JSON config examples and 4 additional reference implementations.
+See `docs/sop/harness-configuration.md` for JSON config examples and 4 additional reference implementations.
 
 ### Review agents
 
