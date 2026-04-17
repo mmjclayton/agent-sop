@@ -354,6 +354,35 @@ proposing changes from future digests.
 
 ---
 
+### P40 — Section 14 + Section 15.4 trim, CLAUDE.md Recent Work + agent-memory.md Decisions compaction
+`[SHIPPED - 2026-04-17] [Iteration]`
+
+Mechanical trim batch flagged from the P32-P39 session. Two SOP-content moves and two tracking-file gardening passes.
+
+**Deliverables:**
+
+1. **Section 14 Common Mistakes table → guide.** Full 14-row table moved to `docs/guides/sop-common-mistakes.md` (new). Section 14 in `docs/sop/claude-agent-sop.md` replaced with one-line pointer that also distinguishes from the per-project Section 15.1 template. Net cost in core SOP: ~-12 instructions.
+
+2. **Section 15.4 Managed Agents API safety block → managed-agents-integration guide.** The 7-line "Managed Agents API safety" subsection moved into `docs/guides/managed-agents-integration.md` under a new "Benchmark safety (Managed Agents API)" section. Section 15.4 in core SOP retains the local-Claude-Code safety rules plus a one-line pointer to the guide.
+
+3. **CLAUDE.md Recent Work compacted.** 16 entries (8 expanded 2026-04-17 + earlier session-day entries) collapsed to 6 entries: P40 entry + a single rolled-up P32-P39 entry referencing build-plan Batch 0.13, plus rolled-up entries for 2026-04-13, 2026-04-09, 2026-04-08, 2026-04-07. Full per-item detail still lives in agent-memory.md Decisions, build-plan Batch Log, and per-item Backlog entries. CLAUDE.md: 183 → 153 lines.
+
+4. **agent-memory.md Decisions audited.** Pre-2026-04-09 entries (initial scaffold + ECC adaptation + token optimisation phase) moved to a new "Pre-2026-04-09 Decisions (relocated 2026-04-17 / P40)" subsection inside Archived, with a header explaining the move and noting that encoded rules live in the SOP docs themselves. Active Decisions section now contains 2026-04-09 onwards only.
+
+**Acceptance criteria:**
+- `docs/guides/sop-common-mistakes.md` exists with full Section 14 table preserved verbatim - DONE
+- `docs/guides/managed-agents-integration.md` has new "Benchmark safety (Managed Agents API)" section with the moved block - DONE
+- Core SOP Section 14 replaced with one-line pointer - DONE
+- Core SOP Section 15.4 retains local rules + one-line pointer for Managed Agents block - DONE
+- CLAUDE.md Recent Work compacted; under 200-line hard limit - DONE
+- agent-memory.md Decisions section audited; pre-cutoff entries moved to Archived (preserved, not deleted) - DONE
+- All four tracking files updated (Backlog, feature-map, agent-memory, build plan) - DONE
+- Core SOP instruction count drops by ~10-12 - DONE
+
+**Why this matters:** ~178 instructions in core SOP for the first time since Rule 5 was added (P32) — under the 150 soft cap target. CLAUDE.md and agent-memory.md Decisions sections are loaded into context every session start; both are now significantly slimmer.
+
+---
+
 ### P39 — Measurement gap closed: hygiene rubric + continuity benchmark + longitudinal exhibit
 `[SHIPPED - 2026-04-17] [Feature]`
 

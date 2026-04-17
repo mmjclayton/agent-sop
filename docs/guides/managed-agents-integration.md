@@ -49,3 +49,15 @@ Map the SOP's Definition of Done rubrics directly to outcome rubrics:
 4. Results surface as `span.outcome_evaluation_end` events with `satisfied`, `needs_revision`, or `max_iterations_reached`
 
 This is the API-native version of the self-evaluation pattern — the grader runs in a separate context window, avoiding the confirmation bias inherent in self-evaluation.
+
+## Benchmark safety (Managed Agents API)
+
+> Extracted from core SOP Section 15.4 on 2026-04-17 (P40). Core SOP retains the local-Claude-Code safety rules; this guide owns the API-specific block.
+
+When benchmarks run via Managed Agents sessions instead of local Claude Code, use permission policies to enforce safety at the API level:
+
+- `bash`: `always_allow` (agents need to run tests)
+- `write` and `edit`: `always_allow` (agents need to modify code)
+- Git push operations: restrict via system prompt ("never push to remote") or use a read-only GitHub token that lacks push permissions
+- Mount repositories with read-only tokens when testing code review or analysis tasks
+- Use isolated environments per session — each Managed Agent session gets its own container, eliminating the worktree contamination problem entirely

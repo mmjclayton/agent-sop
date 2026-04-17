@@ -44,10 +44,10 @@ This project IS the Agent SOP library. All agents working on this project still 
 - P9 — Marketing domain variant `[has-open-questions]`
 - P10 — Data/analytics domain variant `[has-open-questions]`
 
-**Follow-ups flagged from 2026-04-17 session:**
-- Section 14 Common Mistakes table → guide (next low-risk trim candidate, ~-12 instructions)
+**Follow-ups still open:**
 - Config `exclude` field for per-project file skipping (gap found during hst-tracker audit — security.md filename collision)
 - Karpathy-skills before/after examples pattern (Common Mistakes pedagogy — deferred from P34)
+- R6 full-framework benchmark on fresh CLI sessions, Opus 4.6, 2+ rounds (deferred from P38 — run if publicly citing a post-trim percentage)
 
 ---
 
@@ -126,55 +126,25 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 ## Recent Work
 
-*Append-only. New entries at top. Include commit refs.*
+*Append-only. New entries at top. Include commit refs. Older session-day entries roll up into one-liners; full detail lives in build-plan Batch Log + agent-memory.md Decisions + Backlog.md per item.*
 
-### 2026-04-17: P39 — Measurement gap closed
-R1/R2/R5 benchmarks score single-task quality but stop at "code shipped", missing the SOP's core product: project state the next session can pick up. Three supplementary measurements authored: **session-hygiene rubric** (7 new 0/1 dimensions — test gate, Backlog, feature-map, agent-memory, batch log, resume, docs commit; baseline scores 0/7 by construction), **continuity benchmark methodology** (dependent task pairs — task 2 depends on gotcha task 1 captures in agent-memory; measures whether session N+1 benefits from session N; sample pair included), **longitudinal exhibit** (measured artefact counts from hst-tracker: 86 decisions, 23 batch entries, 18 Recent Work, 64 docs commits, 4,628 tracking-file lines — 0 in a no-SOP project). Single-task scores are what the SOP buys on one task; the 86 decisions are what it buys over a project. Continuity benchmark execution deferred to R7.
+### 2026-04-17: P40 — Section 14 + Section 15.4 trim, Recent Work + Decisions compaction (commit pending)
+Section 14 Common Mistakes table moved to `docs/guides/sop-common-mistakes.md`; Section 15.4 Managed Agents API safety block moved into `docs/guides/managed-agents-integration.md`. Core SOP ~189 → ~178 instructions (under 150 soft cap on first measure since Rule 5 was added). Same session: CLAUDE.md Recent Work compacted (older session-days rolled into one-liners) and agent-memory.md Decisions audited (pre-2026-04-09 entries moved to Archived with a dated relocation note). Token saving from CLAUDE.md alone is the larger win.
 
-### 2026-04-17: P38 — R5 post-trim benchmark pilot + README audit
-Directional pilot re-run of R2 tasks (05 tonnage, 06 scroll, 07 skip exercise, 08 keyboard buttons) against same base commit (hst-tracker 1c73062) on post-P32-P36 SOP. Aggregate SOP 75/84 (89%) vs baseline 61/84 (73%) = **SOP +16%** (R2 was +33%). 3 of 4 tasks won by SOP; task 08 flipped to baseline (partly scorer error on real token `--color-accent-light`). Methodology caveats: subagent pilot not fresh CLI, Opus 4.7 vs R2's 4.6, single round. Verdict: trim did not break SOP — spot check (tonnage) still showed baseline actively regressing the B1 fix. README benchmark badge updated from "+33%" → "directional +16% to +33%"; R5 section added with caveats; Key finding #5 qualified as R2-specific. Full R6 on fresh CLI sessions deferred. Artefact: `docs/benchmark/results/r5-post-trim/summary.md`.
-
-### 2026-04-17: P37 — claude-mem review, three portable patterns adopted
-Reviewed thedotmack/claude-mem (60.8k stars, Claude Code plugin, daemon + SQLite + ChromaDB). Confirmed categorically different from Agent SOP (observation/retrieval infrastructure vs prescription layer). Harvested three portable patterns: progressive retrieval (index → narrow → fetch) added as Routing Rule 5 in `multi-agent-context-routing.md`; `<private>` capture-time redaction added as Rule 9 in `security.md`; hooks-must-fail-open added as Core Rule 9 in `harness-configuration.md`. claude-mem positioned as optional complement in `optional-patterns.md`. Core SOP instruction count unchanged.
-
-### 2026-04-17: P36 — SOP sync mechanism shipped
-New `/update-agent-sop` slash command keeps consumer projects in sync with upstream. Three-way diff per file (upstream vs local vs baseline SHA); never force-overwrites locally modified files. `setup.sh` expanded to distribute the full 17-file pristine-replica surface (SOP docs + guides project-scope; slash commands + reference agents user-scope) and auto-create `~/.claude/agent-sop.config.json` with baseline SHAs. `/restart-sop` gained a Step 0 staleness warning (weekly by default, configurable via `update_reminder`). All 17 pristine-replica files now carry version markers — HTML comment for plain markdown, `sop_version:` YAML field for files with frontmatter. GitHub repo: `mmjclayton/agent-sop`.
-
-### 2026-04-17: P35 — Section 4 Versioning Rules removed
-Pure duplicate of Section 0 Rule 1 "How this works" bullets — self-declared via its own opening "See Section 0" line. Replaced with a one-line pointer. Core SOP ~197 → ~189 instructions. Zero content loss; grep confirmed no external "Section 4" references.
-
-### 2026-04-17: P34 — Karpathy-skills findings applied
-Rule 1 extended: *"Never delete without a trace. Never add without reason. Every changed line must trace directly to the user's request."* Closes the silent-add gap symmetric to silent-delete. Rule 6 added: *"Surface interpretations before acting."* Names the ambiguity-resolution pattern Rule 4 implied but didn't spell out. All six non-negotiable rules now carry an italic *Prevents:* annotation naming the failure mode each one prevents — format-only, zero instruction cost. Net: ~+4 instructions (~197 total in core SOP). Applied from the 2026-04-17 review of forrestchang/andrej-karpathy-skills.
-
-### 2026-04-17: P32 — SOP instruction-budget trim
-Added Rules 3 (no opinion, state facts), 4 (back-and-forth before planning), 5 (≤150 soft / 200 hard instruction cap) to Section 0. Audited full SOP: 392 instructions across 5 files, with `claude-agent-sop.md` alone at ~230 — breaching its own Rule 5. Cuts: Quick Reference Card removed (100% duplicate of Sections 0/5/6); Section 17 Managed Agents extracted to `docs/guides/managed-agents-integration.md` (deferred, P33); Sections 12, 16, 18 extracted to `docs/guides/`; `hooks.md` + `context-management.md` merged into `harness-configuration.md`; `security.md` collapsed, container/network-isolation content split to `sandboxing.md`; compliance-checklist left intact (tooling dependency — sop-checker agent references check IDs). Pre-trim snapshot archived at `.archive/sop-pre-trim-2026-04-17/` (gitignored). Core SOP 975→624 lines. Also reviewed forrestchang/andrej-karpathy-skills — 3 of 4 principles duplicate existing SOP coverage; "trace-to-request" phrasing and failure-mode annotations identified as candidate additions (not yet applied).
+### 2026-04-17: P32-P39 — Trim, sync mechanism, two repo reviews, R5 pilot, measurement gap (Batch 0.13, commits 3e452b7, 2350a9f, 0632aad, 8977f46, ee1b012, 988ab69, ca3d57b)
+Eight P-items in one session. Core SOP trim (~230 → ~195 instructions; Section 4 removed; Sections 12/16/17/18 to guides; hooks.md + context-management.md merged into harness-configuration.md; security.md collapsed). Section 0 expanded to six non-negotiable rules with *Prevents:* annotations. `/update-agent-sop` sync command shipped (three-way diff, never force-overwrites). Reviewed forrestchang/andrej-karpathy-skills (trace-to-request ported) and thedotmack/claude-mem (progressive retrieval, capture-time redaction, fail-open hooks ported). R5 post-trim benchmark pilot: SOP +16% aggregate (vs R2's +33%); README badge changed to "directional +16% to +33%". Measurement gap closed: session-hygiene rubric, continuity methodology, longitudinal exhibit (hst-tracker: 86 decisions, 23 batches, 64 docs commits). Full per-item detail in agent-memory.md Decisions.
 
 ### 2026-04-13: P29-P30 — Pre-launch README polish + research digest review (commits be449ac, 605cf60)
-P29: MIT LICENSE added (was missing — blocker for reuse), compliance check count corrected to 75/66, Status section rewritten for outside readers, agent-driven setup paths generalised to placeholder, badges and TOC added, Claude Code v2.1.101+ requirement noted in README and setup.sh. P30: Reviewed weekly research digest (4 sources verified directly — AgentKit date in digest was wrong). Tier 1 slate cut from 4 items to 1 on "sharpening > adding" filter; only the version note shipped. Decision logged: research digests bias toward additions; default filter is "what does this remove or sharpen".
+MIT LICENSE added; Status rewritten for outside readers; setup paths generalised; badges + TOC added; Claude Code v2.1.101+ noted. Weekly research digest reviewed with source verification (4 sources; AgentKit date in digest was wrong). Tier 1 slate cut 4 → 1 on "sharpening > adding" filter. Meta-decision logged: research digests bias toward additions; default filter is "what does this remove or sharpen".
 
-### 2026-04-09: Research session — graphify analysis, P24 scoping
-Evaluated safishamsi/graphify for use alongside agent-sop and hst-tracker. Conclusion: not valuable for agent-sop (too small, too well-structured), moderate value for hst-tracker but SOP dispatch already covers navigation. Recommended ARCHITECTURE.md over graphify for hst-tracker. Fleshed out P24 acceptance criteria with concrete scope informed by benchmark data.
+### 2026-04-09: Batch 0.11 — P23-P28 (benchmark framework, optimisations, Managed Agents, digest changes) + graphify research
+A/B benchmark framework: Round 1 precise prompts +8%, Round 2 vague prompts +33% (sharpening wins). Section 15 Benchmark-Proven Practices added; Common Mistakes mandatory for code projects; intent-rich dispatch. P24 multi-agent guide scoped (deferred). graphify evaluated and rejected (corpus too small for agent-sop; ARCHITECTURE.md preferred for hst-tracker).
 
-### 2026-04-09: P23-P28 — Benchmark framework, optimisations, Managed Agents, digest changes
-P23: A/B benchmark framework with 8 task specs, runner script, blind scoring. Two rounds against hst-tracker. Round 1 (precise prompts): SOP +8%. Round 2 (vague prompts, sharpened SOP): SOP +33%. P25: Incorporated findings into SOP Section 15 (Benchmark-Proven Practices), both templates (Common Mistakes + intent-rich dispatch), compliance checklist (BP1-BP4), implementation guide, README. Also committed sharpened CLAUDE.md to hst-tracker with Common Mistakes section.
+### 2026-04-08: Batches 0.4-0.10 — P14-P22, ECC adaptation, token optimisation, slash commands (commits f928a42-3e8d340)
+Security guidance, hooks guidance (6 reference implementations), code quality rules, 4 reference agents (code-reviewer, security-reviewer, planner, e2e-runner), expanded code template sections, continuous learning pattern, 6 new compliance checks. New project walkthrough + migration checklist. setup.sh shipped. `/restart-sop` and `/update-sop` slash commands shipped. README rewritten (em dashes removed, ECC attribution corrected to affaan-m, verified token efficiency section).
 
-### 2026-04-08: P6-P7, P21-P22 — Guides, setup script, slash commands (commits c4620b6-3e8d340)
-New project walkthrough (P6), migration checklist (P7), setup.sh onboarding script (P21), /restart-sop and /update-sop slash commands (P22). README rewritten: em dashes removed, verified token efficiency section, ECC attribution corrected to affaan-m. Commands installed at user level for all projects.
-
-### 2026-04-08: P14-P20 — ECC-informed expansion (commits f928a42-present)
-Security guidance, hooks guidance with 6 reference implementations, code quality rules, 4 reference agents (code-reviewer, security-reviewer, planner, e2e-runner), expanded code template sections (Auth, Database, Key Commands, Design System), continuous learning pattern, and 6 new compliance checks. Adapted from everything-claude-code reference repo.
-
-### 2026-04-07: P13 — SOP Compliance Checker Agent (commits c0b697d-22f1eb0)
-Compliance checker agent (`.claude/agents/sop-checker.md`) and canonical checklist (`docs/sop/compliance-checklist.md`). ~64 checks across 8 categories, three-tier scoring with critical-failure cap. README rewritten.
-
-### 2026-04-07: P12 — SOP v2 owner feedback iteration (commit 79c5a5c)
-10 changes applied based on multi-session usage feedback. Reframed additive-only to never-delete-without-a-trace, delineated memory systems, added test gates, snapshot resume model, conflict precedence, schema protocol, backlog archive threshold, no-derived-facts rule, multi-agent code conflict nuance.
-
-### 2026-04-07: SOP improvements + P11 (commit 79c5a5c)
-9 improvements applied to core SOP following independent analysis. CLAUDE.md template split into base + code variant (P11 shipped). All tracking files updated per session end checklist.
-
-### 2026-04-07: Initial scaffold (commit 79c5a5c)
-Project created and P1, P2 shipped — CLAUDE.md, Backlog.md, docs/agent-memory.md, docs/feature-map.md, phase-0 build plan, README.md, core SOP, CLAUDE.md template.
+### 2026-04-07: Batches 0.1-0.3f — Initial scaffold + P1-P2-P11-P12-P13 (commits 79c5a5c-b0942cf)
+Project scaffold (CLAUDE.md, Backlog.md, agent-memory.md, feature-map.md, phase-0 build plan, README.md). P1 Core SOP. P2 base CLAUDE.md template. P11 code template. P12 SOP v2 owner feedback iteration (10 changes including additive-only → never-delete-without-a-trace, snapshot resume model, conflict precedence). P13 SOP Compliance Checker agent + canonical checklist (~64 checks, three-tier scoring). Self-compliance fixes (49 → 100).
 
 ---
 
