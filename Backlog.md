@@ -354,6 +354,30 @@ proposing changes from future digests.
 
 ---
 
+### P39 — Measurement gap closed: hygiene rubric + continuity benchmark + longitudinal exhibit
+`[SHIPPED - 2026-04-17] [Feature]`
+
+The R1/R2/R5 code-quality benchmarks measure single-task quality. They end at "code shipped" and do not measure what the SOP's actual product is: a project state the next session can pick up cleanly. This gap was closed with three additions.
+
+**Deliverables:**
+
+1. **Session-hygiene scoring rubric** (appended to `docs/benchmark/README.md`) — 7 extra dimensions scored after each benchmark task: test gate, Backlog update, feature-map append, agent-memory capture, build-plan batch log, project_resume snapshot, docs/ commit. 0/1 per dimension. Baseline scores 0/7 by construction (no tracking files exist); SOP should score 6-7/7 with a disciplined agent. Demonstrative measurement, not comparative in the usual sense.
+
+2. **Continuity benchmark methodology** (`docs/benchmark/continuity-methodology.md`) — dependent task pairs. Task 1 naturally surfaces an adjacent bug that an SOP agent captures in `agent-memory.md`; task 2's vague prompt depends on that captured context. Baseline has nowhere to look; SOP agent reads the gotcha at session start. Sample pair included (tonnage client-side + adjacent server-side gap). Scoring emphasises task-2 tool-call count and time-to-locate.
+
+3. **Longitudinal exhibit** (appended to `docs/benchmark/README.md` + summary in main `README.md`) — measured artefact counts from hst-tracker: 86 dated decisions, 23 build-plan batch-log entries, 18 CLAUDE.md Recent Work entries, 64 docs/-only commits, 4,628 lines across the four tracking files. A no-SOP project of equivalent age has 0 of each. Makes the continuity value visible without running any agent.
+
+**Why this matters for the value story:** the +16-33% R2/R5 scores capture single-task benefit. The 86 decisions, 23 batch entries, etc. capture the compounding lifetime value. Two dimensions, both worth measuring; previously only the first was.
+
+**Artefacts:**
+- `docs/benchmark/README.md` (updated with hygiene rubric + longitudinal exhibit)
+- `docs/benchmark/continuity-methodology.md` (new)
+- `README.md` (new "What the benchmarks don't measure" section)
+
+**Deferred:** actually running the continuity benchmark (would be R7, requires dependent task pair execution on fresh CLI sessions). Methodology shipped now; execution when warranted.
+
+---
+
 ### P38 — R5 post-trim benchmark + README claim audit
 `[SHIPPED - 2026-04-17] [Iteration]`
 

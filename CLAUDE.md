@@ -128,6 +128,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 *Append-only. New entries at top. Include commit refs.*
 
+### 2026-04-17: P39 — Measurement gap closed
+R1/R2/R5 benchmarks score single-task quality but stop at "code shipped", missing the SOP's core product: project state the next session can pick up. Three supplementary measurements authored: **session-hygiene rubric** (7 new 0/1 dimensions — test gate, Backlog, feature-map, agent-memory, batch log, resume, docs commit; baseline scores 0/7 by construction), **continuity benchmark methodology** (dependent task pairs — task 2 depends on gotcha task 1 captures in agent-memory; measures whether session N+1 benefits from session N; sample pair included), **longitudinal exhibit** (measured artefact counts from hst-tracker: 86 decisions, 23 batch entries, 18 Recent Work, 64 docs commits, 4,628 tracking-file lines — 0 in a no-SOP project). Single-task scores are what the SOP buys on one task; the 86 decisions are what it buys over a project. Continuity benchmark execution deferred to R7.
+
 ### 2026-04-17: P38 — R5 post-trim benchmark pilot + README audit
 Directional pilot re-run of R2 tasks (05 tonnage, 06 scroll, 07 skip exercise, 08 keyboard buttons) against same base commit (hst-tracker 1c73062) on post-P32-P36 SOP. Aggregate SOP 75/84 (89%) vs baseline 61/84 (73%) = **SOP +16%** (R2 was +33%). 3 of 4 tasks won by SOP; task 08 flipped to baseline (partly scorer error on real token `--color-accent-light`). Methodology caveats: subagent pilot not fresh CLI, Opus 4.7 vs R2's 4.6, single round. Verdict: trim did not break SOP — spot check (tonnage) still showed baseline actively regressing the B1 fix. README benchmark badge updated from "+33%" → "directional +16% to +33%"; R5 section added with caveats; Key finding #5 qualified as R2-specific. Full R6 on fresh CLI sessions deferred. Artefact: `docs/benchmark/results/r5-post-trim/summary.md`.
 

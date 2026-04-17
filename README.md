@@ -268,7 +268,17 @@ R5 margin is roughly half of R2's +33%. Drivers (from `docs/benchmark/results/r5
 4. **The SOP raises the quality floor, not the ceiling.** Both agents can produce excellent code. The SOP prevents catastrophic misses.
 5. **Token overhead paid for itself in R2.** R2 SOP used 24% more tokens but produced 56% higher scores; on one task, SOP used fewer tokens than baseline while producing a correct result. R5 did not remeasure tokens — the post-trim token overhead has not been independently verified.
 
-Full methodology, task specs, and scoring data: `docs/benchmark/`
+Full methodology, task specs, and scoring data: `docs/benchmark/`.
+
+### What the benchmarks don't measure
+
+R1/R2/R5 measure single-task code quality. They end at "code shipped" and do not score what the SOP's actual product is — a project state the next session can pick up cleanly. Three supplementary measurements close that gap:
+
+- **Session-hygiene rubric** (`docs/benchmark/README.md`) — 7 extra dimensions scored after each task (Backlog update, feature-map append, agent-memory capture, build-plan batch log, project_resume snapshot, test gate, docs commit). Baseline scores 0/7 by construction; SOP should score 6-7/7.
+- **Continuity benchmark** (`docs/benchmark/continuity-methodology.md`) — dependent task pairs where task 2's prompt depends on context task 1 should have captured in `agent-memory.md`. Measures whether session N+1 benefits from session N.
+- **Longitudinal exhibit** (`docs/benchmark/README.md`) — a no-agent audit of artefacts a mature SOP project accumulates. `hst-tracker` today: 86 dated decisions, 23 batch-log entries, 18 Recent Work entries, 64 `docs/` commits, 4,628 lines of tracking files. A no-SOP project of equivalent age and size has 0 of each.
+
+The +16-33% score is what the SOP buys on one task. The 86 decisions are what it buys over a project.
 
 ---
 
