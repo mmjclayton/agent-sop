@@ -17,6 +17,7 @@ How to configure Claude Code's runtime — hooks and context primitives — to e
 6. **Treat project-scope hooks from cloned repos as untrusted.** Review before use — they execute in your environment. See `docs/sop/security.md`.
 7. **Placement:** user-scope hooks in `~/.claude/settings.json`, project-scope in `.claude/settings.json`.
 8. **Combine hooks with checklists, don't replace.** Hooks handle the mechanical; checklists handle judgment.
+9. **Hooks must fail open.** A failing hook must never block the Claude Code session. Catch errors, log them, let the session continue. For blocking gates that genuinely must stop a bad action (secret scan, destructive command), fail closed with a clear error message — but add a circuit breaker (e.g. suppress after 3 consecutive failures in the same session) so a broken hook can't strand the agent.
 
 ---
 

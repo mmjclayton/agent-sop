@@ -27,6 +27,8 @@ Threat context: agents sit in the middle of multiple trusted paths (filesystem, 
 
 8. **Reset auto-memory after running agents on untrusted repos.** Persistent memory is an attacker persistence mechanism — a malicious payload can plant fragments that activate in a later session. Do not store secrets in any memory file.
 
+9. **Redact sensitive content at capture time, not retrieval time.** When a project uses auto-capture hooks that persist session content (observations, transcripts, summaries), provide an explicit opt-out marker and strip it before write — not before read. Convention: `<private>...</private>` tags are removed at the capture layer so the sensitive content never enters the memory store. Retrieval-time filtering is not sufficient: a leaked store still contains the secret.
+
 ---
 
 ## Detection Scans

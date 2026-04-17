@@ -128,6 +128,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 *Append-only. New entries at top. Include commit refs.*
 
+### 2026-04-17: P37 — claude-mem review, three portable patterns adopted
+Reviewed thedotmack/claude-mem (60.8k stars, Claude Code plugin, daemon + SQLite + ChromaDB). Confirmed categorically different from Agent SOP (observation/retrieval infrastructure vs prescription layer). Harvested three portable patterns: progressive retrieval (index → narrow → fetch) added as Routing Rule 5 in `multi-agent-context-routing.md`; `<private>` capture-time redaction added as Rule 9 in `security.md`; hooks-must-fail-open added as Core Rule 9 in `harness-configuration.md`. claude-mem positioned as optional complement in `optional-patterns.md`. Core SOP instruction count unchanged.
+
 ### 2026-04-17: P36 — SOP sync mechanism shipped
 New `/update-agent-sop` slash command keeps consumer projects in sync with upstream. Three-way diff per file (upstream vs local vs baseline SHA); never force-overwrites locally modified files. `setup.sh` expanded to distribute the full 17-file pristine-replica surface (SOP docs + guides project-scope; slash commands + reference agents user-scope) and auto-create `~/.claude/agent-sop.config.json` with baseline SHAs. `/restart-sop` gained a Step 0 staleness warning (weekly by default, configurable via `update_reminder`). All 17 pristine-replica files now carry version markers — HTML comment for plain markdown, `sop_version:` YAML field for files with frontmatter. GitHub repo: `mmjclayton/agent-sop`.
 

@@ -354,6 +354,23 @@ proposing changes from future digests.
 
 ---
 
+### P37 — claude-mem review findings applied
+`[SHIPPED - 2026-04-17] [Iteration]`
+
+Three portable patterns harvested from the claude-mem review (2026-04-17) and applied to existing docs. Each addition traces to a specific claude-mem mechanism shown to be valuable independent of its infra choices.
+
+**Changes:**
+1. `docs/guides/multi-agent-context-routing.md` — added Routing Rule 5: **progressive retrieval pattern** (index → narrow → fetch). Generalises claude-mem's 3-layer MCP retrieval into a context-routing heuristic for large corpuses.
+2. `docs/sop/security.md` — added Rule 9: **redact sensitive content at capture time**. `<private>...</private>` marker stripped at hook write, not retrieval read. Addresses the leaked-store threat model that retrieval-time filtering misses.
+3. `docs/sop/harness-configuration.md` — added Core Rule 9: **hooks must fail open**. Catch errors, log, continue. Blocking gates fail closed but need a circuit breaker so a broken hook can't strand the agent.
+4. `docs/guides/optional-patterns.md` — added **heavyweight persistent memory** section positioning `claude-mem` as an optional complement (not competitor). Clarifies that Agent SOP covers prescription, claude-mem (or equivalent) covers observation/retrieval.
+
+**Patterns explicitly NOT adopted:** DB-backed memory, auto-capture by default, MCP server, web UI. Would compromise Agent SOP's plain-markdown / git-committed / human-authored philosophy.
+
+Core SOP instruction count unchanged (edits landed in guides + security + harness, not `claude-agent-sop.md`).
+
+---
+
 ### P36 — SOP sync mechanism (/update-agent-sop)
 `[SHIPPED - 2026-04-17] [Feature]`
 

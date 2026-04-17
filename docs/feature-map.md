@@ -33,6 +33,7 @@ Last updated: 2026-04-17
 | P34 | Rule 1 extended (trace-to-request); Rule 6 added (surface interpretations); failure-mode annotations on all 6 rules | `docs/sop/claude-agent-sop.md` | 2026-04-17 |
 | P35 | Section 4 Versioning Rules removed (pure duplicate of Section 0 Rule 1) | `docs/sop/claude-agent-sop.md` | 2026-04-17 |
 | P36 | SOP sync mechanism — version markers, `/update-agent-sop` command, `setup.sh` expansion, staleness check on `/restart-sop` | `.claude/commands/update-agent-sop.md`, `.claude/commands/restart-sop.md`, `setup.sh`, `docs/templates/agent-sop-config-template.json`, `README.md`, 17 pristine-replica files | 2026-04-17 |
+| P37 | claude-mem review — 3 portable patterns adopted: progressive retrieval, capture-time redaction, fail-open hooks. claude-mem positioned as optional complement in `optional-patterns.md` | `docs/guides/multi-agent-context-routing.md`, `docs/sop/security.md`, `docs/sop/harness-configuration.md`, `docs/guides/optional-patterns.md` | 2026-04-17 |
 
 ---
 

@@ -23,6 +23,7 @@ Extracted from SOP Section 16 on 2026-04-17 as part of the P32 trim. For single-
 2. **Use minimal context only when the task is tagged `[ok-for-automation]`** or is explicitly a single-file, self-contained change.
 3. **Test-writing agents should NOT read CLAUDE.md.** Benchmark data shows SOP context adds no quality to test writing and may introduce caution that weakens assertions.
 4. **Every agent, regardless of tier, must follow the session end checklist** if it modifies committed files.
+5. **Progressive retrieval for large corpuses.** When an agent faces a large body of prior context (decision log, observation store, big memory file), retrieve identifiers or a compact index first, narrow the candidates by timeline or topic, and only then fetch full content for the few items that matter. Don't load the full corpus upfront. Pattern: index → narrow → fetch.
 
 ## Conflict avoidance
 

@@ -132,3 +132,11 @@ Example rubrics by task type:
 ```
 
 These rubrics work with Claude Managed Agents' `user.define_outcome` API (independent grader) — see `docs/guides/managed-agents-integration.md`. They are equally effective as self-evaluation prompts in Claude Code sessions: the agent reads the rubric from CLAUDE.md and checks its own work before committing.
+
+## Heavyweight persistent memory (optional complement)
+
+Agent SOP's memory model is deliberately lightweight: `docs/agent-memory.md` is plain markdown, git-committed, human-readable, grep-able. This is a conscious choice — it trades sophistication for transparency and portability.
+
+For projects that need more — vector search over session history, automatic capture on every tool call, semantic retrieval, cross-session conversational memory — [`claude-mem`](https://github.com/thedotmack/claude-mem) is a substantial Claude Code plugin that covers the heavyweight end of the spectrum. It uses SQLite + ChromaDB, runs a local daemon, and exposes retrieval via an MCP server.
+
+The two approaches are complementary, not competing. Agent SOP handles the prescriptive layer (what to do, when, why). `claude-mem` or equivalent infrastructure handles the observation layer (what the agent saw, when). If you adopt both, keep their responsibilities distinct: SOP stays in markdown for human-authored decisions and project invariants; infra-layer memory stores machine-captured session observations.
