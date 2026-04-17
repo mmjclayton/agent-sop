@@ -128,7 +128,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 *Append-only. New entries at top. Include commit refs. Older session-day entries roll up into one-liners; full detail lives in build-plan Batch Log + agent-memory.md Decisions + Backlog.md per item.*
 
-### 2026-04-17: P40 — Section 14 + Section 15.4 trim, Recent Work + Decisions compaction (commit pending)
+### 2026-04-17: P40 — Section 14 + Section 15.4 trim, Recent Work + Decisions compaction (commit 5b36751)
 Section 14 Common Mistakes table moved to `docs/guides/sop-common-mistakes.md`; Section 15.4 Managed Agents API safety block moved into `docs/guides/managed-agents-integration.md`. Core SOP ~189 → ~178 instructions (under 150 soft cap on first measure since Rule 5 was added). Same session: CLAUDE.md Recent Work compacted (older session-days rolled into one-liners) and agent-memory.md Decisions audited (pre-2026-04-09 entries moved to Archived with a dated relocation note). Token saving from CLAUDE.md alone is the larger win.
 
 ### 2026-04-17: P32-P39 — Trim, sync mechanism, two repo reviews, R5 pilot, measurement gap (Batch 0.13, commits 3e452b7, 2350a9f, 0632aad, 8977f46, ee1b012, 988ab69, ca3d57b)
