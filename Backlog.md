@@ -354,6 +354,43 @@ proposing changes from future digests.
 
 ---
 
+### P38 — R5 post-trim benchmark + README claim audit
+`[SHIPPED - 2026-04-17] [Iteration]`
+
+Ran a directional pilot benchmark (R5) to validate the P32-P36 trim did not compromise SOP performance. Audited README for unsubstantiated claims and tightened language throughout.
+
+**R5 methodology:**
+- Same 4 vague tasks as R2 (05 tonnage, 06 scroll, 07 skip exercise, 08 keyboard buttons)
+- Same base commit (hst-tracker `1c73062`)
+- Subagent pilot (not fresh CLI sessions — directional only)
+- Opus 4.7 (R2 used 4.6)
+- Single round, blind-scored per condition
+
+**R5 results:**
+| Task | SOP | Baseline | Delta | R2 delta |
+|------|----:|---------:|------:|---------:|
+| 05 Tonnage | 18 | 8 | SOP +10 | SOP +9 |
+| 06 Scroll | 20 | 17 | SOP +3 | Draw |
+| 07 Skip exercise | 21 | 15 | SOP +6 | SOP +9 |
+| 08 Keyboard buttons | 16* | 21 | Baseline +5 | SOP +10 |
+| **Aggregate** | **75/84 (89%)** | **61/84 (73%)** | **SOP +16%** | **SOP +33%** |
+
+(*Task 08 SOP score corrected +1 after scorer incorrectly penalised `--color-accent-light` which does exist — 87 occurrences in index.css.)
+
+**Interpretation:** SOP still wins (+16% aggregate, 3 of 4 tasks), but margin narrowed from R2's +33%. Drivers: Opus 4.7 baseline was more capable than R2's 4.6 (didn't crash on task 07 as R2's did; used correct design tokens on task 08 unlike R2); subagent methodology is weaker than fresh CLI sessions; single round is not averaged. The spot check (task 05) held strongly — baseline actively regressed the B1 fix, exactly the catastrophic miss the SOP prevents.
+
+**README audit + updates:**
+- Benchmark badge changed from `+33% vs baseline` → `directional +16% to +33%`.
+- Benchmark preamble rewritten to name the methodology difference between R1/R2 (fresh CLI, Opus 4.6) and R5 (subagents, Opus 4.7).
+- R5 section added with caveats and explicit "not a definitive replacement for R2" framing.
+- Key finding #5 ("token overhead pays for itself") qualified to R2-specific — R5 didn't remeasure tokens.
+
+**Deferred:** full-framework R6 on fresh CLI sessions, same model as R2, multi-round — before citing a post-trim percentage unconditionally.
+
+**Artefact:** `docs/benchmark/results/r5-post-trim/summary.md`
+
+---
+
 ### P37 — claude-mem review findings applied
 `[SHIPPED - 2026-04-17] [Iteration]`
 

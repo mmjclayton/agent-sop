@@ -4,7 +4,7 @@ Standard operating procedures for Claude Code agents. Consistent structure, pers
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-v2.1.101+-orange.svg)](https://code.claude.com/docs/en/changelog)
-[![Benchmark](https://img.shields.io/badge/A%2FB_benchmarked-+33%25_vs_baseline-brightgreen.svg)](#benchmark-results)
+[![Benchmark](https://img.shields.io/badge/A%2FB_benchmarked-directional_+16%25_to_+33%25-brightgreen.svg)](#benchmark-results)
 [![Status](https://img.shields.io/badge/status-active-success.svg)](#status)
 
 ---
@@ -229,7 +229,7 @@ The SOP includes an automated compliance checker agent. Run it from a Claude Cod
 
 ## Benchmark Results
 
-The SOP has been A/B tested against a baseline (no SOP context) using blind-scored agent pairs on identical tasks. Two rounds of benchmarks were run against a production React/Express codebase (hst-tracker, ~15K lines, 7 models, 486 tests). Figures below reflect the pre-P32 SOP (Round 1: 2026-04-09, Round 2: 2026-04-09). The post-trim SOP (P32-P36) has not yet been re-benchmarked.
+The SOP has been A/B tested against a baseline (no SOP context) using blind-scored agent pairs on identical tasks. Rounds 1-2 (2026-04-09) ran against a production React/Express codebase (hst-tracker, ~15K lines, 7 models, 486 tests) on the pre-P32 SOP, using fresh Claude Code CLI sessions on Opus 4.6 — this is the methodology behind the +33% claim. Round 5 (2026-04-17) was a directional pilot re-run of the post-P32-P36 trimmed SOP on the same tasks and same base commit, using subagents rather than fresh CLI sessions, on Opus 4.7. R5 is directionally positive but methodologically weaker than R1-R2 and should not be read as a definitive replacement.
 
 ### Round 1: Precise prompts (detailed task instructions)
 
@@ -248,13 +248,25 @@ The SOP has been A/B tested against a baseline (no SOP context) using blind-scor
 | Token overhead | +24% | baseline | |
 | Production bugs prevented | 2 | 0 | |
 
+### Round 5: Post-trim pilot (directional, subagent methodology)
+
+Same 4 vague tasks as R2, same base commit. Ran 2026-04-17 on the post-P32-P36 SOP (~195 instructions after trim vs R2's ~230).
+
+| Metric | SOP | Baseline | Delta |
+|--------|-----|----------|-------|
+| Aggregate score | 75/84 (89%) | 61/84 (73%) | **SOP +16%** |
+| Wins | 3 | 0 | 1 loss |
+| Tasks where baseline regressed prior fix | 0 | 1 (Task 5 tonnage) | |
+
+R5 margin is roughly half of R2's +33%. Drivers (from `docs/benchmark/results/r5-post-trim/summary.md`): baseline was more capable this run (Opus 4.7 vs R2's 4.6; didn't crash on task 07 as R2's did; used correct design tokens on task 08 unlike R2); subagent methodology inherits parent-session capabilities in ways fresh CLI sessions do not; single-round run is not statistically averaged. R5 is **directional evidence the trim did not break the SOP** — not a definitive replacement for R2's +33% figure. A full-framework R6 on fresh CLI sessions, same model as R2, multi-round, is needed before citing a post-trim percentage unconditionally.
+
 ### Key findings
 
 1. **"Common Mistakes" is the highest-value section.** It directly prevented 2 production bugs in round 2 (wrong CSS tokens, wrong function modified).
 2. **Intent-rich dispatch outperforms file-path lists.** "When you need to change X, start at Y" navigates agents directly. File paths alone cause blind exploration.
 3. **Vague prompts amplify the gap.** Precise prompts mask context deficiencies. Product-level prompts (how real work arrives) expose them.
 4. **The SOP raises the quality floor, not the ceiling.** Both agents can produce excellent code. The SOP prevents catastrophic misses.
-5. **Token overhead pays for itself.** SOP used 24% more tokens but produced 56% higher scores. On one task, SOP used fewer tokens than baseline while producing a correct result.
+5. **Token overhead paid for itself in R2.** R2 SOP used 24% more tokens but produced 56% higher scores; on one task, SOP used fewer tokens than baseline while producing a correct result. R5 did not remeasure tokens — the post-trim token overhead has not been independently verified.
 
 Full methodology, task specs, and scoring data: `docs/benchmark/`
 

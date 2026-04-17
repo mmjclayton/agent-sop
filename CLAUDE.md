@@ -128,6 +128,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 *Append-only. New entries at top. Include commit refs.*
 
+### 2026-04-17: P38 — R5 post-trim benchmark pilot + README audit
+Directional pilot re-run of R2 tasks (05 tonnage, 06 scroll, 07 skip exercise, 08 keyboard buttons) against same base commit (hst-tracker 1c73062) on post-P32-P36 SOP. Aggregate SOP 75/84 (89%) vs baseline 61/84 (73%) = **SOP +16%** (R2 was +33%). 3 of 4 tasks won by SOP; task 08 flipped to baseline (partly scorer error on real token `--color-accent-light`). Methodology caveats: subagent pilot not fresh CLI, Opus 4.7 vs R2's 4.6, single round. Verdict: trim did not break SOP — spot check (tonnage) still showed baseline actively regressing the B1 fix. README benchmark badge updated from "+33%" → "directional +16% to +33%"; R5 section added with caveats; Key finding #5 qualified as R2-specific. Full R6 on fresh CLI sessions deferred. Artefact: `docs/benchmark/results/r5-post-trim/summary.md`.
+
 ### 2026-04-17: P37 — claude-mem review, three portable patterns adopted
 Reviewed thedotmack/claude-mem (60.8k stars, Claude Code plugin, daemon + SQLite + ChromaDB). Confirmed categorically different from Agent SOP (observation/retrieval infrastructure vs prescription layer). Harvested three portable patterns: progressive retrieval (index → narrow → fetch) added as Routing Rule 5 in `multi-agent-context-routing.md`; `<private>` capture-time redaction added as Rule 9 in `security.md`; hooks-must-fail-open added as Core Rule 9 in `harness-configuration.md`. claude-mem positioned as optional complement in `optional-patterns.md`. Core SOP instruction count unchanged.
 
