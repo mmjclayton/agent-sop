@@ -1,6 +1,6 @@
 ---
 description: Run the Agent SOP session start checklist. Reads all context files, checks git history, flags inconsistencies, and reports readiness before coding begins.
-sop_version: "2026-04-17"
+sop_version: "2026-04-19"
 ---
 
 Start a new session by executing the Agent SOP session start checklist. Read every file listed below, in order. Do not skip any step.
@@ -55,6 +55,15 @@ Run `git log --oneline -10` and cross-check against:
 - project_resume.md "What was done" (does it match the latest commits?)
 
 If anything is inconsistent, flag it before proceeding.
+
+**Secondary-tracker drift guard:** if any of the last 10 commit messages reference a finding ID (e.g. `fix(audit): A1`, `fix(security): H-3`, `feat(migration): M5`), verify the matching entries are marked `[SHIPPED - YYYY-MM-DD]` in their tracker file. Detect trackers the same way `/update-sop` Step 3b does — `.md` files in CLAUDE.md's Key Documents that use heading-level status tags.
+
+```bash
+git log --format='%s' -10 | grep -oE '\b[A-Z]+-?[0-9]+\b' | sort -u
+# For each ID, grep tracker files; any still-[OPEN] is drift from a prior session
+```
+
+Flag any stale `[OPEN]` entries in Step 6 so the user can choose to reconcile before new work begins. Do not auto-reconcile — prior sessions may have had a reason to leave them open.
 
 ### Step 5: Read the current work item
 

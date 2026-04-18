@@ -1,7 +1,7 @@
-<!-- SOP-Version: 2026-04-17 -->
+<!-- SOP-Version: 2026-04-19 -->
 # SOP Compliance Checklist
 
-Last updated: 2026-04-09
+Last updated: 2026-04-19
 
 The canonical list of checks used by the SOP Compliance Checker agent. Each check has a severity tier that determines its scoring weight.
 
@@ -124,7 +124,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | ID | Check | What to look for |
 |----|-------|-----------------|
 | B3 | Tag order correct: status first, type second | All items follow pattern: `[STATUS] [TYPE]` on the tag line |
-| B4 | Status tags use valid values | Only: `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[SHIPPED - YYYY-MM-DD]`, `[VERIFIED - YYYY-MM-DD]`, `[WON'T]` |
+| B4 | Status tags use valid values | Only: `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[DEFERRED]`, `[SHIPPED - YYYY-MM-DD]`, `[VERIFIED - YYYY-MM-DD]`, `[WON'T]` |
 | B5 | Type tags use valid values | Only: `[Feature]`, `[Iteration]`, `[Bug]`, `[Refactor]` |
 | B6 | [WON'T] items include reason | Format: `[WON'T] [Type] — Reason: [text]` |
 | B7 | [SHIPPED] and [VERIFIED] items include date | Pattern: `YYYY-MM-DD` present in the tag |
@@ -229,6 +229,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 |----|-------|-----------------|
 | X4 | Recent Work has PR/commit refs | CLAUDE.md Recent Work entries contain references to PRs or commits |
 | X5 | Build plan Batch Log references PRs | Batch Log entries contain PR numbers or commit hashes |
+| X6 | Secondary trackers reconciled with commit history | For every `.md` file in CLAUDE.md Key Documents that uses heading-level `[OPEN]`/`[SHIPPED]` tags (excluding `Backlog.md`): extract finding IDs from the last 20 commit messages (pattern `\b[A-Z]+-?[0-9]+\b`), then verify any matching entries in the tracker are not still `[OPEN]`. A still-`[OPEN]` entry whose ID was referenced in a shipped commit indicates drift from a skipped `/update-sop` Step 3b. |
 
 ---
 
@@ -289,14 +290,14 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | feature-map.md Structure | 0 | 3 | 1 | 4 |
 | Build Plans Structure | 0 | 4 | 1 | 5 |
 | project_resume.md Structure | 0 | 3 | 0 | 3 |
-| Cross-File Consistency | 0 | 3 | 2 | 5 |
+| Cross-File Consistency | 0 | 3 | 3 | 6 |
 | Security, Hooks, Quality, Agents | 1 | 2 (+2 code) | 2 | 5 (+2) |
 | Benchmark-Proven Practices | 0 | 0 (+2 code) | 2 | 2 (+2) |
-| **Total (non-code)** | **14** | **40** | **12** | **66** |
-| **Total (code)** | **14** | **49** | **12** | **75** |
+| **Total (non-code)** | **14** | **40** | **13** | **67** |
+| **Total (code)** | **14** | **49** | **13** | **76** |
 
 **Maximum deductions:**
-- Non-code: 14 x 10 + 40 x 5 + 12 x 2 = 140 + 200 + 24 = 364
-- Code: 14 x 10 + 49 x 5 + 12 x 2 = 140 + 245 + 24 = 409
+- Non-code: 14 x 10 + 40 x 5 + 13 x 2 = 140 + 200 + 26 = 366
+- Code: 14 x 10 + 49 x 5 + 13 x 2 = 140 + 245 + 26 = 411
 
 **Normalisation:** Score = max(0, 100 - (total deductions / max possible deductions * 100)). Then apply critical cap (49 max) if any critical check fails.

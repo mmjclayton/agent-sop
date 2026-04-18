@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-04-17 (P41)
+Last updated: 2026-04-19 (P42)
 
 ---
 
@@ -38,6 +38,7 @@ Last updated: 2026-04-17 (P41)
 | P39 | Measurement gap closed: session-hygiene rubric (7 new dimensions, 0/1 each), continuity benchmark methodology (dependent task pairs), longitudinal exhibit (hst-tracker artefact counts: 86 decisions / 23 batch entries / 18 Recent Work / 64 docs commits / 4,628 lines) | `docs/benchmark/README.md`, `docs/benchmark/continuity-methodology.md`, `README.md` | 2026-04-17 |
 | P40 | Section 14 Common Mistakes table extracted to guide; Section 15.4 Managed Agents API safety block extracted to managed-agents-integration guide; CLAUDE.md Recent Work compacted; agent-memory.md Decisions audited (pre-2026-04-09 entries moved to Archived). Core SOP ~189 → ~178 instructions. | `docs/guides/sop-common-mistakes.md` (new), `docs/guides/managed-agents-integration.md`, `docs/sop/claude-agent-sop.md`, `CLAUDE.md`, `docs/agent-memory.md` | 2026-04-17 |
 | P41 | README rewrite (465 → 119 lines), hero reframed to operating-practice + PM-discipline, new Backlog discipline + Cross-session memory sections, License section added, Acknowledgements removed (verbatim review confirmed pattern inspiration only — no copied prose), A/B benchmark badge removed, GitHub About description rewritten | `README.md` | 2026-04-17 |
+| P42 | Secondary-tracker reconciliation + `[DEFERRED]` tag. `/update-sop` Step 3b auto-detects tracker files via CLAUDE.md Key Documents scan; Step 11 hard-blocks commit if any finding ID from this session's commits is still `[OPEN]`. `/restart-sop` Step 4 adds advisory drift guard. Section 8 gains `[DEFERRED]` with distinction from `[BLOCKED]`. Compliance B4 + new X6 check, totals 66→67 / 75→76. | `docs/sop/claude-agent-sop.md`, `docs/sop/compliance-checklist.md`, `.claude/commands/update-sop.md`, `.claude/commands/restart-sop.md`, `docs/templates/backlog-template.md`, `docs/templates/claude-md-template.md`, `docs/templates/claude-md-template-code.md` | 2026-04-19 |
 
 ---
 

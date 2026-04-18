@@ -59,7 +59,7 @@ After shipping: update Backlog.md + docs/feature-map.md
 
 ### Tag taxonomy
 
-- Status (first): `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[SHIPPED - YYYY-MM-DD]`, `[VERIFIED - YYYY-MM-DD]`, `[WON'T]`
+- Status (first): `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[DEFERRED]`, `[SHIPPED - YYYY-MM-DD]`, `[VERIFIED - YYYY-MM-DD]`, `[WON'T]`
 - Type (second): `[Feature]`, `[Iteration]`, `[Bug]`, `[Refactor]`
 - Optional: `[has-open-questions]`, `[ok-for-automation]`
 
@@ -69,6 +69,7 @@ After shipping: update Backlog.md + docs/feature-map.md
 - Never mark `[SHIPPED]` without merge to main.
 - Never mark `[VERIFIED]` without testing in a running app.
 - Status first, type second. Never reverse.
+- `[BLOCKED]` = waiting on external action. `[DEFERRED]` = intentionally postponed. Use `[DEFERRED]` instead of leaving stale `[OPEN]` items sitting around.
 
 ---
 
@@ -165,11 +166,12 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 1. Run tests (code projects) — fix failures before proceeding.
 2. `Backlog.md` — update status tags in place, append new items.
-3. `docs/feature-map.md` — append shipped items.
-4. `docs/agent-memory.md` — append decisions/gotchas, move completed to `## Completed Work`.
-5. `docs/build-plans/phase-N.md` — append to Batch Log.
-6. `project_resume.md` — overwrite with current state.
-7. Commit `docs/` changes with the work.
+3. Secondary trackers — reconcile any project-specific finding files (audit-backlog, security-findings, etc.) that use heading-level `[OPEN]`/`[SHIPPED]` tags. Hard block: any finding ID referenced in this session's commits must not be left `[OPEN]`.
+4. `docs/feature-map.md` — append shipped items.
+5. `docs/agent-memory.md` — append decisions/gotchas, move completed to `## Completed Work`.
+6. `docs/build-plans/phase-N.md` — append to Batch Log.
+7. `project_resume.md` — overwrite with current state.
+8. Commit `docs/` changes with the work.
 
 ---
 

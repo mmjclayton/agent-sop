@@ -1,6 +1,6 @@
 ---
 description: Run the Agent SOP session end checklist. Updates all tracking files, writes the resume snapshot, and commits.
-sop_version: "2026-04-17"
+sop_version: "2026-04-19"
 ---
 
 Execute the Agent SOP session end checklist. Complete every step below before the session ends. Do not skip any step. Never delete without a trace: update in place, mark superseded, or archive.
@@ -27,6 +27,32 @@ Skip this step for documentation-only or markdown-only projects.
 - Append any new work items discovered during the session with `[OPEN]` status
 - Add to the Shipped Archive if items were shipped
 - Never delete items. Never remove items. Update in place.
+
+## Step 3b: Reconcile project-specific secondary trackers
+
+Many projects maintain tracker files separate from `Backlog.md` — audit findings, security scans, compliance checklists, migration punch-lists — using the same `[OPEN]` / `[SHIPPED]` status tags. `/update-sop` must reconcile those files too, or shipped work silently leaves stale `[OPEN]` entries behind.
+
+**Detection (auto, no config):** scan every `.md` path listed in CLAUDE.md's Key Documents & Dispatch table. A file is a secondary tracker if any of its headings (`^##` or `^###`) carry a status tag — one of `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[DEFERRED]`, `[SHIPPED`, `[VERIFIED`, `[WON'T]`. Skip `Backlog.md` itself (covered by Step 3).
+
+```bash
+# List candidates pulled from the Key Documents table
+grep -oE '\`[^\`]+\.md\`' CLAUDE.md | tr -d '\`' | while read f; do
+  [ "$f" = "Backlog.md" ] && continue
+  [ -f "$f" ] || continue
+  if grep -qE '^##+ .*\[(OPEN|IN PROGRESS|BLOCKED|DEFERRED|SHIPPED|VERIFIED|WON.T)' "$f"; then
+    echo "tracker: $f"
+  fi
+done
+```
+
+**For each detected tracker:**
+
+1. Identify this session's commits that reference a finding ID — e.g. `fix(audit): A1`, `fix(security): H-3`, `feat(migration): M5`. Run `git log --format='%s' [since-last-/update-sop]` to enumerate.
+2. For each referenced ID, locate the matching entry in the tracker and update its status tag: `[OPEN]` → `[SHIPPED - YYYY-MM-DD]`. Preserve the entry body. Never delete.
+3. Update the tracker's `Last updated:` header (if present) to today's date.
+4. Apply the same tag discipline as `Backlog.md`: status first, `[WON'T]` requires an inline reason, `[DEFERRED]` for intentional postponement.
+
+Skip this step only if no `.md` files in Key Documents match the tracker detection. Projects with no secondary trackers see a no-op.
 
 ## Step 4: Update docs/feature-map.md
 
@@ -97,7 +123,15 @@ docs: session end housekeeping — [brief description of what was updated]
 ## Step 11: Report completion
 
 After completing all steps, report:
-- Which files were updated
+- Which files were updated (including any secondary trackers touched in Step 3b)
 - Definition of Done self-evaluation result (all criteria met, or which gaps remain)
 - What the next session should pick up (from project_resume.md)
 - Whether any items need human attention (open questions, blockers, inconsistencies)
+
+**Reconciliation check (hard block):** before finalising Step 10 (commit), verify that every finding ID referenced in this session's commit messages is now marked `[SHIPPED - YYYY-MM-DD]` (or explicitly `[DEFERRED]` / `[BLOCKED]`) in its tracker. Any ID still `[OPEN]` means Step 3b missed it — return to Step 3b and reconcile before committing. Do not proceed to Step 10 with unreconciled IDs.
+
+```bash
+# Enumerate IDs referenced in this session's commits
+git log --format='%s' [range] | grep -oE '\b[A-Z]+-?[0-9]+\b' | sort -u
+# For each ID, grep the tracker files — any still-[OPEN] match is a block
+```

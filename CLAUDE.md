@@ -35,7 +35,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 
 ---
 
-## Current Priority Items (as of 2026-04-17)
+## Current Priority Items (as of 2026-04-19)
 
 **Next:**
 - P24 — Multi-agent optimisation guide (informed by P23 benchmark results)
@@ -45,7 +45,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 - P10 — Data/analytics domain variant `[has-open-questions]`
 
 **Follow-ups still open:**
-- Config `exclude` field for per-project file skipping (gap found during hst-tracker audit — security.md filename collision)
+- Config `exclude` field for per-project file skipping (gap found during hst-tracker audit — security.md filename collision). Also doubles as `exclude_from_tracker_scan` escape hatch for the P42 auto-detect heuristic if false positives emerge.
 - Karpathy-skills before/after examples pattern (Common Mistakes pedagogy — deferred from P34)
 - R6 full-framework benchmark on fresh CLI sessions, Opus 4.6, 2+ rounds (deferred from P38 — run if publicly citing a post-trim percentage)
 
@@ -56,7 +56,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 `Backlog.md` is the single source of truth. Never delete without a trace — update in place, mark superseded, or archive.
 
 ### Tag taxonomy
-- Status (first): `[OPEN]` `[IN PROGRESS]` `[BLOCKED]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T]`
+- Status (first): `[OPEN]` `[IN PROGRESS]` `[BLOCKED]` `[DEFERRED]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T]`
 - Type (second): `[Feature]` `[Iteration]` `[Bug]` `[Refactor]`
 - Optional: `[has-open-questions]` `[ok-for-automation]`
 
@@ -116,17 +116,21 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 1. Run tests (code projects) — fix failures before proceeding.
 2. `Backlog.md` — update status tags in place, append new items.
-3. `docs/feature-map.md` — append shipped items.
-4. `docs/agent-memory.md` — append decisions/gotchas, move completed to Completed Work.
-5. `docs/build-plans/phase-N.md` — append to Batch Log.
-6. `project_resume.md` — overwrite with current state.
-7. Commit docs/ changes with the work.
+3. Secondary trackers — reconcile any project-specific finding files in Key Documents (audit-backlog, security-findings, etc.) using heading-level `[OPEN]`/`[SHIPPED]` tags. Hard block: finding IDs referenced in this session's commits must not be left `[OPEN]`.
+4. `docs/feature-map.md` — append shipped items.
+5. `docs/agent-memory.md` — append decisions/gotchas, move completed to Completed Work.
+6. `docs/build-plans/phase-N.md` — append to Batch Log.
+7. `project_resume.md` — overwrite with current state.
+8. Commit docs/ changes with the work.
 
 ---
 
 ## Recent Work
 
 *Append-only. New entries at top. Include commit refs. Older session-day entries roll up into one-liners; full detail lives in build-plan Batch Log + agent-memory.md Decisions + Backlog.md per item.*
+
+### 2026-04-19: P42 — Secondary-tracker reconciliation + `[DEFERRED]` tag (commit pending)
+Close a gap surfaced by hst-tracker: `/update-sop` treated `Backlog.md` as the sole work tracker and never reconciled project-specific finding files (e.g. `audit-backlog-*.md`) that use the same status-tag discipline. Fixed at four points. Core SOP Section 6 session-end checklist gained new step 3 (reconcile any `.md` in CLAUDE.md Key Documents using heading-level status tags); total 7 → 8 steps. `/update-sop` Step 3b auto-detects trackers (skip `Backlog.md`), reconciles finding IDs from this session's commits; Step 11 hard-blocks the commit if any ID is still `[OPEN]`. `/restart-sop` Step 4 gained an advisory drift guard for prior-session drift. Section 8 gains `[DEFERRED]` as distinct from `[BLOCKED]` (waiting-external vs intentionally-postponed). Templates + compliance checklist propagated (B4 accepts `[DEFERRED]`; new X6 check; totals 66 → 67 / 75 → 76). Heuristic is auto-detect rather than config opt-in — opt-in recreates the failure mode at a different level.
 
 ### 2026-04-17: P41 — README rewrite, License section, Acknowledgements removed, About refreshed (commits 38a3476, e36cb53)
 README compressed 465 → 119 lines. Hero reframed to "Standard operating procedures and product management discipline for Claude Code sessions" anchored on the standard file set + three slash commands. New Backlog discipline + Cross-session memory sections make the PM angle concrete. Removed: TOC, token-efficiency math wall, four-table What's Included, repository tree, expanded session-checklist + six-rules commentary, A/B benchmark badge, Acknowledgements. Added: License section. Verbatim review against ECC found no copied prose — pattern inspiration only, MIT attribution not required. Aesthetic aligned with claude-code-action and superpowers reference READMEs. GitHub About description rewritten.

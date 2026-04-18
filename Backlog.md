@@ -4,9 +4,10 @@ Single source of truth for all work items. Never delete without a trace — upda
 
 ## Tag Taxonomy
 
-- Status (first): `[OPEN]` `[IN PROGRESS]` `[BLOCKED]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T]`
+- Status (first): `[OPEN]` `[IN PROGRESS]` `[BLOCKED]` `[DEFERRED]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T]`
 - Type (second): `[Feature]` `[Iteration]` `[Bug]` `[Refactor]`
 - Optional: `[has-open-questions]` `[ok-for-automation]`
+- `[BLOCKED]` = waiting on external action. `[DEFERRED]` = intentionally postponed with no external blocker.
 
 ---
 
@@ -351,6 +352,39 @@ compaction failure rule — too rare to justify).
 **Lesson:** Research digests bias toward "things to add". Default position
 should be "what does this remove or sharpen". Apply this filter before
 proposing changes from future digests.
+
+---
+
+### P42 — Secondary-tracker reconciliation + [DEFERRED] tag
+`[SHIPPED - 2026-04-19] [Iteration]`
+
+Close a gap surfaced by hst-tracker: `/update-sop` treated `Backlog.md` as the sole work tracker and never reconciled project-specific secondary trackers (audit-backlog, security-findings, etc.) that use the same status-tag taxonomy. Silent drift left 118 shipped audit items marked `[OPEN]` in hst-tracker's `audit-backlog-2026-04-18.md` for a full day.
+
+**Root cause:** SOP Section 6 session-end checklist and `/update-sop` Step 3 named only `Backlog.md`. No auto-detection of secondary trackers, no cross-check between commit IDs and tracker status at session end, no session-start guard to catch drift from a prior session.
+
+**Secondary gap:** `[BLOCKED]` conflated "waiting on external action" with "intentionally postponed". `[DEFERRED]` needed as a distinct status for conscious postponement.
+
+**Deliverables:**
+
+1. **Core SOP Section 6** — session-end checklist gained a new step (3) for secondary-tracker reconciliation; total steps 7 → 8.
+2. **Core SOP Section 8** — `[DEFERRED]` added with distinction vs `[BLOCKED]`.
+3. **`/update-sop` command** — new Step 3b with auto-detection heuristic (scan .md files in CLAUDE.md Key Documents for heading-level status tags; skip `Backlog.md`). Step 11 report extended with hard-block reconciliation check: any finding ID in this session's commits still `[OPEN]` must be reconciled before commit.
+4. **`/restart-sop` command** — Step 4 gained a drift guard: grep last 10 commits for finding IDs, verify matching entries not still `[OPEN]`. Advisory only (does not auto-reconcile).
+5. **Templates** — `backlog-template.md`, `claude-md-template.md`, `claude-md-template-code.md` updated with `[DEFERRED]` and the new session-end step.
+6. **Compliance checklist** — B4 now accepts `[DEFERRED]`; new check X6 (secondary tracker currency). Summary table totals: non-code 66→67, code 75→76.
+7. **Version markers** — all touched pristine-replica files bumped from `2026-04-17` to `2026-04-19`.
+
+**Heuristic design choice:** auto-detect over explicit opt-in. Explicit opt-in (a `secondary_trackers` array in `agent-sop.config.json`) recreates the original failure mode at a different level — user adds a new tracker file, forgets to register it, reconciliation silently skips it. Auto-detection scans `.md` paths from CLAUDE.md Key Documents and matches `^##+ .*\[(OPEN|IN PROGRESS|BLOCKED|DEFERRED|SHIPPED|VERIFIED|WON.T)` at heading level only. Inline prose mentions don't match. Escape hatch: the existing `exclude` config follow-up (from the hst-tracker audit) can double as `exclude_from_tracker_scan` when it ships.
+
+**Acceptance criteria:**
+- Core SOP Section 6 has 8 steps, new step is secondary-tracker reconciliation - DONE
+- Core SOP Section 8 has `[DEFERRED]` with semantic distinction from `[BLOCKED]` - DONE
+- `/update-sop` Step 3b has detection heuristic + per-ID reconciliation + hard-block check in Step 11 - DONE
+- `/restart-sop` Step 4 has advisory drift guard - DONE
+- All three templates updated (`backlog-template.md`, `claude-md-template.md`, `claude-md-template-code.md`) - DONE
+- Compliance checklist B4 accepts `[DEFERRED]`; new X6 check added; summary table totals corrected - DONE
+- Version markers bumped on all touched pristine-replica files - DONE
+- Tracking files updated (Backlog, feature-map, agent-memory, build plan, CLAUDE.md, project_resume) - DONE
 
 ---
 

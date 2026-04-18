@@ -1,7 +1,7 @@
-<!-- SOP-Version: 2026-04-17 -->
+<!-- SOP-Version: 2026-04-19 -->
 # Claude Code Agent SOP
 **Standard Operating Procedure — All Projects**
-Last updated: 2026-04-17
+Last updated: 2026-04-19
 
 ---
 
@@ -340,11 +340,12 @@ Skip agent-memory.md, build plans, and MEMORY.md/project_resume.md. The lightwei
 ```
 1. Run tests (code projects) — fix failures before proceeding
 2. Backlog.md — update status tags in place, append new items
-3. docs/feature-map.md — append shipped items
-4. docs/agent-memory.md — append decisions/gotchas, move completed to ## Completed Work
-5. docs/build-plans/phase-N.md — append to Batch Log
-6. project_resume.md — overwrite with current state (snapshot, not a log)
-7. Commit docs/ changes with the work
+3. Secondary trackers — reconcile any project-specific finding lists (audit-backlog-*.md, security-findings.md, compliance-*.md). Any .md file in CLAUDE.md's Key Documents that uses heading-level [OPEN]/[SHIPPED] tags follows the same discipline as Backlog.md. For each commit in this session whose message references a finding ID (e.g. fix(audit): A1), update the matching entry's status tag. Hard block: if any ID in this session's commits is still [OPEN] in a tracker, reconcile before step 7.
+4. docs/feature-map.md — append shipped items
+5. docs/agent-memory.md — append decisions/gotchas, move completed to ## Completed Work
+6. docs/build-plans/phase-N.md — append to Batch Log
+7. project_resume.md — overwrite with current state (snapshot, not a log)
+8. Commit docs/ changes with the work
 ```
 
 **Context compaction threshold:** When context reaches approximately 60% capacity, wrap up the current batch and run `/update-sop` (or complete the session end checklist manually) before continuing. Do not push to 95% — compaction at that point causes context loss and unreliable behaviour in the remainder of the session. Treat 60% as the session boundary signal, not a warning to ignore.
@@ -376,7 +377,8 @@ Skip agent-memory.md, build plans, and MEMORY.md/project_resume.md. The lightwei
 **Status (always first, always one):**
 - `[OPEN]` - not started
 - `[IN PROGRESS]` - active work
-- `[BLOCKED]` - waiting on something external
+- `[BLOCKED]` - waiting on an external action (someone else must do X first)
+- `[DEFERRED]` - intentionally postponed with no external blocker (chosen to do later). Distinct from `[BLOCKED]`: blocked means cannot proceed, deferred means chose not to proceed yet. Use `[DEFERRED]` instead of leaving stale `[OPEN]` items that were consciously pushed back.
 - `[SHIPPED - YYYY-MM-DD]` - merged to main and deployed
 - `[VERIFIED - YYYY-MM-DD]` - confirmed correct in the live environment. For code projects: tested in production. For documentation projects: reviewed by the project owner and confirmed accurate and complete. For other project types: define what verified means in CLAUDE.md.
 - `[WON'T]` - decision not to build. Required format: `[WON'T] [Type] — Reason: [one-line explanation or superseding P-number]`

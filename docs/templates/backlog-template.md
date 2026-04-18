@@ -4,12 +4,14 @@ Single source of truth for all work items. Never delete without a trace — upda
 
 ## Tag Taxonomy
 
-- Status (first): `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[SHIPPED - YYYY-MM-DD]`, `[VERIFIED - YYYY-MM-DD]`, `[WON'T]`
+- Status (first): `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[DEFERRED]`, `[SHIPPED - YYYY-MM-DD]`, `[VERIFIED - YYYY-MM-DD]`, `[WON'T]`
 - Type (second): `[Feature]`, `[Iteration]`, `[Bug]`, `[Refactor]`
 - Optional: `[has-open-questions]`, `[ok-for-automation]`
 
 **Tag rules:**
 - Status first, type second. Never reverse.
+- `[BLOCKED]` = waiting on an external action (someone else must do X first).
+- `[DEFERRED]` = intentionally postponed with no external blocker (chosen to do later). Use this instead of leaving stale `[OPEN]` entries that were consciously pushed back.
 - `[WON'T]` requires inline reason: `[WON'T] [Type] — Reason: [one-line explanation or superseding P-number]`
 - `[VERIFIED]` means tested in production (code projects) or reviewed and confirmed accurate (docs projects).
 - P-numbers are assigned sequentially, never reused, and do not imply priority.
