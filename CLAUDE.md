@@ -13,6 +13,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 ## Build Plans — READ FIRST
 
 - `docs/build-plans/phase-0-foundation.md` — In Progress (scaffold, core SOP docs, templates)
+- `docs/build-plans/phase-1-parallel-sessions.md` — Planning (P43 parallel multi-agent support)
 
 ---
 
@@ -38,6 +39,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 ## Current Priority Items (as of 2026-04-19)
 
 **Next:**
+- P43 — Parallel multi-agent session support (Phase 1 — plan shipped 2026-04-19, ready to execute Batch 1.1)
 - P24 — Multi-agent optimisation guide (informed by P23 benchmark results)
 - P33 — Managed Agents integration guide (deferred — revive when a project uses Managed Agents API)
 - P8 — Web app domain variant `[has-open-questions]`

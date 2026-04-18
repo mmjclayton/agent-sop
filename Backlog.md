@@ -355,6 +355,45 @@ proposing changes from future digests.
 
 ---
 
+### P43 — Parallel multi-agent session support
+`[OPEN] [Feature]`
+
+Enable 3-5 Claude Code terminal instances on separate git worktrees to run `/update-sop` and `/restart-sop` concurrently without manual conflict resolution or human-in-the-loop co-ordination. Today the SOP mandates sequential merges and append patterns (prepend to Recent Work, overwrite `project_resume.md`) that guarantee conflicts when two agents end sessions in the same window.
+
+**Root cause:** single-agent assumptions in `/update-sop` write patterns — prepend to `CLAUDE.md` Recent Work, overwrite of `project_resume.md`, mutable `Last updated` headers, implicit commit ranges for Step 3b reconciliation, no agent identity concept.
+
+**Approach:** worktree + branch isolation already partitions code. Extend the same partitioning to tracking files via directory-per-entry for high-conflict sections (Recent Work, Decisions, Gotchas), per-agent resume files, and commit-range partitioning via `git merge-base main HEAD..HEAD`. Single-agent projects migrate to the same format with a `solo` default id — one format, not two.
+
+**Key decisions locked in** (see `docs/build-plans/phase-1-parallel-sessions.md` Key Decisions):
+- Agent-id = `sha256(worktree-path)[:6]`, override via `CLAUDE_AGENT_ID` or `.sop-agent-id` file
+- `project_resume_<agent-id>.md` per-agent; `solo` default for single-agent
+- Directory-per-entry for Recent Work, Decisions, Gotchas — rollup summary kept in CLAUDE.md
+- Commit-range via merge-base (no author trailers, no git config changes)
+- Single format for all projects — migration command handles existing projects
+- Build in agent-sop, dogfood on hst-tracker (3 parallel worktrees)
+- Single P43 in new Phase 1 — not decomposed
+
+**Batches** (full detail in `docs/build-plans/phase-1-parallel-sessions.md`):
+1. 1.1 — Agent-ID detection + config field
+2. 1.2 — Directory-per-entry extractions + CLAUDE.md rollup
+3. 1.3 — Commit-range partitioning (Step 3b, Step 11, /restart-sop Step 4)
+4. 1.4 — P-number renumber-on-merge
+5. 1.5 — Core SOP rewrites + compliance checks M1-M5
+6. 1.6 — Migration command `/update-sop --migrate-to-multi-agent`
+7. 1.7 — Dogfood on hst-tracker
+
+**Acceptance criteria:**
+- 3 agents on 3 worktrees each running `/update-sop` sequentially at different times produce zero manual conflict resolution on merge to main
+- `agent-sop` itself runs in the new format (self-hosting proof)
+- hst-tracker dogfood pass: 3 parallel tasks × 3 `/update-sop` × 3 sequential merges = 0 conflicts
+- Compliance checks M1-M5 added to `sop-checker` agent
+- Single-agent projects (agent-id = `solo`) behave identically to current single-agent workflow
+- `/update-agent-sop` baselines refreshed for all touched pristine-replica files
+- Core SOP instruction count still under 200 hard ceiling (Rule 5)
+- All tracking files updated (Backlog, feature-map, agent-memory, build plan, CLAUDE.md)
+
+---
+
 ### P42 — Secondary-tracker reconciliation + [DEFERRED] tag
 `[SHIPPED - 2026-04-19] [Iteration]`
 
