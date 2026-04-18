@@ -13,6 +13,12 @@
   "last_update_check": "2026-04-17",
   "_last_update_check_note": "ISO date string or null. Updated by /update-agent-sop on each run.",
 
+  "multi_agent": "auto",
+  "_multi_agent_values": "auto | on | off. auto detects parallel mode from git worktree count. on forces parallel conventions (per-agent directories, per-agent resume files) regardless of worktree count. off forces single-agent conventions with literal 'solo' id. See docs/guides/multi-agent-parallel-sessions.md.",
+
+  "agent_id_override": null,
+  "_agent_id_override_note": "String or null. Takes precedence over CLAUDE_AGENT_ID env var and .sop-agent-id file. Rarely used — prefer env var or per-worktree file for identity.",
+
   "baseline_shas": {
     "_comment": "SHA-256 of each pristine-replica file at last sync. Used for three-way diff (baseline vs local vs upstream) to detect local modifications. Populated by setup.sh at install and updated by /update-agent-sop per file.",
     "docs/sop/claude-agent-sop.md": "<sha256>",

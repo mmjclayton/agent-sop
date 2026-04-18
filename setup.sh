@@ -266,6 +266,8 @@ if [ ! -f "$CONFIG_PATH" ] || [ "$FORCE" = true ]; then
         echo "  \"github\": \"mmjclayton/agent-sop\","
         echo "  \"update_reminder\": \"weekly\","
         echo "  \"last_update_check\": \"$TODAY\","
+        echo "  \"multi_agent\": \"auto\","
+        echo "  \"agent_id_override\": null,"
         echo "  \"baseline_shas\": {"
 
         first=true

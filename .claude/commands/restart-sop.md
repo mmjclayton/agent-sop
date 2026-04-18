@@ -16,6 +16,47 @@ Compare `last_update_check` against `update_reminder`:
 
 If stale, print: *"SOP update overdue — run `/update-agent-sop` to sync pristine-replica files."* Then continue with the checklist. Do not block.
 
+## Step 0b: Resolve agent identity
+
+Agent identity appears in filenames (`docs/recent-work/YYYY-MM-DD-<agent-id>-<slug>.md`), in per-agent `project_resume_<agent-id>.md`, and in commit-range partitioning for the drift guard (Step 4). Resolve it before reading any project files.
+
+Precedence: `CLAUDE_AGENT_ID` env var > `.sop-agent-id` file at worktree root > `solo` (single-worktree default) > 6-char hash of worktree path. See `docs/guides/multi-agent-parallel-sessions.md` Section 1 for full scenarios.
+
+```bash
+resolve_agent_id() {
+  if [ -n "${CLAUDE_AGENT_ID:-}" ]; then
+    printf '%s' "$CLAUDE_AGENT_ID"
+    return
+  fi
+
+  local root
+  root=$(git rev-parse --show-toplevel 2>/dev/null) || { printf 'solo'; return; }
+
+  if [ -f "$root/.sop-agent-id" ]; then
+    head -1 "$root/.sop-agent-id" | tr -d '[:space:]'
+    return
+  fi
+
+  local count
+  count=$(git worktree list 2>/dev/null | wc -l | tr -d '[:space:]')
+  if [ "$count" = "1" ]; then
+    printf 'solo'
+    return
+  fi
+
+  if command -v shasum >/dev/null 2>&1; then
+    printf '%s' "$root" | shasum -a 256 | cut -c1-6
+  else
+    printf '%s' "$root" | sha256sum | cut -c1-6
+  fi
+}
+
+AGENT_ID=$(resolve_agent_id)
+echo "Agent identity: $AGENT_ID"
+```
+
+When `$AGENT_ID` is `solo`, Step 2 reads `project_resume.md` (legacy filename). When any other value, Step 2 reads `project_resume_<agent-id>.md` instead — see Step 2 note.
+
 ## Determine checklist type
 
 Check if this session's task is tagged `[ok-for-automation]` in the Backlog, or is a single-file change with fewer than 2 acceptance criteria. If so, use the **Lightweight Start** (steps 1L and 2L only). Otherwise, use the **Full Start** (steps 1-6).

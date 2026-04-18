@@ -5,6 +5,47 @@ sop_version: "2026-04-19"
 
 Execute the Agent SOP session end checklist. Complete every step below before the session ends. Do not skip any step. Never delete without a trace: update in place, mark superseded, or archive.
 
+## Step 0: Resolve agent identity
+
+Agent identity appears in filenames (`docs/recent-work/YYYY-MM-DD-<agent-id>-<slug>.md`), in per-agent `project_resume_<agent-id>.md`, and in commit-range partitioning routines (Step 3b, Step 11). Resolve it first so every subsequent step uses a consistent value.
+
+Precedence: `CLAUDE_AGENT_ID` env var > `.sop-agent-id` file at worktree root > `solo` (single-worktree default) > 6-char hash of worktree path. See `docs/guides/multi-agent-parallel-sessions.md` Section 1 for full scenarios.
+
+```bash
+resolve_agent_id() {
+  if [ -n "${CLAUDE_AGENT_ID:-}" ]; then
+    printf '%s' "$CLAUDE_AGENT_ID"
+    return
+  fi
+
+  local root
+  root=$(git rev-parse --show-toplevel 2>/dev/null) || { printf 'solo'; return; }
+
+  if [ -f "$root/.sop-agent-id" ]; then
+    head -1 "$root/.sop-agent-id" | tr -d '[:space:]'
+    return
+  fi
+
+  local count
+  count=$(git worktree list 2>/dev/null | wc -l | tr -d '[:space:]')
+  if [ "$count" = "1" ]; then
+    printf 'solo'
+    return
+  fi
+
+  if command -v shasum >/dev/null 2>&1; then
+    printf '%s' "$root" | shasum -a 256 | cut -c1-6
+  else
+    printf '%s' "$root" | sha256sum | cut -c1-6
+  fi
+}
+
+AGENT_ID=$(resolve_agent_id)
+echo "Agent identity: $AGENT_ID"
+```
+
+If `$AGENT_ID` is `solo`, single-agent conventions apply. If it is any other value, parallel-session conventions apply — see `docs/guides/multi-agent-parallel-sessions.md`.
+
 ## Step 1: Self-evaluate against Definition of Done
 
 Before updating any tracking files, check your work against the relevant Definition of Done rubric in CLAUDE.md:
