@@ -1,6 +1,6 @@
 ---
-sop_version: 2026-04-17
 description: Sync pristine-replica Agent SOP files (SOP docs, guides, slash commands, reference agents) from the upstream agent-sop repo into this project and the user's ~/.claude directory. Three-way diff for locally modified files; never force-overwrites.
+sop_version: "2026-04-17"
 ---
 
 Keep Agent SOP artefacts up to date. Pulls the current pristine-replica files from upstream (local checkout if available, GitHub raw otherwise), diffs them against this project's copies, and applies updates only where safe. Locally modified files are surfaced for reconciliation rather than overwritten.
