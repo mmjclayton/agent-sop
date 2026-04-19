@@ -24,7 +24,7 @@ See CLAUDE.md Key Documents table.
 
 ## In-Flight Work
 
-*(none)* -- P23 round 2 complete 2026-04-09, moved to Completed Work.
+- solo (2026-04-19): P43 Phase 1 parallel-session support — Batches 1.1-1.6 shipped; Batch 1.7 dogfood playbook drafted and awaiting Matt-hands multi-session run on hst-tracker.
 
 ---
 

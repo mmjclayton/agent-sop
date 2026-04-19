@@ -356,7 +356,9 @@ proposing changes from future digests.
 ---
 
 ### P43 — Parallel multi-agent session support
-`[OPEN] [Feature]`
+`[IN PROGRESS] [Feature]`
+
+*2026-04-19: Batches 1.1 through 1.6 shipped. Batch 1.7 playbook drafted; dogfood execution deferred to a Matt-hands multi-session run. Status moves to SHIPPED once the dogfood pass completes cleanly.*
 
 Enable 3-5 Claude Code terminal instances on separate git worktrees to run `/update-sop` and `/restart-sop` concurrently without manual conflict resolution or human-in-the-loop co-ordination. Today the SOP mandates sequential merges and append patterns (prepend to Recent Work, overwrite `project_resume.md`) that guarantee conflicts when two agents end sessions in the same window.
 

@@ -307,7 +307,15 @@ Derived summary that replaces prepend-semantic Recent Work:
 
 *Append-only. Format: `- YYYY-MM-DD <agent-id>: Batch N.X — description. Commit [hash] or PR #N.`*
 
-(empty — planning phase)
+- 2026-04-19 `solo`: Plan shipped — P43 Backlog entry, phase-1 build plan, CLAUDE.md priority update. Commit ed3ac49.
+- 2026-04-19 `solo`: Batch 1.1 — agent-id detection + config field. Commit ad33ec3.
+- 2026-04-19 `solo`: Batch 1.2 — directory-per-entry structure + CLAUDE.md rollup + seed recent-work entry. Commit 07a3d5f.
+- 2026-04-19 `solo`: Batch 1.3 — commit-range partitioning via `git merge-base`. Commit c34c6ef.
+- 2026-04-19 `solo`: Batch 1.4 — P-number collision detection + renumber helper. Commit 9237302.
+- 2026-04-19 `solo`: Batch 1.5 — core SOP rewrites (Section 0, Section 6, Section 15.4) + compliance checks M1-M5. Commit a3dd828.
+- 2026-04-19 `solo`: Batch 1.6 tooling — migrate-to-multi-agent.py + slash command + setup.sh update. Commit 788663a.
+- 2026-04-19 `solo`: Batch 1.6 dogfood on agent-sop — 77 legacy entries extracted, legacy sections removed, rollup refreshed. Commit 15650c0.
+- 2026-04-19 `solo`: Batch 1.7 playbook drafted — requires Matt-hands dogfood on hst-tracker with 3 parallel sessions. Deferred.
 
 ---
 
@@ -315,10 +323,10 @@ Derived summary that replaces prepend-semantic Recent Work:
 
 Before marking Phase 1 shipped:
 
-- [ ] All 7 batches shipped
-- [ ] agent-sop migrated to new format (Recent Work, Decisions, Gotchas directories populated)
-- [ ] hst-tracker dogfood pass: 3 parallel worktrees, 3 `/update-sop` runs, 3 sequential merges, 0 manual conflict resolution
-- [ ] Compliance checks M1-M5 wired into sop-checker; summary table totals correct
+- [x] All 7 batches shipped (Batch 1.7 playbook only — dogfood execution deferred)
+- [x] agent-sop migrated to new format (Recent Work, Decisions, Gotchas directories populated — 77 entries extracted 2026-04-19)
+- [ ] hst-tracker dogfood pass: 3 parallel worktrees, 3 `/update-sop` runs, 3 sequential merges, 0 manual conflict resolution (requires Matt-hands multi-session — see `docs/benchmark/parallel-dogfood-playbook.md`)
+- [x] Compliance checks M1-M5 wired into sop-checker; summary table totals correct
 - [ ] README updated to cover parallel-sessions feature
 - [ ] `/update-agent-sop` baselines refreshed for all touched pristine-replica files
 - [ ] Core SOP instruction count verified under 200 hard ceiling (Rule 5)

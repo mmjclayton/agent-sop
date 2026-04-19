@@ -133,6 +133,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-04-19.*
 
+- 2026-04-19 `solo`: P43 Phase 1 Batches 1.1 through 1.6 shipped
 - 2026-04-19 `solo`: P43 Batch 1.2 — directory structure + rollup specs
 - 2026-04-19 `solo`: P42 — Secondary-tracker reconciliation + `[DEFERRED]` tag
 - 2026-04-17 `solo`: P41 — README rewrite, License section, Acknowledgements removed, About refreshed
