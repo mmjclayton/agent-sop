@@ -80,10 +80,14 @@ When a request has multiple valid interpretations — ambiguous scope, target, o
 
 **Override hierarchy:** `CLAUDE.md` can override any project-specific convention defined in this SOP (tag taxonomy, file paths, stack-specific rules). It cannot override the six non-negotiable rules above. They apply to every project regardless of what CLAUDE.md says.
 
-**Multi-agent contention:** When multiple agents work on the same project simultaneously, each agent must work on a separate branch and merge to main sequentially. Conflict resolution depends on the file type:
-- **Documentation files** (`agent-memory.md`, `Backlog.md`, `feature-map.md`): resolve by appending both entries — never discard either agent's additions.
-- **Code files**: cannot be resolved by concatenation. The agent merging second must read both versions, understand the intent, and produce a correct merge. If the conflict is non-trivial, flag it in `docs/agent-memory.md` Gotchas for human resolution rather than guessing.
-- **Semantic conflicts** (e.g. two agents shipped the same P-number, or conflicting architectural decisions): always flag in `docs/agent-memory.md` Gotchas for human resolution.
+**Multi-agent parallel sessions:** Multiple agents on the same project work in separate git worktrees on separate branches. Tracking-file conflicts are prevented by structural choices — no human-in-the-loop co-ordination required:
+- **Per-entry directories:** Recent Work, Decisions, and Gotchas live as one file per entry with agent-id in the filename. Two agents writing on the same date produce distinct filenames. The CLAUDE.md `## Recent Work (rollup)` section is derived from `docs/recent-work/` via `/update-sop` Step 8b; regeneration is idempotent so merges converge.
+- **Per-agent resume snapshots:** `project_resume_<agent-id>.md` keyed by agent-id. No cross-agent clobber.
+- **Commit-range partitioning:** secondary-tracker reconciliation, drift guard, and hard-block checks use `git merge-base <default> HEAD..HEAD` so sibling agents' finding IDs never contaminate this agent's scope.
+- **P-number collision detection:** `/update-sop` Step 2a hard-blocks when two agents independently pick the same P-number; resolved via the `renumber_p` helper.
+- **Code files:** worktrees typically give each agent a mutually exclusive file set. When code conflicts do arise, the agent merging second reads both versions and produces a correct merge; flag non-trivial cases in a new `docs/agent-memory/gotchas/` entry.
+
+See `docs/guides/multi-agent-parallel-sessions.md` for the full mechanics, agent-id resolution, `renumber_p` helper, and dogfood protocol.
 
 ---
 
@@ -403,13 +407,14 @@ Skip agent-memory.md, build plans, and MEMORY.md/project_resume.md. The lightwei
 
 ```
 1. Run tests (code projects) — fix failures before proceeding
-2. Backlog.md — update status tags in place, append new items
-3. Secondary trackers — reconcile any project-specific finding lists (audit-backlog-*.md, security-findings.md, compliance-*.md). Any .md file in CLAUDE.md's Key Documents that uses heading-level [OPEN]/[SHIPPED] tags follows the same discipline as Backlog.md. For each commit in this session whose message references a finding ID (e.g. fix(audit): A1), update the matching entry's status tag. Hard block: if any ID in this session's commits is still [OPEN] in a tracker, reconcile before step 7.
+2. Backlog.md — update status tags in place, append new items (Step 2a: P-number collision check against default branch, hard-block if collision)
+3. Secondary trackers — reconcile any project-specific finding lists (audit-backlog-*.md, security-findings.md, compliance-*.md). Commit range partitioned via `git merge-base <default> HEAD..HEAD`. Hard block: if any ID in this session's commits is still [OPEN] in a tracker, reconcile before step 8.
 4. docs/feature-map.md — append shipped items
-5. docs/agent-memory.md — append decisions/gotchas, move completed to ## Completed Work
+5. docs/agent-memory.md narrative + decisions/gotchas directories — write new decisions to docs/agent-memory/decisions/YYYY-MM-DD_<agent-id>_<slug>.md, new gotchas to docs/agent-memory/gotchas/, update In-Flight/Completed lines in agent-memory.md by agent-id
 6. docs/build-plans/phase-N.md — append to Batch Log
-7. project_resume.md — overwrite with current state (snapshot, not a log)
-8. Commit docs/ changes with the work
+7. project_resume_<agent-id>.md — overwrite with current state (snapshot, per-agent)
+8. Write session entry to docs/recent-work/ and refresh CLAUDE.md rollup section
+9. Commit docs/ changes with the work
 ```
 
 **Context compaction threshold:** When context reaches approximately 60% capacity, wrap up the current batch and run `/update-sop` (or complete the session end checklist manually) before continuing. Do not push to 95% — compaction at that point causes context loss and unreliable behaviour in the remainder of the session. Treat 60% as the session boundary signal, not a warning to ignore.
@@ -658,7 +663,9 @@ When running A/B benchmarks or any agent testing against a real codebase:
 - **Never access production or staging databases.** Benchmark agents use test databases or no database.
 - **Never deploy.** No CI triggers, no Render/Vercel deploys, no pushing to remote.
 - **Clean up after every round.** Remove worktrees and branches when scoring is complete.
-- **Run strictly sequentially.** Never overlap agent batches on the same worktrees. Setup round N, run all agents, wait for completion, score, cleanup, then setup round N+1. Concurrent batches cause worktree contamination.
+- **Run benchmark batches strictly sequentially.** Never overlap agent batches on the same worktrees within a benchmark round. Setup round N, run all agents, wait for completion, score, cleanup, then setup round N+1. Concurrent batches cause worktree contamination in benchmarks.
+
+  This applies to A/B benchmarks specifically. General parallel development work (3-5 agents on independent worktrees shipping different items) is supported — see `docs/guides/multi-agent-parallel-sessions.md`.
 
 **Managed Agents API safety:** when benchmarks run via the Managed Agents API instead of local Claude Code, see `docs/guides/managed-agents-integration.md` (Benchmark safety section) for permission-policy and isolation rules.
 

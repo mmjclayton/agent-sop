@@ -1,5 +1,5 @@
 ---
-sop_version: 2026-04-17
+sop_version: "2026-04-19"
 name: sop-checker
 description: Audits any project folder for SOP compliance and produces a scored report with actionable recommendations. Read-only — never modifies the target project.
 ---
@@ -65,17 +65,19 @@ The canonical checklist (as of 2026-04-08) has 5 numbered steps:
 
 Plus an unnumbered interrupt-recovery bullet. Count only the numbered steps. Projects using the older 7-step or 8-step format should be marked WARN (not FAIL) with a note to update.
 
-**C4 — Session end checklist has 7 steps:**
-The canonical checklist has 7 numbered steps:
+**C4 — Session end checklist has 9 steps:**
+The canonical checklist has 9 numbered steps as of 2026-04-19 (Phase 1 parallel sessions):
 1. Run tests
-2. Backlog.md
-3. feature-map.md
-4. agent-memory.md
-5. build plan Batch Log
-6. project_resume.md
-7. Commit docs/ with the work
+2. Backlog.md (Step 2a: P-number collision pre-check)
+3. Secondary trackers
+4. feature-map.md
+5. agent-memory.md narrative + decisions/gotchas directories
+6. build plan Batch Log
+7. project_resume_<agent-id>.md (per-agent)
+8. Write to docs/recent-work/ + refresh CLAUDE.md rollup
+9. Commit docs/ with the work
 
-Projects using the older 8-step format (which included "MEMORY.md index" as a separate step) should be marked WARN with a note to update.
+Sub-steps (2a P-number collision, 3b secondary-tracker reconciliation, 8b rollup refresh) are part of the canonical numbered-step structure. Projects using the older 7-step (pre-P42) or 8-step (pre-P43) format should be marked WARN (not FAIL) with a note to update via `/update-agent-sop`.
 
 **C5 — Dispatch reference with 5+ files:**
 Accept either format:
@@ -154,12 +156,31 @@ List files in `.claude/agents/` directory. Count markdown files (`.md`). If 2 or
 
 If `.claude/agents/` does not exist, mark as FAIL with fix: "Create `.claude/agents/` directory and add at least 2 agent definitions."
 
+### Phase 4.5: Multi-Agent Parallel Sessions
+
+Run checks M1-M5 from checklist Section 11 when the target project has multi-agent parallel sessions enabled (indicated by any of: `multi_agent: auto` / `multi_agent: on` in agent-sop.config.json with worktree count >1, OR presence of `docs/recent-work/`, `docs/agent-memory/decisions/`, `docs/agent-memory/gotchas/` directories).
+
+**M1 — Agent-id resolvable (Critical):**
+Grep `.claude/commands/update-sop.md` and `.claude/commands/restart-sop.md` for the `resolve_agent_id` function definition. Both commands must include it. The precedence (env var > file > solo > hash) must be verifiable by reading the snippet.
+
+**M2 — Per-entry directory structure exists (Important):**
+Check for `docs/recent-work/README.md`, `docs/agent-memory/decisions/README.md`, `docs/agent-memory/gotchas/README.md`. All three must exist, OR the project must have a legacy `## Recent Work` section in CLAUDE.md with a cutover note referencing Batch 1.6 migration (pre-migration acceptable).
+
+**M3 — Commit-range uses merge-base (Important):**
+Grep `.claude/commands/update-sop.md` and `.claude/commands/restart-sop.md` for `git merge-base`. Both files must contain the pattern. Failure: any file uses `git log -10` or `git log --author=` as the drift scan.
+
+**M4 — Per-agent resume file exists (Important):**
+In the target's local memory dir (`~/.claude/projects/[hash]/memory/`), list `project_resume_*.md`. At least one must exist. Legacy `project_resume.md` also acceptable for solo-agent projects.
+
+**M5 — CLAUDE.md rollup refreshed within 7 days (Recommended):**
+Read the rollup section between `<!-- recent-work-rollup:start -->` and `<!-- recent-work-rollup:end -->` sentinels. Extract `Last refreshed: YYYY-MM-DD` and compare against today. If over 7 days old, WARN.
+
 ### Phase 5: Cross-File Consistency Checks
 
 Run the checks from checklist Section 8. These require reading multiple files and comparing:
 
 - Extract all `[SHIPPED]` P-numbers from Backlog.md, verify each appears in feature-map.md
-- Extract In-Flight Work items from agent-memory.md, verify each has a matching `[IN PROGRESS]` entry in Backlog.md
+- Extract In-Flight Work lines from agent-memory.md (per-agent `- <agent-id> (YYYY-MM-DD): ...`), verify each has a matching `[IN PROGRESS]` entry in Backlog.md
 - Verify agent-memory.md Key Documents section references CLAUDE.md rather than duplicating
 
 ### Phase 6: Scoring

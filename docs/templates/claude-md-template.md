@@ -165,13 +165,14 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 **Every session, no exceptions.** The `/update-sop` command automates this checklist. If the command is not available, execute manually. Never delete without a trace. Update in place, mark superseded, or archive.
 
 1. Run tests (code projects) — fix failures before proceeding.
-2. `Backlog.md` — update status tags in place, append new items.
-3. Secondary trackers — reconcile any project-specific finding files (audit-backlog, security-findings, etc.) that use heading-level `[OPEN]`/`[SHIPPED]` tags. Hard block: any finding ID referenced in this session's commits must not be left `[OPEN]`.
+2. `Backlog.md` — update status tags in place, append new items. Step 2a hard-blocks P-number collisions with the default branch.
+3. Secondary trackers — reconcile any project-specific finding files (audit-backlog, security-findings, etc.) that use heading-level `[OPEN]`/`[SHIPPED]` tags. Commit-range partitioned via `git merge-base`. Hard block on unreconciled finding IDs.
 4. `docs/feature-map.md` — append shipped items.
-5. `docs/agent-memory.md` — append decisions/gotchas, move completed to `## Completed Work`.
+5. `docs/agent-memory.md` narrative + decisions/gotchas directories — new decisions → `docs/agent-memory/decisions/YYYY-MM-DD_<agent-id>_<slug>.md`, new gotchas → `docs/agent-memory/gotchas/`; update In-Flight/Completed lines in `agent-memory.md` by agent-id.
 6. `docs/build-plans/phase-N.md` — append to Batch Log.
-7. `project_resume.md` — overwrite with current state.
-8. Commit `docs/` changes with the work.
+7. `project_resume_<agent-id>.md` — overwrite with current state (per-agent snapshot).
+8. Write session entry to `docs/recent-work/` and refresh `CLAUDE.md` rollup section.
+9. Commit `docs/` changes with the work.
 
 ---
 

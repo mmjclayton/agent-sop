@@ -1,9 +1,11 @@
-<!-- SOP-Version: 2026-04-17 -->
+<!-- SOP-Version: 2026-04-19 -->
 # Multi-Agent Context Routing
 
 Applies when multiple agents work in parallel on the same project. Routing the right context to each agent based on task type saves 15-25% of token spend while maintaining quality on the tasks that matter.
 
 Extracted from SOP Section 16 on 2026-04-17 as part of the P32 trim. For single-agent work, this guide is not needed — the core SOP covers it.
+
+**Distinct from `multi-agent-parallel-sessions.md`:** this guide covers *token-efficient context allocation* when delegating to sub-agents within one Claude Code session (coordinator + specialist pattern). The parallel-sessions guide covers *concurrent independent Claude Code sessions* on the same repo via git worktrees, with tracking-file conflict prevention. Use both when both patterns apply.
 
 ## Context tiers
 
@@ -27,11 +29,11 @@ Extracted from SOP Section 16 on 2026-04-17 as part of the P32 trim. For single-
 
 ## Conflict avoidance
 
-- Each agent works on a **separate branch** and merges sequentially.
-- Agents on the same codebase must not modify the same files. Assign files explicitly in the task prompt.
-- If two agents need to modify the same file, run them sequentially, not in parallel.
-- Documentation conflicts (agent-memory.md, Backlog.md) resolve by appending both entries.
-- Code conflicts require human review. Flag in agent-memory.md Gotchas.
+For sub-agents within one Claude Code session (this guide's scope):
+- Assign files explicitly in the task prompt so specialist agents do not modify the same file.
+- If two specialists need to modify the same file, run them sequentially.
+
+For concurrent independent Claude Code sessions on separate worktrees: see `docs/guides/multi-agent-parallel-sessions.md` — per-entry directory structure, commit-range partitioning, and P-number collision detection handle conflict prevention without manual file-set assignment.
 
 ## Managed Agents API implementation
 

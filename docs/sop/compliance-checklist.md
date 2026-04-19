@@ -74,7 +74,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | C1 | Agent SOP section exists | `## Agent SOP` header referencing the SOP document |
 | C2 | Session & Memory Hygiene section exists | `## Session` header (match flexibly) |
 | C3 | Session start checklist has 5 steps | Numbered list under session start heading (5 steps per canonical SOP) |
-| C4 | Session end checklist has 7 steps | Numbered list under session end heading, step 1 is test gate for code projects |
+| C4 | Session end checklist has 9 steps | Numbered list under session end heading, step 1 is test gate for code projects. Steps 2a (P-number collision) and 3b (secondary tracker reconciliation) are documented as sub-steps, not separate top-level numbers. Projects still using 7-step (pre-P42) or 8-step (pre-P43) format should be WARN (not FAIL) with a note to update. |
 | C5 | Dispatch reference exists with 5+ files | `## Dispatch` or `## Key Documents & Dispatch` header, table with at least 5 file path entries |
 
 ### Important
@@ -282,6 +282,32 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 ---
 
+## 11. Multi-Agent Parallel Sessions
+
+*These checks apply only when the project is in parallel-agent mode (`multi_agent: auto` and worktree count > 1, OR `multi_agent: on`). Non-applicable when `multi_agent: off` or the project has never added per-agent directories.*
+
+### Critical
+
+| ID | Check | What to look for |
+|----|-------|-----------------|
+| M1 | Agent-id resolvable | `resolve_agent_id` snippet present in both `.claude/commands/update-sop.md` Step 0 and `.claude/commands/restart-sop.md` Step 0b. Function runs without error (precedence: `CLAUDE_AGENT_ID` env > `.sop-agent-id` file > `solo` > worktree-path hash). Inside a valid git repo, `$AGENT_ID` always resolves to a non-empty string. |
+
+### Important
+
+| ID | Check | What to look for |
+|----|-------|-----------------|
+| M2 | Per-entry directory structure exists | `docs/recent-work/`, `docs/agent-memory/decisions/`, `docs/agent-memory/gotchas/` all exist with `README.md`. Legacy projects pre-migration: accept the legacy `## Recent Work` / `## Decisions Made` / `## Gotchas and Lessons` narrative sections provided a cutover note references the migration (Batch 1.6). |
+| M3 | Commit-range uses merge-base | `resolve_session_commit_range` snippet present in `.claude/commands/update-sop.md` Step 0a and `.claude/commands/restart-sop.md` Step 0c. Snippet uses `git merge-base <default-branch> HEAD` (not last-N commits, not git author filtering). Grep-verifiable by pattern `git merge-base`. |
+| M4 | Per-agent resume file exists | `~/.claude/projects/[hash]/memory/` contains at least one `project_resume_<agent-id>.md`. Legacy `project_resume.md` accepted as fallback when `$AGENT_ID` is `solo`. |
+
+### Recommended
+
+| ID | Check | What to look for |
+|----|-------|-----------------|
+| M5 | CLAUDE.md rollup refreshed within 7 days | `CLAUDE.md` contains `<!-- recent-work-rollup:start -->` / `<!-- recent-work-rollup:end -->` sentinels. The `Last refreshed: YYYY-MM-DD` line inside is within the last 7 days (advisory; rollup is auto-refreshed by `/update-sop`, so staleness indicates `/update-sop` was skipped). |
+
+---
+
 ## Check Summary
 
 | Category | Critical | Important | Recommended | Total |
@@ -296,11 +322,12 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | Cross-File Consistency | 0 | 3 | 3 | 6 |
 | Security, Hooks, Quality, Agents | 1 | 2 (+2 code) | 2 | 5 (+2) |
 | Benchmark-Proven Practices | 0 | 0 (+2 code) | 2 | 2 (+2) |
-| **Total (non-code)** | **14** | **43** | **13** | **70** |
-| **Total (code)** | **14** | **52** | **13** | **79** |
+| Multi-Agent Parallel Sessions | 1 | 3 | 1 | 5 |
+| **Total (non-code)** | **15** | **46** | **14** | **75** |
+| **Total (code)** | **15** | **55** | **14** | **84** |
 
 **Maximum deductions:**
-- Non-code: 14 x 10 + 43 x 5 + 13 x 2 = 140 + 215 + 26 = 381
-- Code: 14 x 10 + 52 x 5 + 13 x 2 = 140 + 260 + 26 = 426
+- Non-code: 15 x 10 + 46 x 5 + 14 x 2 = 150 + 230 + 28 = 408
+- Code: 15 x 10 + 55 x 5 + 14 x 2 = 150 + 275 + 28 = 453
 
 **Normalisation:** Score = max(0, 100 - (total deductions / max possible deductions * 100)). Then apply critical cap (49 max) if any critical check fails.
