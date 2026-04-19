@@ -316,6 +316,8 @@ Derived summary that replaces prepend-semantic Recent Work:
 - 2026-04-19 `solo`: Batch 1.6 tooling — migrate-to-multi-agent.py + slash command + setup.sh update. Commit 788663a.
 - 2026-04-19 `solo`: Batch 1.6 dogfood on agent-sop — 77 legacy entries extracted, legacy sections removed, rollup refreshed. Commit 15650c0.
 - 2026-04-19 `solo`: Batch 1.7 playbook drafted — requires Matt-hands dogfood on hst-tracker with 3 parallel sessions. Deferred.
+- 2026-04-19 `solo`: Phase 1 close-out — README parallel-sessions coverage, Deploy Checklist updates, Rule 5 instruction-count audit (estimate ~185-190, under 200 ceiling). Commit 81952c6.
+- 2026-04-19 `solo`: Session pause — Matt handling hst-tracker `feat/catalogue-ui` merge separately. Dogfood deferred; resumes when hst-tracker tree is clean.
 
 ---
 
