@@ -94,6 +94,13 @@ Accept either:
 
 Both are valid. The table must contain file paths with purposes.
 
+**B11 — State-transition validator present:**
+Two-part check:
+1. Tooling presence: `scripts/validate-state-transitions.sh` exists and is executable, AND `.claude/commands/update-sop.md` references it (grep for `validate-state-transitions`). If either is missing, WARN with fix: "Run `/update-agent-sop` to sync the state-transition validator and Step 3c reference."
+2. Retrospective audit (best-effort, skippable): if the validator script exists, run it against a synthetic before/after pair using `HEAD~20` as the before-ref and current working tree as after. Any illegal transitions detected are flagged as drift that predated or bypassed the live gate. Skip this part if the script does not exist (no retrospective possible).
+
+B11 is Recommended — do not fail the project if either part is missing. Emit a constructive note.
+
 ### Phase 4: Security, Hooks, Code Quality, and Agents Checks
 
 Run the checks from checklist Section 9. These checks cover practices introduced by the security guidance (`docs/sop/security.md`), hooks guidance (`docs/sop/harness-configuration.md`), code quality rules, and reference agent definitions.

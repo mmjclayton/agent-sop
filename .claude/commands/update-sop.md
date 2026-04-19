@@ -200,6 +200,29 @@ done
 
 Skip this step entirely when `SESSION_RANGE` is empty (agent is on the default branch directly with no diverging commits). Projects with no secondary trackers also see a no-op regardless of range.
 
+## Step 3c: Validate Backlog state transitions
+
+Step 2a catches P-number collisions. It does not catch illegal status-tag transitions — e.g. an entry jumping `[OPEN]` → `[SHIPPED - YYYY-MM-DD]` with no `[IN PROGRESS]` intermediate, a terminal-state revival, or a `[SHIPPED]` transition with no matching Batch Log entry. Step 3c runs the state-transition validator against the graph documented in Section 8 of the core SOP.
+
+```bash
+if [ -x scripts/validate-state-transitions.sh ]; then
+  bash scripts/validate-state-transitions.sh || exit 1
+else
+  echo "Warning: validate-state-transitions.sh not found. Upgrade with /update-agent-sop or run from upstream: bash ~/Projects/agent-sop/scripts/validate-state-transitions.sh"
+fi
+```
+
+Hard-blocks on non-zero exit. Runs *after* Step 3 (and Step 3b) so the validator sees this session's finalised Backlog state. The validator compares `HEAD:Backlog.md` against working-tree `Backlog.md` — exactly the changes this `/update-sop` is about to commit. No-ops when there is no working-tree diff.
+
+For a retrospective whole-session validation, invoke with the session's merge-base: `bash scripts/validate-state-transitions.sh --before $(git merge-base origin/main HEAD)`. Use this if earlier commits in the session predated the validator or bypassed it.
+
+Typical violations and fixes:
+- `<absent> → [SHIPPED]` or `[OPEN] → [SHIPPED]` — missing `[IN PROGRESS]` intermediate. Fix: add it in the same `Backlog.md` edit, or downgrade to `[OPEN]` and ship in a follow-up session.
+- `[VERIFIED] → [OPEN]` (or other terminal revival) — create a new P-number that references the original.
+- `[SHIPPED]` without Batch Log reference — append the P-number to the current phase's `docs/build-plans/phase-N.md` Batch Log.
+
+Soft warnings (`[BLOCKED]` ↔ `[DEFERRED]` with no decision file in the commit range) are non-blocking — re-classification is legitimate, the warning is a prompt to consider writing a decision entry.
+
 ## Step 4: Update docs/feature-map.md
 
 - Add any newly shipped items to the Shipped table

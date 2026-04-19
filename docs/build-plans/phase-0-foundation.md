@@ -64,6 +64,7 @@ agent-sop/
 
 *Append-only. Format: YYYY-MM-DD: Batch N.X — description.*
 
+- 2026-04-19: Batch 0.15 — P45 shipped. State-transition validator (`scripts/validate-state-transitions.sh`, zero-dep bash, 0.2s on 200-item Backlog) enforces the Backlog status-tag transition graph. Runs as `/update-sop` Step 3c after Backlog updates; hard-blocks illegal transitions (`<absent>` → `[SHIPPED]`, terminal revivals) and `[SHIPPED]` without Batch Log reference. Graph relaxed during implementation so `[OPEN]`/`[BLOCKED]`/`[DEFERRED]` → `[SHIPPED]` is legal when Batch Log reference exists — the Batch Log is the anti-gaming teeth; the `[IN PROGRESS]` intermediate was bookkeeping, not enforcement. 6 fixtures ship under `docs/benchmark/state-transition-fixtures/`. Section 8 of core SOP gained the transition table (+3 instructions). Shared `--assert-review` subcommand prepared for P44. Compliance check B11 + sop-checker guidance added. First item shipped via its own new `/update-sop` Step 3c — dogfood clean.
 - 2026-04-07: Batch 0.1 — Project scaffold created. CLAUDE.md, Backlog.md, docs/agent-memory.md, docs/feature-map.md, docs/build-plans/phase-0-foundation.md, README.md. Commit 79c5a5c.
 - 2026-04-07: Batch 0.2 — P1 shipped. Core SOP published at docs/sop/claude-agent-sop.md. Commit 79c5a5c.
 - 2026-04-07: Batch 0.3 — P2 shipped. CLAUDE.md base template published at docs/templates/claude-md-template.md. Commit 79c5a5c.

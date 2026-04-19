@@ -139,6 +139,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | ID | Check | What to look for |
 |----|-------|-----------------|
 | B10 | Shipped Archive section exists when needed | If file exceeds ~2,000 lines, a `## Shipped Archive` section should exist |
+| B11 | State-transition validator present | `scripts/validate-state-transitions.sh` exists and `/update-sop` references it as Step 3c. Retrospective: run the validator across `git log --follow Backlog.md` range; flag any illegal transitions (e.g. `[OPEN]` → `[SHIPPED]` with no `[IN PROGRESS]` intermediate) that predate the validator or bypassed it. Live sessions are already protected by Step 3c; this check catches historical drift. |
 
 ---
 
@@ -314,7 +315,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 |----------|----------|-----------|-------------|-------|
 | File Existence | 5 | 5 | 0 | 10 |
 | CLAUDE.md Structure | 5 | 12 (+5 code) | 2 | 19 (+5) |
-| Backlog.md Structure | 2 | 7 | 1 | 10 |
+| Backlog.md Structure | 2 | 7 | 2 | 11 |
 | agent-memory.md Structure | 1 | 4 | 1 | 6 |
 | feature-map.md Structure | 0 | 3 | 1 | 4 |
 | Build Plans Structure | 0 | 4 | 1 | 5 |
@@ -323,11 +324,11 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | Security, Hooks, Quality, Agents | 1 | 2 (+2 code) | 2 | 5 (+2) |
 | Benchmark-Proven Practices | 0 | 0 (+2 code) | 2 | 2 (+2) |
 | Multi-Agent Parallel Sessions | 1 | 3 | 1 | 5 |
-| **Total (non-code)** | **15** | **46** | **14** | **75** |
-| **Total (code)** | **15** | **55** | **14** | **84** |
+| **Total (non-code)** | **15** | **46** | **15** | **76** |
+| **Total (code)** | **15** | **55** | **15** | **85** |
 
 **Maximum deductions:**
-- Non-code: 15 x 10 + 46 x 5 + 14 x 2 = 150 + 230 + 28 = 408
-- Code: 15 x 10 + 55 x 5 + 14 x 2 = 150 + 275 + 28 = 453
+- Non-code: 15 x 10 + 46 x 5 + 15 x 2 = 150 + 230 + 30 = 410
+- Code: 15 x 10 + 55 x 5 + 15 x 2 = 150 + 275 + 30 = 455
 
 **Normalisation:** Score = max(0, 100 - (total deductions / max possible deductions * 100)). Then apply critical cap (49 max) if any critical check fails.

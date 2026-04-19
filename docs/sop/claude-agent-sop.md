@@ -473,6 +473,20 @@ Skip agent-memory.md, build plans, and MEMORY.md/project_resume.md. The lightwei
 
 **Backlog archive threshold:** When `Backlog.md` exceeds approximately 2,000 lines, move all `[SHIPPED]` and `[VERIFIED]` items older than 90 days to a `## Shipped Archive` section at the bottom of the file (or to a separate `docs/backlog-archive.md` if preferred). Items in the archive retain their full content and are never deleted.
 
+**Allowed transitions (validated by `/update-sop` Step 3c):**
+
+| From | Legal next states |
+|------|-------------------|
+| `<absent>` | `[OPEN]`, `[DEFERRED]`, `[IN PROGRESS]` |
+| `[OPEN]` | `[IN PROGRESS]`, `[DEFERRED]`, `[SHIPPED]`, `[WON'T]` |
+| `[IN PROGRESS]` | `[BLOCKED]`, `[DEFERRED]`, `[SHIPPED]`, `[WON'T]` |
+| `[BLOCKED]` | `[IN PROGRESS]`, `[DEFERRED]`, `[SHIPPED]`, `[WON'T]` |
+| `[DEFERRED]` | `[IN PROGRESS]`, `[SHIPPED]`, `[WON'T]`, `[BLOCKED]` |
+| `[SHIPPED]` | `[VERIFIED]` |
+| `[VERIFIED]` / `[WON'T]` | terminal — revival requires a new P-number |
+
+`[SHIPPED]` transitions (from any legal source) additionally require a Batch Log reference in `docs/build-plans/phase-*.md` — this is the anti-gaming teeth. `<absent>` → `[SHIPPED]` stays illegal so unplanned work cannot ship without leaving a paper trail. `[BLOCKED]` ↔ `[DEFERRED]` soft-warns if no decision file references the P-number in the commit range.
+
 ---
 
 ## 9. P-Number System

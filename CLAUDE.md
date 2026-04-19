@@ -39,8 +39,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 ## Current Priority Items (as of 2026-04-19)
 
 **Next:**
-- P45 — State-transition validator (protocol enforceability — ship first; highest action-per-text ratio)
-- P44 — Required reviewer turn with substance assertion (depends on P45 validator infrastructure)
+- P44 — Required reviewer turn with substance assertion (P45 infrastructure shipped; `--assert-review` subcommand ready)
 - P46 — Mid-session drift detection (actionable commit-range check, not print hook)
 - P24 — Multi-agent optimisation guide (informed by P23 benchmark results)
 - P33 — Managed Agents integration guide (deferred — revive when a project uses Managed Agents API)
@@ -135,6 +134,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-04-19.*
 
+- 2026-04-19 `solo`: P45 state-transition validator shipped
 - 2026-04-19 `solo`: P44/P45/P46 drafted from Reddit state-drift feedback
 - 2026-04-19 `solo`: P43 close-out — README parallel-sessions coverage + Rule 5 audit
 - 2026-04-19 `solo`: P43 Phase 1 Batches 1.1 through 1.6 shipped

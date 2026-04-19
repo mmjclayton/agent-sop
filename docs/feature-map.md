@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-04-19 (P42)
+Last updated: 2026-04-19 (P45)
 
 ---
 
@@ -39,6 +39,7 @@ Last updated: 2026-04-19 (P42)
 | P40 | Section 14 Common Mistakes table extracted to guide; Section 15.4 Managed Agents API safety block extracted to managed-agents-integration guide; CLAUDE.md Recent Work compacted; agent-memory.md Decisions audited (pre-2026-04-09 entries moved to Archived). Core SOP ~189 → ~178 instructions. | `docs/guides/sop-common-mistakes.md` (new), `docs/guides/managed-agents-integration.md`, `docs/sop/claude-agent-sop.md`, `CLAUDE.md`, `docs/agent-memory.md` | 2026-04-17 |
 | P41 | README rewrite (465 → 119 lines), hero reframed to operating-practice + PM-discipline, new Backlog discipline + Cross-session memory sections, License section added, Acknowledgements removed (verbatim review confirmed pattern inspiration only — no copied prose), A/B benchmark badge removed, GitHub About description rewritten | `README.md` | 2026-04-17 |
 | P42 | Secondary-tracker reconciliation + `[DEFERRED]` tag. `/update-sop` Step 3b auto-detects tracker files via CLAUDE.md Key Documents scan; Step 11 hard-blocks commit if any finding ID from this session's commits is still `[OPEN]`. `/restart-sop` Step 4 adds advisory drift guard. Section 8 gains `[DEFERRED]` with distinction from `[BLOCKED]`. Compliance B4 + new X6 check, totals 66→67 / 75→76. | `docs/sop/claude-agent-sop.md`, `docs/sop/compliance-checklist.md`, `.claude/commands/update-sop.md`, `.claude/commands/restart-sop.md`, `docs/templates/backlog-template.md`, `docs/templates/claude-md-template.md`, `docs/templates/claude-md-template-code.md` | 2026-04-19 |
+| P45 | State-transition validator. `scripts/validate-state-transitions.sh` enforces Backlog status-tag transition graph at `/update-sop` Step 3c. Hard-blocks `<absent>` → `[SHIPPED]`, terminal revivals, and `[SHIPPED]` without Batch Log reference. Zero-dep bash, 0.2s on 200-item Backlog. 6 fixtures + test harness. Includes `--assert-review` subcommand for P44's substance assertion. Section 8 of core SOP gains transition graph (+3 instructions). Compliance B11 added, totals 75→76 / 84→85. | `scripts/validate-state-transitions.sh`, `docs/benchmark/state-transition-fixtures/` (6 fixtures + run-tests.sh), `docs/sop/claude-agent-sop.md`, `docs/sop/compliance-checklist.md`, `.claude/commands/update-sop.md`, `.claude/commands/update-agent-sop.md`, `.claude/agents/sop-checker.md` | 2026-04-19 |
 
 ---
 
