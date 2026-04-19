@@ -14,7 +14,9 @@ Claude Code sessions are stateful in principle and stateless in practice. Each n
 
 The usual answers are either too heavy (databases, daemons, MCP servers with background capture) or too light (ad-hoc notes scattered across `docs/` that agents may or may not find). Agent SOP is the disciplined middle: a fixed file set, a fixed session workflow, and a fixed tag taxonomy — no tooling that isn't already in git and the shell.
 
-Benchmark data shows SOP-context agents produce 8-33% higher task quality on identical tasks than bare-repo agents, with the gap widening on vague product-level prompts. The compounding benefit across sessions — durable decisions, gotchas, batch logs — is visible in long-running projects. A 15k-line full-stack production codebase running the SOP for ~2 weeks has accumulated 125 dated decisions, 26 build-plan batch entries, and 20 rollup session entries. Equivalent counts in a no-SOP project of the same age: zero.
+The compounding benefit across sessions — durable decisions, gotchas, batch logs that the next session can read — is the thing Agent SOP is designed to deliver. A 15k-line full-stack production codebase running the SOP for ~2 weeks has accumulated 125 dated decisions, 26 build-plan batch entries, and 20 rollup session entries. Equivalent counts in a no-SOP project of the same age: zero.
+
+Single-task A/B benchmarks in [`docs/benchmark/`](docs/benchmark/) also show a +8-33% quality uplift, but they measure per-task code quality, not the cross-session durability this library is actually for.
 
 ## What it gives every project
 
