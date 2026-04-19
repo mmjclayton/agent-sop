@@ -52,6 +52,91 @@ Open the new files, replace `[bracket placeholders]` with your project content, 
 
 Every session from then on starts with `/restart-sop` and ends with `/update-sop`.
 
+## Using the slash commands
+
+Four slash commands cover the full session lifecycle. They install to `~/.claude/commands/` on setup and work in any project with the SOP files.
+
+### `/restart-sop` — at the start of every session
+
+Run this as the first thing in every new Claude Code session. It takes no arguments.
+
+```
+/restart-sop
+```
+
+The command reads the standard context files in order (`CLAUDE.md`, the local memory index and per-agent resume file, `docs/agent-memory.md` plus recent entries under `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/`, the current build plan), runs `git log --oneline -10`, and cross-checks that memory agrees with git state. It reads the Backlog item(s) flagged as current priority and reports:
+
+- What the current priority is and what you're ready to work on
+- Whether the previous session ended cleanly or was interrupted
+- Any inconsistencies between files that need reconciling
+- Which Definition of Done rubric applies to this task type
+
+Typical runtime: ~30 seconds. A lightweight variant kicks in automatically when the task is tagged `[ok-for-automation]` and reads fewer files.
+
+### `/update-sop` — at the end of every session
+
+Run this before closing every session. It takes no arguments.
+
+```
+/update-sop
+```
+
+Runs the 9-step session-end checklist:
+
+1. Self-evaluate the work against the Definition of Done rubric for the task type (bug fix, feature, refactor, test writing)
+2. Run the full test suite (code projects only)
+3. Update `Backlog.md` status tags — Step 2a hard-blocks if a P-number collides with one already on the default branch
+4. Reconcile any project-specific secondary trackers (audit findings, security scans, compliance lists) against this session's commits, partitioned per-agent via `git merge-base`
+5. Update `docs/feature-map.md` with shipped items
+6. Write any new decisions to `docs/agent-memory/decisions/` and new gotchas to `docs/agent-memory/gotchas/` as individual files; update the narrative sections of `docs/agent-memory.md` by your agent-id
+7. Append to the current build plan's Batch Log
+8. Overwrite `project_resume_<agent-id>.md` with a fresh snapshot
+9. Write the session summary to `docs/recent-work/YYYY-MM-DD_<agent-id>_<slug>.md`, refresh the Recent Work rollup in `CLAUDE.md` via `bash scripts/refresh-rollup.sh`
+10. Commit the docs changes together with the feature work
+
+On a parallel multi-agent worktree, each agent's `/update-sop` only touches its own branch — the commit-range partitioning via `git merge-base` ensures agents don't step on each other's reconciliation.
+
+### `/update-agent-sop` — periodically, when you want upstream SOP changes
+
+Run this roughly weekly to pull improvements from the agent-sop repo into your project (and to update the slash commands installed at `~/.claude/`). It takes no arguments.
+
+```
+/update-agent-sop
+```
+
+Per file, it computes three SHAs — upstream, your local copy, the recorded baseline — and classifies the state:
+
+| Classification | Action |
+|----------------|--------|
+| IN SYNC (consumer matches upstream) | No change |
+| UPSTREAM CHANGED, LOCAL UNCHANGED | Copy upstream to consumer, refresh baseline SHA |
+| LOCALLY MODIFIED, UPSTREAM UNCHANGED | No change — your local edits preserved |
+| LOCALLY MODIFIED + UPSTREAM CHANGED | Surfaced for reconciliation; never force-overwrites |
+| MISSING (first-run) | Copy upstream, record as baseline |
+
+Config at `~/.claude/agent-sop.config.json` controls behaviour:
+
+- `update_reminder`: `"weekly"` (default) / `"manual"` / `"off"` — `/restart-sop` prints a one-line staleness warning when `last_update_check` falls outside this cadence
+- `local_path`: path to your local agent-sop checkout (preferred source, falls back to GitHub raw)
+- `github`: `owner/repo` for the raw fallback
+- `multi_agent`: `"auto"` (default) / `"on"` / `"off"` — controls whether parallel-session conventions apply (see [Parallel multi-agent sessions](#parallel-multi-agent-sessions))
+
+The staleness reminder is non-blocking; it doesn't stop session start.
+
+### `/migrate-to-multi-agent` — one-shot when upgrading a legacy project
+
+Run this once when moving an existing project from the pre-Phase-1 narrative format (where Recent Work was a prepend section in `CLAUDE.md` and Decisions/Gotchas were bullet lists in `docs/agent-memory.md`) to the Phase 1 directory structure. Not needed for projects set up with `setup.sh` from 2026-04-19 onwards — those are already in the new format.
+
+```bash
+# Preview what would be extracted (no file writes)
+python3 scripts/migrate-to-multi-agent.py --dry-run
+
+# Do the extraction (requires clean working tree)
+python3 scripts/migrate-to-multi-agent.py
+```
+
+After the script runs, manually remove the legacy narrative sections from `CLAUDE.md` and `docs/agent-memory.md` (the script leaves them for review), then run `/update-sop` to refresh the rollup and commit. Full mechanics in [`docs/guides/multi-agent-parallel-sessions.md`](docs/guides/multi-agent-parallel-sessions.md).
+
 ## Six non-negotiable rules
 
 These cannot be overridden by project-specific configuration. Each is tagged with the failure mode it prevents.
