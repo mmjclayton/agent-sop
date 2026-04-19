@@ -28,6 +28,7 @@ Single-task A/B benchmarks in [`docs/benchmark/`](docs/benchmark/) also show a +
 - **A compliance checker** that scores any project 0-100 across 84 checks for code projects (75 for non-code), three-tier weighted scoring with a critical-failure cap, including M1-M5 checks for multi-agent parallel-session readiness.
 - **Templates** for every standard file, plus `setup.sh` that installs them into a target project.
 - **A/B benchmark framework** with eight task specs, blind scoring, runner script, and three rounds of recorded results.
+- **Low session-start cost.** Typical read on a mature project stays well under 2% of a 1M context window. Measure per project via Claude Code's context usage indicator.
 
 ## Quick start
 
@@ -219,12 +220,6 @@ Both target the "Claude Code has no memory across sessions" problem. They solve 
 ### vs no tooling
 
 The common alternative is free-form notes in `README.md` or `docs/`, updated when someone remembers. That works for solo projects until you try to come back after a month or hand off to another agent. The benchmark gap (+33% on vague prompts) is mostly this: agents with structured context don't waste tool calls reconstructing what was already decided.
-
-## Token efficiency
-
-Session start reads ~6,400 raw tokens (~10,900 with Claude Code's 1.7× file-read overhead) on a mature project — about 1.1% of a 1M context window or 5.5% of a 200k window. The full library totals ~38-49K tokens; the session start checklist reads about 8% of that. The remaining 92% is accessed on demand through the dispatch table and line-range hints.
-
-After the first turn, Anthropic's prompt caching applies a 90% discount on cache hits, reducing recurring per-turn cost of loaded files to ~1,000 effective tokens.
 
 ## Requirements
 
