@@ -226,6 +226,19 @@ for subdir in "recent-work" "agent-memory/decisions" "agent-memory/gotchas"; do
     copy_if_missing "$src" "$TARGET/docs/$subdir/README.md"
 done
 
+# ── Copy migration and maintenance scripts ────────────────────────────────────
+
+if [ -d "$SCRIPT_DIR/scripts" ]; then
+    for src in "$SCRIPT_DIR"/scripts/*; do
+        [ -f "$src" ] || continue
+        copy_if_missing "$src" "$TARGET/scripts/$(basename "$src")"
+        # Preserve executable bit for scripts
+        if [ -x "$src" ] && [ -f "$TARGET/scripts/$(basename "$src")" ]; then
+            chmod +x "$TARGET/scripts/$(basename "$src")"
+        fi
+    done
+fi
+
 # ── Install slash commands and reference agents (user-scope) ──────────────────
 
 USER_CLAUDE_DIR="${HOME}/.claude"
