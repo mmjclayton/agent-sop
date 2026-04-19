@@ -151,7 +151,9 @@ The `## Recent Work (rollup)` section of CLAUDE.md is a derived summary of `docs
 
 ### Why it converges
 
-The refresh is a pure function of `docs/recent-work/*.md`. Any agent regenerating the section from the same directory contents produces the same output. Two agents running `/update-sop` Step 8b in separate worktrees with identical directory states write byte-identical rollups. Git merges either side's rollup silently because they're equal. If the directories diverge (each agent added a file the other doesn't have yet), the second merge includes both new files, and the next `/update-sop` regenerates the rollup reflecting both.
+The refresh is a pure function of `docs/recent-work/*.md`. Any agent regenerating the section from the same directory contents produces the same output. Two agents running `/update-sop` Step 8b in separate worktrees with identical directory states write byte-identical rollups. Git merges either side's rollup silently because they're equal.
+
+When directories diverge (each agent added a file the other doesn't have yet), the merge produces a textual conflict inside the sentinel block — each agent's rollup is correct for its own view but different from the other's. Resolution is mechanical and canonical: `git checkout --ours CLAUDE.md` then `bash scripts/refresh-rollup.sh` then `git add CLAUDE.md && git commit`. The regenerated rollup reflects both agents' new entries because the merged `docs/recent-work/` directory contains both files. The 2026-04-19 dogfood run observed this exact pattern on merges 2 and 3; both resolved in under 30 seconds each.
 
 ### Why not edit by hand
 

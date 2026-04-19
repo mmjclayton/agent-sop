@@ -160,58 +160,16 @@ Report: `Extracted: Recent Work X/X, Decisions Y/Y, Gotchas Z/Z`. If counts don'
 
 ## Step 9: Refresh the CLAUDE.md rollup
 
-Run the `refresh_recent_work_rollup` snippet from `/update-sop` Step 8b to regenerate the rollup section in CLAUDE.md with the newly extracted entries.
+Regenerate the rollup section from the newly-extracted `docs/recent-work/` entries:
 
 ```bash
-refresh_recent_work_rollup() {
-  local claude_md="CLAUDE.md"
-  local recent_dir="docs/recent-work"
-  local tmp
-  tmp=$(mktemp)
+[ "$DRY_RUN" = "0" ] && bash scripts/refresh-rollup.sh
+```
 
-  {
-    echo "<!-- recent-work-rollup:start -->"
-    echo "*Auto-generated from \`docs/recent-work/\`. Last refreshed: $(date +%Y-%m-%d).*"
-    echo ""
+The script lives at `scripts/refresh-rollup.sh` (shipped with agent-sop, copied by `setup.sh`). If the project hasn't been synced yet, invoke from the upstream checkout:
 
-    local found=0
-    if ls "$recent_dir"/*.md >/dev/null 2>&1; then
-      for f in $(ls "$recent_dir"/*.md 2>/dev/null | sort -r); do
-        [ "$(basename "$f")" = "README.md" ] && continue
-        local fname title date_part agent_part
-        fname=$(basename "$f" .md)
-        date_part=$(printf '%s' "$fname" | cut -d_ -f1)
-        agent_part=$(printf '%s' "$fname" | cut -d_ -f2)
-        title=$(grep -m1 '^# ' "$f" | sed 's/^# //')
-        [ -z "$title" ] && title="(untitled)"
-        echo "- $date_part \`$agent_part\`: $title"
-        found=1
-      done
-    fi
-
-    [ "$found" = "0" ] && echo "*No entries yet.*"
-
-    echo "<!-- recent-work-rollup:end -->"
-  } > "$tmp"
-
-  awk -v repl_file="$tmp" '
-    /<!-- recent-work-rollup:start -->/ {
-      while ((getline line < repl_file) > 0) print line
-      close(repl_file)
-      skip = 1
-      next
-    }
-    /<!-- recent-work-rollup:end -->/ {
-      skip = 0
-      next
-    }
-    !skip { print }
-  ' "$claude_md" > "${claude_md}.tmp" && mv "${claude_md}.tmp" "$claude_md"
-
-  rm -f "$tmp"
-}
-
-[ "$DRY_RUN" = "0" ] && refresh_recent_work_rollup
+```bash
+[ "$DRY_RUN" = "0" ] && bash ~/Projects/agent-sop/scripts/refresh-rollup.sh
 ```
 
 ## Step 10: Report

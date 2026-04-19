@@ -293,59 +293,18 @@ Slug convention: same as Step 5 (lowercase alphanumeric + hyphens, no underscore
 The `## Recent Work (rollup)` section in CLAUDE.md is a derived summary of `docs/recent-work/*.md`. Regenerate it between the sentinel markers on every `/update-sop` run. The refresh is idempotent — two agents producing identical directory contents produce identical output, so the rollup converges regardless of merge order.
 
 ```bash
-refresh_recent_work_rollup() {
-  local claude_md="CLAUDE.md"
-  local recent_dir="docs/recent-work"
-  local tmp
-  tmp=$(mktemp)
+bash scripts/refresh-rollup.sh
+```
 
-  {
-    echo "<!-- recent-work-rollup:start -->"
-    echo "*Auto-generated from \`docs/recent-work/\`. Last refreshed: $(date +%Y-%m-%d).*"
-    echo ""
+The script lives at `scripts/refresh-rollup.sh` (installed by `setup.sh`; present in any project that ran `/update-agent-sop` after 2026-04-19). If the script is missing (pre-migration project), invoke it via the agent-sop upstream:
 
-    local found=0
-    if ls "$recent_dir"/*.md >/dev/null 2>&1; then
-      for f in $(ls "$recent_dir"/*.md 2>/dev/null | sort -r); do
-        [ "$(basename "$f")" = "README.md" ] && continue
-        local fname title date_part agent_part
-        fname=$(basename "$f" .md)
-        date_part=$(printf '%s' "$fname" | cut -d_ -f1)
-        agent_part=$(printf '%s' "$fname" | cut -d_ -f2)
-        title=$(grep -m1 '^# ' "$f" | sed 's/^# //')
-        [ -z "$title" ] && title="(untitled)"
-        echo "- $date_part \`$agent_part\`: $title"
-        found=1
-      done
-    fi
-
-    [ "$found" = "0" ] && echo "*No entries yet.*"
-
-    echo "<!-- recent-work-rollup:end -->"
-  } > "$tmp"
-
-  # Replace content between sentinels in CLAUDE.md
-  awk -v repl_file="$tmp" '
-    /<!-- recent-work-rollup:start -->/ {
-      while ((getline line < repl_file) > 0) print line
-      close(repl_file)
-      skip = 1
-      next
-    }
-    /<!-- recent-work-rollup:end -->/ {
-      skip = 0
-      next
-    }
-    !skip { print }
-  ' "$claude_md" > "${claude_md}.tmp" && mv "${claude_md}.tmp" "$claude_md"
-
-  rm -f "$tmp"
-}
-
-refresh_recent_work_rollup
+```bash
+bash ~/Projects/agent-sop/scripts/refresh-rollup.sh
 ```
 
 Verify with: `grep -A 20 'recent-work-rollup:start' CLAUDE.md`
+
+**Why a script, not inline:** the prior inline snippet used `local var=$(cmd)` inside a compound output group, which leaks assignment lines to stdout under zsh (macOS default). A script with an explicit `#!/usr/bin/env bash` shebang forces the right interpreter regardless of the caller's shell. See `docs/agent-memory/decisions/2026-04-19_solo_rollup-refresh-snippet-zsh-bug.md`.
 
 ## Step 9: Update MEMORY.md index
 

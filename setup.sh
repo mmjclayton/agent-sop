@@ -232,7 +232,7 @@ if [ -d "$SCRIPT_DIR/scripts" ]; then
     for src in "$SCRIPT_DIR"/scripts/*; do
         [ -f "$src" ] || continue
         copy_if_missing "$src" "$TARGET/scripts/$(basename "$src")"
-        # Preserve executable bit for scripts
+        # Preserve executable bit for scripts (migration tool, refresh-rollup, etc.)
         if [ -x "$src" ] && [ -f "$TARGET/scripts/$(basename "$src")" ]; then
             chmod +x "$TARGET/scripts/$(basename "$src")"
         fi
