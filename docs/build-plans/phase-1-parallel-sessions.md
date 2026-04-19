@@ -158,23 +158,36 @@ Derived summary that replaces prepend-semantic Recent Work:
 
 ---
 
-## Batch 1.2 — Directory-per-entry extractions + rollup
+## Batch 1.2 — Directory-per-entry structure + rollup (specs and new-entry paths)
+
+**Scope narrowed from original plan:** historical extraction of agent-sop's own Recent Work, Decisions, and Gotchas moves to Batch 1.6 (where the migration command ships and is tested on real historical content). Batch 1.2 establishes the structure, specs, and new-entry write paths only. Until 1.6, legacy sections in CLAUDE.md and agent-memory.md coexist with the new directories — the rollup displays newly written entries; the legacy section remains for pre-migration history.
 
 **Files touched:**
-- `docs/sop/claude-agent-sop.md` (Section 3 agent-memory.md structure; Section 3 CLAUDE.md rollup section)
+- `docs/sop/claude-agent-sop.md` (Section 1 standard file set; Section 3 file structure specs — new directories, rollup, agent-memory.md narrative-only)
 - `docs/templates/claude-md-template.md`, `claude-md-template-code.md`, `agent-memory-template.md`
-- `.claude/commands/update-sop.md` (Steps 5 and 8 rewritten for directory writes; rollup refresh added)
-- `.claude/commands/restart-sop.md` (Steps 2-3 updated to read rollup primarily)
-- `docs/guides/multi-agent-parallel-sessions.md` (directory structure + rollup sections)
-- `docs/sop/compliance-checklist.md` (new directory-existence checks; agent-memory.md narrative-only rule)
-- agent-sop's own: `CLAUDE.md` Recent Work extraction, `docs/agent-memory.md` Decisions+Gotchas extraction, new `docs/recent-work/`, `docs/agent-memory/decisions/`, `docs/agent-memory/gotchas/` directories
+- `.claude/commands/update-sop.md` (Step 5 writes Decisions/Gotchas to directories; Step 8 writes Recent Work to directory; new Step 8b refreshes rollup)
+- `.claude/commands/restart-sop.md` (Step 2 reads per-agent resume file; Step 3 reads narrative + glances at recent directory entries)
+- `docs/guides/multi-agent-parallel-sessions.md` (Section 2 directory structure, Section 3 rollup, Section 4 filename convention)
+- `docs/sop/compliance-checklist.md` (directory-existence checks; agent-memory.md narrative-only structure)
+- `docs/recent-work/README.md`, `docs/agent-memory/decisions/README.md`, `docs/agent-memory/gotchas/README.md` (new — explain purpose and filename convention)
+- agent-sop's own `CLAUDE.md` (add rollup section with sentinels; keep legacy Recent Work until Batch 1.6)
+- agent-sop's own `docs/agent-memory.md` (cutover note above legacy Decisions and Gotchas sections)
+
+**Filename convention locked:**
+- Pattern: `YYYY-MM-DD_<agent-id>_<slug>.md` (underscore is the field separator; hyphens allowed within fields)
+- Slug: lowercase alphanumeric + hyphens, max ~50 chars, no underscores, no leading/trailing hyphens
+- Agent-id: alphanumeric + hyphens, no underscores (enforced by resolve_agent_id validation)
 
 **Acceptance criteria:**
-- `/update-sop` writes session entries to new directories with correct filename pattern (`YYYY-MM-DD-<agent-id>-<slug>.md`)
-- `/restart-sop` reads CLAUDE.md rollup by default; reads directory files directly only if rollup `Last refreshed` is >7 days old
-- CLAUDE.md stays under the 300-line code-project limit / 200-line non-code limit
-- agent-sop itself migrated as part of this batch — no content lost (git diff proves every extracted entry lands in a file)
-- Merge test: two agents creating entries on the same date with different slugs produce no git conflict (filenames differ)
+- `/update-sop` Step 5 and Step 8 write new entries to the directories with correct filename pattern
+- `/update-sop` Step 8b refreshes rollup via idempotent shell snippet between sentinel markers
+- `/restart-sop` Step 2 reads per-agent `project_resume_<agent-id>.md`; falls back to `project_resume.md` for `solo`
+- `/restart-sop` Step 3 reads agent-memory.md narrative + lists 10 most recent decision filenames as advisory
+- Core SOP Section 3 describes the new directory structure authoritatively
+- Three directory README.md files explain purpose and filename convention
+- agent-sop's own CLAUDE.md has a rollup section with `<!-- recent-work-rollup:start -->` / `<!-- recent-work-rollup:end -->` sentinels (initially empty pending the first new entry)
+- Merge test documented: two agents creating entries on the same date with different slugs produce no git conflict (verified in guide's Section 2)
+- Compliance checklist updates reflect the structural shift (A1 Decisions/Gotchas requirements removed; new directory-existence checks added)
 
 ---
 

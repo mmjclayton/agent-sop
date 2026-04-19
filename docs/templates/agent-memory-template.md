@@ -23,7 +23,7 @@ See CLAUDE.md Key Documents & Dispatch table.
 
 ## In-Flight Work
 
-<!-- What is currently being built. When work completes, move the entry to ## Completed Work with date and PR number. Never delete. Empty is fine — it means no work was interrupted. -->
+<!-- Per-agent lines. Format: `- <agent-id> (YYYY-MM-DD): description`. Each agent manages their own line. When work completes, the agent moves their line to ## Completed Work. Empty is fine. -->
 
 *(none)*
 
@@ -31,17 +31,17 @@ See CLAUDE.md Key Documents & Dispatch table.
 
 ## Decisions Made
 
-<!-- One line per decision. Format: YYYY-MM-DD: Decision. Append only. If superseded: mark [SUPERSEDED - YYYY-MM-DD: replaced by X] and move to ## Archived. -->
+<!-- Decisions live as one file per entry in `docs/agent-memory/decisions/`. Filename: `YYYY-MM-DD_<agent-id>_<slug>.md`. See `docs/sop/claude-agent-sop.md` Section 3 and `docs/guides/multi-agent-parallel-sessions.md` for the format and filename convention. -->
 
-- YYYY-MM-DD: [first decision]
+See `docs/agent-memory/decisions/`. One file per decision.
 
 ---
 
 ## Gotchas and Lessons
 
-<!-- Non-obvious things that burned time. Also: data model invariants not obvious from the schema, named utility functions for cross-cutting concerns, framework-specific patterns that agents commonly get wrong. Append only. Mark stale entries [SUPERSEDED - YYYY-MM-DD] and move to ## Archived. -->
+<!-- Gotchas live as one file per entry in `docs/agent-memory/gotchas/`. Same filename convention as decisions. Non-obvious things that burned time, data model invariants not obvious from the schema, named utility functions for cross-cutting concerns, framework-specific patterns that agents commonly get wrong. -->
 
-*(none yet)*
+See `docs/agent-memory/gotchas/`. One file per gotcha.
 
 ---
 
@@ -55,7 +55,7 @@ See CLAUDE.md Key Documents & Dispatch table.
 
 ## Completed Work
 
-<!-- Entries moved from In-Flight Work when done. Format: YYYY-MM-DD: description — PR #N or commit hash. -->
+<!-- Entries moved from In-Flight Work when done. Format: `- YYYY-MM-DD <agent-id>: description — PR #N or commit hash`. Each line per agent per completion. -->
 
 *(none yet)*
 
@@ -63,6 +63,6 @@ See CLAUDE.md Key Documents & Dispatch table.
 
 ## Archived
 
-<!-- Superseded decisions and gotchas. Format: [SUPERSEDED - YYYY-MM-DD: reason] original entry. Never delete from this section. -->
+<!-- Historical narrative that no longer belongs in active sections. Superseded decisions and gotchas move to `docs/agent-memory/decisions/archive/` and `docs/agent-memory/gotchas/archive/` respectively — this section is only for narrative content that doesn't live in those directories. Never delete. -->
 
 *(none yet)*

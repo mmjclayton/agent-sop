@@ -28,7 +28,9 @@ See CLAUDE.md Key Documents table.
 
 ---
 
-## Decisions Made
+## Decisions Made (legacy, pending Batch 1.6 migration)
+
+*From 2026-04-19 onwards, decisions live as one file per entry in `docs/agent-memory/decisions/`. The entries below are preserved here until `/update-sop --migrate-to-multi-agent` lands in Batch 1.6 and extracts them into that directory.*
 
 *Pre-2026-04-09 entries (initial scaffold + ECC adaptation + token optimisation + foundational rule decisions) relocated to Archived on 2026-04-17 (P40). Decisions still in force are encoded in the SOP docs themselves (Section 0 rules, file specs, compliance checklist). The Archived entries preserve the why/when context.*
 
@@ -58,7 +60,9 @@ See CLAUDE.md Key Documents table.
 
 ---
 
-## Gotchas and Lessons
+## Gotchas and Lessons (legacy, pending Batch 1.6 migration)
+
+*From 2026-04-19 onwards, gotchas live as one file per entry in `docs/agent-memory/gotchas/`. The entries below are preserved here until `/update-sop --migrate-to-multi-agent` lands in Batch 1.6 and extracts them into that directory.*
 
 - [SUPERSEDED - 2026-04-07: replaced by "never delete without a trace" — in-place updates are now expected] 2026-04-07: The additive-only rule applies to the SOP docs themselves. When the SOP is updated, append corrections below existing content — do not overwrite sections.
 - 2026-04-07: Do not store derived facts in agent-memory.md — test counts, line numbers, file sizes, dependency versions go stale immediately. Store the rule, not the measurement.

@@ -74,19 +74,41 @@ Pay special attention to:
 - **Key Documents & Dispatch** — intent-based table ("When you need to...")
 - **Definition of Done** — self-evaluation rubrics by task type
 
-### Step 2: Read memory files
+### Step 2: Read memory files (this agent's resume + optional sibling-agent snapshots)
 
 Read these local memory files:
 - `~/.claude/projects/[project-hash]/memory/MEMORY.md` (auto-memory index)
-- `~/.claude/projects/[project-hash]/memory/project_resume.md` (last session snapshot)
+- `~/.claude/projects/[project-hash]/memory/project_resume_${AGENT_ID}.md` (this agent's last session snapshot)
 
-If `project_resume.md` does not exist, note this and continue.
+If `project_resume_${AGENT_ID}.md` does not exist, fall back to `project_resume.md` (legacy single-agent filename). If neither exists, note this and continue.
 
-### Step 3: Read agent memory
+When `$AGENT_ID` is not `solo`, also list sibling agents' resume files for advisory context — they reveal parallel in-flight work:
 
-Read `docs/agent-memory.md` (if it exists — optional for projects with fewer than 10 sessions). This contains cross-session decisions, gotchas, data model invariants, preferences, and in-flight work status.
+```bash
+for f in ~/.claude/projects/*/memory/project_resume_*.md; do
+  [ -e "$f" ] || continue
+  [ "$(basename "$f")" = "project_resume_${AGENT_ID}.md" ] && continue
+  echo "=== $f ==="
+  sed -n '/^## What was done/,/^## /p' "$f" | head -20
+done
+```
 
-Check the In-Flight Work section. If it is populated, the previous session was interrupted. Read the build plan Batch Log (linked from CLAUDE.md) before starting new work.
+These are read-only advisory — do not overwrite another agent's resume.
+
+### Step 3: Read agent memory (narrative + decisions/gotchas directories)
+
+Read `docs/agent-memory.md` if it exists. Contains the narrative sections: Key Documents pointer, Key Source Files, In-Flight Work, Completed Work, Preferences, Archived.
+
+Scan the 10 most recent files in `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/` (sorted by filename date descending) to surface recent decisions and gotchas. Open any whose slug relates to this session's task; the rest stay advisory.
+
+```bash
+echo "=== Recent decisions ==="
+ls -1 docs/agent-memory/decisions/*.md 2>/dev/null | sort -r | head -10
+echo "=== Recent gotchas ==="
+ls -1 docs/agent-memory/gotchas/*.md 2>/dev/null | sort -r | head -10
+```
+
+Check the `## In-Flight Work` section for a line matching this agent's id (`- ${AGENT_ID} (...)`). If that line exists, the previous session for this agent was interrupted — read the build plan Batch Log (linked from CLAUDE.md) before starting new work. Other agents' lines in In-Flight Work indicate parallel activity in sibling worktrees; do not clear them.
 
 ### Step 4: Check git history
 

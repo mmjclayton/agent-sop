@@ -103,7 +103,10 @@ Every project must have the following files. Create them at project initialisati
 |------|------|-------|---------|
 | Project instructions | `CLAUDE.md` | Human + Agent | Stack, conventions, dispatch reference, rules. Master context file. |
 | Backlog | `Backlog.md` | Human + Agent | Single source of truth for all work items. |
-| Agent memory | `docs/agent-memory.md` | Agent | Permanent cross-session context: decisions, gotchas, data model invariants, preferences. Read and updated every session. **Optional for projects with fewer than 10 sessions** — CLAUDE.md is the mandatory context source; agent-memory becomes valuable once decisions accumulate. |
+| Agent memory | `docs/agent-memory.md` | Agent | Cross-session narrative: In-Flight Work, Completed Work, Preferences, Archived. Decisions and Gotchas live in per-entry directories (see below). Read and updated every session. **Optional for projects with fewer than 10 sessions.** |
+| Decisions | `docs/agent-memory/decisions/` | Agent | One file per decision. Filename: `YYYY-MM-DD_<agent-id>_<slug>.md`. Enables parallel agents to append without merge conflicts. |
+| Gotchas | `docs/agent-memory/gotchas/` | Agent | One file per gotcha. Same filename convention as decisions. |
+| Recent Work entries | `docs/recent-work/` | Agent | One file per session summary. Filename: `YYYY-MM-DD_<agent-id>_<slug>.md`. CLAUDE.md `## Recent Work (rollup)` section is a derived summary of this directory. |
 | Feature map | `docs/feature-map.md` | Agent | Inventory of shipped features and prioritised roadmap. |
 | Build plans | `docs/build-plans/phase-N-[name].md` | Agent | Phase-level architecture, batch logs, deploy checklists. One file per phase. |
 
@@ -120,7 +123,7 @@ Every project must have the following files. Create them at project initialisati
 |------|------|---------|
 | Auto-memory index | `~/.claude/projects/[project-hash]/memory/MEMORY.md` | Index of all memory files. Maintained automatically. |
 | Memory files | `~/.claude/projects/[project-hash]/memory/[type]_[topic].md` | Individual memory entries. Types: `user`, `feedback`, `project`, `reference`. |
-| Resume point | `~/.claude/projects/[project-hash]/memory/project_resume.md` | Per-session handoff: what was done, what is next, any blockers. Updated every session end. |
+| Resume point (per-agent) | `~/.claude/projects/[project-hash]/memory/project_resume_<agent-id>.md` | Per-session handoff: what was done, what is next, any blockers. Overwritten every session end. `solo` agent uses `project_resume_solo.md` (or legacy `project_resume.md` — `/restart-sop` falls back when present). See `docs/guides/multi-agent-parallel-sessions.md`. |
 
 **Two memory systems — clear separation:**
 Claude Code has two memory systems. They serve different purposes and must not overlap:
@@ -134,7 +137,7 @@ Claude Code has two memory systems. They serve different purposes and must not o
 
 **Reliability warning:** Auto-memory recall is unreliable — stored rules are frequently not applied in subsequent sessions (multiple confirmed community reports as of 2026). `docs/agent-memory.md` is the authoritative cross-session context source. Never store project-critical information only in auto-memory.
 
-**Filename rule:** The resume file is always named `project_resume.md`. Do not use project-specific prefixes (e.g. `project_loadout_resume.md`). Projects using a prefixed name should rename to `project_resume.md` as part of their SOP migration.
+**Filename rule:** The resume file is named `project_resume_<agent-id>.md`, where `<agent-id>` is resolved per `docs/guides/multi-agent-parallel-sessions.md` Section 1. Single-agent projects produce `project_resume_solo.md`. Legacy projects with an unsuffixed `project_resume.md` remain supported — `/restart-sop` falls back to it when `project_resume_<agent-id>.md` is absent.
 
 **Distinction:** `docs/agent-memory.md` is permanent cross-session context (architectural decisions, data model invariants, named utility functions, patterns) — committed to git, visible to all contributors. `project_resume.md` is a point-in-time snapshot (where the project stands, what is next) — local, overwritten each session. Different purpose, different audience. Never confuse them.
 
@@ -198,8 +201,10 @@ Claude Code has two memory systems. They serve different purposes and must not o
 ## Session & Memory Hygiene
 [Start checklist / End checklist]
 
-## Recent Work
-[Append-only. New sessions at top. Format: Date, PR numbers, 2-3 line summary.]
+## Recent Work (rollup)
+[Auto-generated summary of `docs/recent-work/`. Rendered between sentinel markers:
+`<!-- recent-work-rollup:start -->` and `<!-- recent-work-rollup:end -->`.
+Refreshed by `/update-sop` Step 8b. Never edit by hand — directory contents are the source of truth.]
 
 ## Deprioritised
 [Items moved here from priority lists. Never removed from this section.]
@@ -207,37 +212,94 @@ Claude Code has two memory systems. They serve different purposes and must not o
 
 ### docs/agent-memory.md
 
+`docs/agent-memory.md` holds the narrative sections (In-Flight Work, Completed Work, Preferences, Archived). **Decisions and Gotchas live in per-entry directories** at `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/` — one file per entry, with `YYYY-MM-DD_<agent-id>_<slug>.md` filenames. This removes the merge-conflict surface for concurrent appends.
+
 ```
 # Agent Memory
 
-Shared context for all agents. Read this at the start of every session.
-Update this at the end of every session. Additive only — nothing is ever deleted.
+Shared narrative context for all agents. Decisions and Gotchas live in the
+sibling directories `agent-memory/decisions/` and `agent-memory/gotchas/`.
+Read this file + scan those directories at the start of every session.
 
 ## Key Documents
-[Do not duplicate the table from CLAUDE.md. Instead: "See CLAUDE.md Key Documents table." Add line-range hints here only for files not listed in CLAUDE.md.]
+[Do not duplicate the table from CLAUDE.md. Instead: "See CLAUDE.md Key Documents table."]
 
 ## Key Source Files for Current Work
 [Table: Area | File | Notes — updated at the start of each phase, not each session]
 
 ## In-Flight Work
-[What is currently being built. When work completes, move entry to ## Completed Work. Never delete.]
-
-## Decisions Made
-[YYYY-MM-DD: Decision. One line per decision. Append only.
-If superseded: mark [SUPERSEDED - YYYY-MM-DD: replaced by X] and move to ## Archived.]
-
-## Gotchas and Lessons
-[Non-obvious things that burned time, data model invariants, named utility functions.
-Append only. Mark stale entries [SUPERSEDED - YYYY-MM-DD] and move to ## Archived.]
+[Per-agent lines, format: `- <agent-id> (YYYY-MM-DD): description`. Each agent manages their own line. When work completes, the agent moves their line to ## Completed Work. Empty is fine.]
 
 ## [Project]'s Preferences
 [Agent behaviour preferences for this project. Append only.]
 
 ## Completed Work
-[Entries moved from In-Flight Work when done. Format: YYYY-MM-DD: description — PR #N]
+[Entries moved from In-Flight Work when done. Format: `- YYYY-MM-DD <agent-id>: description — PR #N or commit hash`]
 
 ## Archived
-[Superseded decisions and gotchas. Format: [SUPERSEDED - YYYY-MM-DD: reason] original entry]
+[Historical narrative that no longer belongs in active sections. Never delete.]
+```
+
+### docs/agent-memory/decisions/
+
+Directory of per-decision entry files. One file per architectural decision, data model invariant, or named-utility callout.
+
+```
+docs/agent-memory/decisions/
+  2026-04-19_solo_p42-secondary-tracker-reconciliation.md
+  2026-04-19_a7c3f2_rollup-derivation-idempotent.md
+  archive/                (entries older than 90 days, preserved)
+```
+
+**Filename convention:** `YYYY-MM-DD_<agent-id>_<slug>.md`
+- `_` is the field separator; `-` is allowed within each field.
+- `<agent-id>` must be alphanumeric + hyphens (no underscores). See `docs/guides/multi-agent-parallel-sessions.md` Section 1 for resolution.
+- `<slug>` is kebab-case, max ~50 chars, no leading/trailing hyphen.
+
+**File format:**
+
+```
+# [Decision title]
+
+**Date:** YYYY-MM-DD
+**Agent:** <agent-id>
+
+[Decision body. Multi-paragraph is fine. Reference P-numbers where applicable.]
+
+---
+*Supersedes:* [file-name or P-number, if any]
+*Superseded by:* [file-name, if later entry replaces this]
+```
+
+**Superseded decisions:** do not delete. Add a trailing `*Superseded by:*` line pointing to the replacement file, and move the superseded file to `archive/` once the replacement lands.
+
+### docs/agent-memory/gotchas/
+
+Same structure as decisions, for data model invariants, framework gotchas, and named utility functions agents commonly miss. Same filename convention. Same file format (swap "Decision" for "Gotcha" in the title).
+
+### docs/recent-work/
+
+Directory of per-session entry files. The CLAUDE.md `## Recent Work (rollup)` section is a derived summary of this directory.
+
+```
+docs/recent-work/
+  2026-04-19_solo_p43-batch-1-2-directory-structure.md
+  2026-04-18_a7c3f2_fix-tonnage-edge-case.md
+  archive/                (entries older than 90 days, preserved)
+```
+
+**Filename convention:** same as decisions.
+
+**File format:**
+
+```
+# [Session summary title]
+
+**Date:** YYYY-MM-DD
+**Agent:** <agent-id>
+**Commits:** [hash, hash, ...] or PRs: [#N, #N, ...]
+
+[2-4 line summary of what shipped. Cross-reference Backlog P-numbers and build-plan batch numbers.]
 ```
 
 **Template variants:** Two CLAUDE.md templates exist in `docs/templates/`: `claude-md-template-base.md` for any project type (markdown, scripts, docs), and `claude-md-template-code.md` for full-stack code projects (adds Auth, Database, Design System, and code-specific build rules). Always start from the base template and add the code sections only if needed.
@@ -279,12 +341,12 @@ Status: [emoji] [Planning / In Progress / Shipped YYYY-MM-DD]
 [Pending questions. Answered questions stay here, marked [RESOLVED - YYYY-MM-DD: answer]]
 ```
 
-### project_resume.md (local, overwrite each session)
+### project_resume_<agent-id>.md (local, per-agent, overwrite each session)
 
-This file is a **snapshot**, not a log. Overwrite the entire content each session. Historical context belongs in build-plan batch logs.
+Snapshot, not a log. Per-agent file — multiple agents on separate worktrees each own their own file. Overwrite the entire content each session. Historical context belongs in build-plan batch logs.
 
 ```
-# Session Resume — [Project Name]
+# Session Resume — [Project Name] — Agent <agent-id>
 
 Last updated: YYYY-MM-DD
 
@@ -297,6 +359,8 @@ Last updated: YYYY-MM-DD
 ## Blockers
 [(none) or specific blocker with context]
 ```
+
+Legacy single-agent projects may still have an unsuffixed `project_resume.md`. `/restart-sop` Step 2 falls back to it when `project_resume_<agent-id>.md` is absent.
 
 ---
 

@@ -218,6 +218,14 @@ for src in "$SCRIPT_DIR"/docs/guides/*.md; do
     copy_if_missing "$src" "$TARGET/docs/guides/$(basename "$src")"
 done
 
+# ── Create per-entry directories (recent-work, decisions, gotchas) ────────────
+
+for subdir in "recent-work" "agent-memory/decisions" "agent-memory/gotchas"; do
+    src="$SCRIPT_DIR/docs/$subdir/README.md"
+    [ -f "$src" ] || continue
+    copy_if_missing "$src" "$TARGET/docs/$subdir/README.md"
+done
+
 # ── Install slash commands and reference agents (user-scope) ──────────────────
 
 USER_CLAUDE_DIR="${HOME}/.claude"

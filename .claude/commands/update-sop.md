@@ -101,16 +101,38 @@ Skip this step only if no `.md` files in Key Documents match the tracker detecti
 - Move any roadmap items that shipped from the Roadmap section to the Shipped table
 - Update the `Last updated` date at the top
 
-## Step 5: Update docs/agent-memory.md
+## Step 5: Update agent-memory narrative + decisions/gotchas directories
 
-- Append any architectural decisions to Decisions Made (format: `YYYY-MM-DD: Decision`)
-- Append any gotchas, data model invariants, or framework patterns to Gotchas and Lessons
-- Move any In-Flight Work entries that completed to Completed Work (format: `YYYY-MM-DD: description`)
-- If new work started but did not finish, add it to In-Flight Work
-- Mark any superseded entries `[SUPERSEDED - YYYY-MM-DD: reason]` and move to Archived
-- Never delete entries
+Decisions and gotchas live as one file per entry in `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/`. The narrative sections (In-Flight Work, Completed Work, Archived, Preferences) remain in `docs/agent-memory.md`.
 
-If `docs/agent-memory.md` does not exist (optional for projects with fewer than 10 sessions), skip this step.
+**For each architectural decision made this session:**
+
+Create `docs/agent-memory/decisions/YYYY-MM-DD_${AGENT_ID}_<slug>.md`:
+
+```markdown
+# [Decision title]
+
+**Date:** YYYY-MM-DD
+**Agent:** <agent-id>
+
+[Decision body. Multi-paragraph is fine. Reference P-numbers where applicable.]
+```
+
+Slug convention: lowercase alphanumeric + hyphens, max ~50 chars, no underscores, no leading/trailing hyphen. Include P-number where relevant (e.g. `p43-rollup-derivation-idempotent`).
+
+**For each gotcha / data model invariant / named utility:**
+
+Create `docs/agent-memory/gotchas/YYYY-MM-DD_${AGENT_ID}_<slug>.md` with the same file format (swap "Decision" for "Gotcha" in the title).
+
+**Superseded entries:** do not delete. Edit the superseded file to add a trailing `*Superseded by:* <new-file-name>` line, then `git mv` the file into `archive/` subdirectory once the replacement lands.
+
+**Narrative updates in `docs/agent-memory.md`:**
+
+- **In-Flight Work:** if the work this agent was tracking completed, remove this agent's `- <agent-id> (YYYY-MM-DD): ...` line. If new work started but did not finish, add or update this agent's line. Each agent manages only its own line — never touch another agent's entry.
+- **Completed Work:** append `- YYYY-MM-DD ${AGENT_ID}: description — commit [hash]` when work completes.
+- **Archived:** historical narrative content only (superseded decisions/gotchas move to their respective `archive/` subdirectories, not here).
+
+Skip this step if `docs/agent-memory.md` does not exist (optional for projects with fewer than 10 sessions).
 
 ## Step 6: Update build plan Batch Log
 
@@ -120,12 +142,12 @@ Format: `YYYY-MM-DD: Batch N.X — description. Commit [hash] or PR #N.`
 
 If no build plan exists for the current work, skip this step.
 
-## Step 7: Update project_resume.md
+## Step 7: Update project_resume_<agent-id>.md
 
-Overwrite `~/.claude/projects/[project-hash]/memory/project_resume.md` with a fresh snapshot:
+Overwrite `~/.claude/projects/[project-hash]/memory/project_resume_${AGENT_ID}.md` with a fresh snapshot. Per-agent file — do not edit other agents' resume files.
 
 ```
-# Session Resume — [Project Name]
+# Session Resume — [Project Name] — Agent <agent-id>
 
 Last updated: [today's date]
 
@@ -141,13 +163,84 @@ Last updated: [today's date]
 
 This file is a snapshot, not a log. Overwrite the entire content.
 
-## Step 8: Update CLAUDE.md Recent Work
+**Legacy fallback:** if the project still uses the unsuffixed `project_resume.md` (single-agent legacy format) and `$AGENT_ID` is `solo`, write to that filename for backwards compatibility. Otherwise always use the suffixed filename.
 
-Add a new entry at the top of the Recent Work section in CLAUDE.md:
+## Step 8: Write session entry to docs/recent-work/
 
-Format: `### YYYY-MM-DD: [summary] (commits [range] or PRs #N-#N)`
+Create `docs/recent-work/YYYY-MM-DD_${AGENT_ID}_<slug>.md`:
 
-Keep to 2-3 lines. Include commit or PR references.
+```markdown
+# [Session summary title]
+
+**Date:** YYYY-MM-DD
+**Agent:** <agent-id>
+**Commits:** [hash, hash, ...]
+
+[2-4 line summary of what shipped. Cross-reference Backlog P-numbers and build-plan batch numbers.]
+```
+
+Slug convention: same as Step 5 (lowercase alphanumeric + hyphens, no underscores, max ~50 chars). Include P-number and batch number where relevant (e.g. `p43-batch-1-2-directory-structure`).
+
+**Do not edit CLAUDE.md `## Recent Work (rollup)` by hand.** Step 8b regenerates that section from this directory.
+
+## Step 8b: Refresh CLAUDE.md Recent Work rollup
+
+The `## Recent Work (rollup)` section in CLAUDE.md is a derived summary of `docs/recent-work/*.md`. Regenerate it between the sentinel markers on every `/update-sop` run. The refresh is idempotent — two agents producing identical directory contents produce identical output, so the rollup converges regardless of merge order.
+
+```bash
+refresh_recent_work_rollup() {
+  local claude_md="CLAUDE.md"
+  local recent_dir="docs/recent-work"
+  local tmp
+  tmp=$(mktemp)
+
+  {
+    echo "<!-- recent-work-rollup:start -->"
+    echo "*Auto-generated from \`docs/recent-work/\`. Last refreshed: $(date +%Y-%m-%d).*"
+    echo ""
+
+    local found=0
+    if ls "$recent_dir"/*.md >/dev/null 2>&1; then
+      for f in $(ls "$recent_dir"/*.md 2>/dev/null | sort -r); do
+        [ "$(basename "$f")" = "README.md" ] && continue
+        local fname title date_part agent_part
+        fname=$(basename "$f" .md)
+        date_part=$(printf '%s' "$fname" | cut -d_ -f1)
+        agent_part=$(printf '%s' "$fname" | cut -d_ -f2)
+        title=$(grep -m1 '^# ' "$f" | sed 's/^# //')
+        [ -z "$title" ] && title="(untitled)"
+        echo "- $date_part \`$agent_part\`: $title"
+        found=1
+      done
+    fi
+
+    [ "$found" = "0" ] && echo "*No entries yet.*"
+
+    echo "<!-- recent-work-rollup:end -->"
+  } > "$tmp"
+
+  # Replace content between sentinels in CLAUDE.md
+  awk -v repl_file="$tmp" '
+    /<!-- recent-work-rollup:start -->/ {
+      while ((getline line < repl_file) > 0) print line
+      close(repl_file)
+      skip = 1
+      next
+    }
+    /<!-- recent-work-rollup:end -->/ {
+      skip = 0
+      next
+    }
+    !skip { print }
+  ' "$claude_md" > "${claude_md}.tmp" && mv "${claude_md}.tmp" "$claude_md"
+
+  rm -f "$tmp"
+}
+
+refresh_recent_work_rollup
+```
+
+Verify with: `grep -A 20 'recent-work-rollup:start' CLAUDE.md`
 
 ## Step 9: Update MEMORY.md index
 

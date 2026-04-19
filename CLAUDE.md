@@ -127,9 +127,19 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 ---
 
-## Recent Work
+## Recent Work (rollup)
 
-*Append-only. New entries at top. Include commit refs. Older session-day entries roll up into one-liners; full detail lives in build-plan Batch Log + agent-memory.md Decisions + Backlog.md per item.*
+<!-- recent-work-rollup:start -->
+*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-04-19.*
+
+- 2026-04-19 `solo`: P43 Batch 1.2 — directory structure + rollup specs
+<!-- recent-work-rollup:end -->
+
+---
+
+## Recent Work (legacy, pending Batch 1.6 migration)
+
+*Pre-2026-04-19 session-day entries preserved here until `/update-sop --migrate-to-multi-agent` lands in Batch 1.6 and extracts them into `docs/recent-work/`. After migration this section will be removed. Full detail for each entry lives in build-plan Batch Log + Backlog.md per item.*
 
 ### 2026-04-19: P42 — Secondary-tracker reconciliation + `[DEFERRED]` tag (commit 0c95727)
 Close a gap surfaced by hst-tracker: `/update-sop` treated `Backlog.md` as the sole work tracker and never reconciled project-specific finding files (e.g. `audit-backlog-*.md`) that use the same status-tag discipline. Fixed at four points. Core SOP Section 6 session-end checklist gained new step 3 (reconcile any `.md` in CLAUDE.md Key Documents using heading-level status tags); total 7 → 8 steps. `/update-sop` Step 3b auto-detects trackers (skip `Backlog.md`), reconciles finding IDs from this session's commits; Step 11 hard-blocks the commit if any ID is still `[OPEN]`. `/restart-sop` Step 4 gained an advisory drift guard for prior-session drift. Section 8 gains `[DEFERRED]` as distinct from `[BLOCKED]` (waiting-external vs intentionally-postponed). Templates + compliance checklist propagated (B4 accepts `[DEFERRED]`; new X6 check; totals 66 → 67 / 75 → 76). Heuristic is auto-detect rather than config opt-in — opt-in recreates the failure mode at a different level.

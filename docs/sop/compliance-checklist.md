@@ -57,8 +57,11 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| F6 | project_resume.md exists (local) | `~/.claude/projects/[hash]/memory/project_resume.md` — check all project hash directories for a path matching the target project |
+| F6 | Per-agent resume file exists (local) | `~/.claude/projects/[hash]/memory/project_resume_<agent-id>.md` — at least one file matching this pattern. Legacy unsuffixed `project_resume.md` also accepted for single-agent projects. |
 | F7 | MEMORY.md index exists (local) | `~/.claude/projects/[hash]/memory/MEMORY.md` — same discovery method |
+| F8 | docs/recent-work/ directory exists | Directory at `docs/recent-work/` with `README.md`. Created by Phase 1 Batch 1.2 / pre-existing in SOP-setup projects from 2026-04-19 onwards. Legacy projects pre-migration acceptable. |
+| F9 | docs/agent-memory/decisions/ directory exists | If `docs/agent-memory.md` exists, the `decisions/` subdirectory under `docs/agent-memory/` must exist with `README.md`. Legacy projects pre-migration acceptable. |
+| F10 | docs/agent-memory/gotchas/ directory exists | Same as F9 for `gotchas/` subdirectory. Legacy projects pre-migration acceptable. |
 
 ---
 
@@ -85,7 +88,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | C10 | Stack section exists and populated | `## Stack` header with content (not just placeholders) |
 | C11 | Key Commands section exists and populated | `## Key Commands` header with at least one command |
 | C12 | Rules for Automated Builds section exists | `## Rules for Automated Builds` header with numbered list |
-| C13 | Recent Work section exists | `## Recent Work` header |
+| C13 | Recent Work (rollup) section exists with sentinel markers | `## Recent Work (rollup)` header AND `<!-- recent-work-rollup:start -->` / `<!-- recent-work-rollup:end -->` comment sentinels present. Legacy `## Recent Work` acceptable during migration window before `/update-sop --migrate-to-multi-agent` has run. |
 | C14 | Deprioritised section exists | `## Deprioritised` header |
 | C15 | Non-negotiable rules referenced | Text references "never delete without a trace" or equivalent, and "single source of truth" or "one source of truth" |
 | C16 | Conflict precedence defined or referenced | Text mentions precedence order or references the SOP conflict resolution |
@@ -145,7 +148,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| A1 | All 8 required sections present | Headers for: Key Documents, Key Source Files, In-Flight Work, Decisions Made, Gotchas and Lessons, Preferences (may use project name), Completed Work, Archived |
+| A1 | All 6 required narrative sections present | Headers for: Key Documents, Key Source Files, In-Flight Work, Preferences (may use project name), Completed Work, Archived. Decisions and Gotchas live in `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/` directories — their narrative sections may either pointer-link to those directories or be absent entirely. |
 
 ### Important
 
@@ -283,7 +286,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 | Category | Critical | Important | Recommended | Total |
 |----------|----------|-----------|-------------|-------|
-| File Existence | 5 | 2 | 0 | 7 |
+| File Existence | 5 | 5 | 0 | 10 |
 | CLAUDE.md Structure | 5 | 12 (+5 code) | 2 | 19 (+5) |
 | Backlog.md Structure | 2 | 7 | 1 | 10 |
 | agent-memory.md Structure | 1 | 4 | 1 | 6 |
@@ -293,11 +296,11 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | Cross-File Consistency | 0 | 3 | 3 | 6 |
 | Security, Hooks, Quality, Agents | 1 | 2 (+2 code) | 2 | 5 (+2) |
 | Benchmark-Proven Practices | 0 | 0 (+2 code) | 2 | 2 (+2) |
-| **Total (non-code)** | **14** | **40** | **13** | **67** |
-| **Total (code)** | **14** | **49** | **13** | **76** |
+| **Total (non-code)** | **14** | **43** | **13** | **70** |
+| **Total (code)** | **14** | **52** | **13** | **79** |
 
 **Maximum deductions:**
-- Non-code: 14 x 10 + 40 x 5 + 13 x 2 = 140 + 200 + 26 = 366
-- Code: 14 x 10 + 49 x 5 + 13 x 2 = 140 + 245 + 26 = 411
+- Non-code: 14 x 10 + 43 x 5 + 13 x 2 = 140 + 215 + 26 = 381
+- Code: 14 x 10 + 52 x 5 + 13 x 2 = 140 + 260 + 26 = 426
 
 **Normalisation:** Score = max(0, 100 - (total deductions / max possible deductions * 100)). Then apply critical cap (49 max) if any critical check fails.
