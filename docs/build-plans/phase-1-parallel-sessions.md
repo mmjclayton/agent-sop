@@ -1,6 +1,6 @@
 # Phase 1 — Parallel Sessions
 
-Status: Planning
+Status: Shipped 2026-04-19
 
 ---
 
@@ -318,6 +318,7 @@ Derived summary that replaces prepend-semantic Recent Work:
 - 2026-04-19 `solo`: Batch 1.7 playbook drafted — requires Matt-hands dogfood on hst-tracker with 3 parallel sessions. Deferred.
 - 2026-04-19 `solo`: Phase 1 close-out — README parallel-sessions coverage, Deploy Checklist updates, Rule 5 instruction-count audit (estimate ~185-190, under 200 ceiling). Commit 81952c6.
 - 2026-04-19 `solo`: Session pause — Matt handling hst-tracker `feat/catalogue-ui` merge separately. Dogfood deferred; resumes when hst-tracker tree is clean.
+- 2026-04-19 `solo`: Batch 1.7 dogfood complete on hst-tracker. 3 parallel subagents (A/B/C on separate worktrees) each ran /update-sop discipline. Sequential merge: 0 Backlog/directory conflicts, 2 expected rollup conflicts (resolved canonically). 855/855 tests pass on merged main. P43 SHIPPED. Full log at docs/benchmark/parallel-dogfood-log.md.
 
 ---
 
@@ -325,14 +326,18 @@ Derived summary that replaces prepend-semantic Recent Work:
 
 Before marking Phase 1 shipped:
 
-- [x] All 7 batches shipped (Batch 1.7 playbook only — dogfood execution deferred)
-- [x] agent-sop migrated to new format (Recent Work, Decisions, Gotchas directories populated — 77 entries extracted 2026-04-19)
-- [ ] hst-tracker dogfood pass: 3 parallel worktrees, 3 `/update-sop` runs, 3 sequential merges, 0 manual conflict resolution (requires Matt-hands multi-session — see `docs/benchmark/parallel-dogfood-playbook.md`)
+- [x] All 7 batches shipped (1.1-1.6 tooling + 1.7 dogfood executed 2026-04-19)
+- [x] agent-sop migrated to new format (77 entries extracted 2026-04-19)
+- [x] hst-tracker dogfood pass: 3 parallel subagents × 3 `/update-sop` runs × 3 sequential merges. 2 expected rollup conflicts resolved canonically via idempotent refresh; 0 Backlog/directory conflicts; 855/855 tests pass on merged main. Full log at `docs/benchmark/parallel-dogfood-log.md`.
 - [x] Compliance checks M1-M5 wired into sop-checker; summary table totals correct
-- [x] README updated to cover parallel-sessions feature (What it gives, new Parallel multi-agent sessions section, Cross-session memory reshape, Status update)
-- [ ] `/update-agent-sop` baselines refreshed — happens automatically during Batch 1.7 dogfood when hst-tracker runs the command; not gate-able from agent-sop side alone
-- [x] Core SOP instruction count verified under 200 hard ceiling (Rule 5) — estimated ~185-190 post-session, previous measured baseline was ~178 post-P40 with +10 net from this session (Section 0 rewrite, Section 1 directory rows, Section 3 format specs, Section 6 step 8). Precise count is deferred.
+- [x] README updated to cover parallel-sessions feature
+- [x] `/update-agent-sop` baselines refreshed (hst-tracker commit `c3361f7` synced Phase 1 artefacts; user config updated 2026-04-19)
+- [x] Core SOP instruction count verified under 200 hard ceiling (Rule 5) — estimated ~185-190
 - [ ] Owner review and verification
+
+**Follow-ups captured** (ship as separate small items):
+- `refresh_recent_work_rollup` bash snippet leaks `local var=...` declarations under zsh. Two of three dogfood subagents independently caught it; both worked around via `bash -c`. See `docs/agent-memory/decisions/2026-04-19_solo_rollup-refresh-snippet-zsh-bug.md`. Recommended fix: ship as `scripts/refresh-rollup.sh` with bash shebang.
+- Migration script silently skips undated prose bullets. hst-tracker's `## Gotchas and Lessons` section has 35+ `- **Topic**: body` bullets not recognised by the `YYYY-MM-DD:`-prefix parser. Section kept intact as legacy. Fix: extend parser to handle dateless format, or emit a warning when a detected section produces 0 extractions.
 
 ---
 

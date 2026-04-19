@@ -135,6 +135,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 - 2026-04-19 `solo`: P43 close-out — README parallel-sessions coverage + Rule 5 audit
 - 2026-04-19 `solo`: P43 Phase 1 Batches 1.1 through 1.6 shipped
+- 2026-04-19 `solo`: P43 Batch 1.7 dogfood complete — P43 ships
 - 2026-04-19 `solo`: P43 Batch 1.2 — directory structure + rollup specs
 - 2026-04-19 `solo`: P42 — Secondary-tracker reconciliation + `[DEFERRED]` tag
 - 2026-04-17 `solo`: P41 — README rewrite, License section, Acknowledgements removed, About refreshed
