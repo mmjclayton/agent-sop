@@ -672,6 +672,96 @@ Enforced Section 0 Rule 5 by auditing and trimming the SOP instruction set. Pre-
 
 ---
 
+### P44 — Required reviewer turn before ship (with substance assertion)
+`[OPEN] [Feature]`
+
+Close the gap identified in external feedback (2026-04-19): `/update-sop` Step 1 is agent self-evaluation against a Definition-of-Done rubric, but no step forces an independent reviewer-agent invocation before the shipping commit lands. Reviewer agents (`code-reviewer`, `security-reviewer`) exist but are not in the required path. Without a substance check, a required reviewer turn becomes ceremony — the agent can write "LGTM" in a file and pass the gate.
+
+**Approach:**
+1. `/update-sop` Step 1 extended: for any item transitioning to `[SHIPPED]` this session AND tagged `[Feature]` or `[Refactor]` AND session diff > threshold (default 50 LOC OR 3 files, configurable in `agent-sop.config.json`), invoke `code-reviewer` (or `security-reviewer` if the diff touches paths matching `docs/sop/security.md` mandatory-review triggers). Write findings to `docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md`.
+2. Batch Log entry must reference the findings file path — hard-block if missing.
+3. **Substance assertion:** findings file must contain three sections — diff summary, severity assessment (CRITICAL / HIGH / MEDIUM / LOW / NONE), and at least one concrete finding OR an explicit "no issues" statement with a one-sentence reason. Shared validator (from P45) asserts these sections exist. Hard-block on stub / LGTM-only files.
+4. New compliance check `R1` in `compliance-checklist.md`: every shipped `[Feature]`/`[Refactor]` in the last 30 days with diff > threshold has a matching substantive review artifact. Important-tier (5pts).
+5. Solo-agent default: reviewer runs as a sibling task; review is advisory on the merge, blocking on the shipping status flip.
+
+**Acceptance criteria:**
+- `/update-sop` Step 1 hard-blocks shipping `[Feature]`/`[Refactor]` without a substantive review artifact when diff exceeds threshold - PENDING
+- `docs/reviews/` filenames follow per-agent convention (matches `docs/recent-work/` pattern) - PENDING
+- Substance validator rejects stub / LGTM-only files - PENDING
+- Compliance check R1 added; summary table totals updated - PENDING
+- Threshold + agent selection configurable in `agent-sop.config.json` - PENDING
+- Core SOP instruction delta: +3-4 (Rule 5 budget respected) - PENDING
+
+**Out of scope:** blocking the actual git commit or push (pre-push hook is an optional snippet in `docs/guides/`, not default); human-approval gate on merge.
+
+**Source:** Reddit feedback 2026-04-19 — state drift / required reviewer turns / human gate concerns. Substance-assertion caveat added during assessment after being challenged on action-vs-ceremony.
+
+**Depends on:** P45 (validator infrastructure shared).
+
+---
+
+### P45 — State-transition validator
+`[OPEN] [Feature]`
+
+Status tags have semantics but no enforcement. Nothing prevents an agent writing `[OPEN] [Feature]` → `[SHIPPED - YYYY-MM-DD]` in one diff with no `[IN PROGRESS]` intermediate, no Batch Log entry, and no commit date inside the shipped-date window. `/update-sop` Step 2a covers P-number collision only.
+
+**Approach:**
+1. `scripts/validate-state-transitions.sh` — reads `Backlog.md` diff in the commit range (`git merge-base <default> HEAD..HEAD`), parses status-tag changes per P-number, validates against the transition graph:
+   - `[OPEN]` → `[IN PROGRESS]`, `[DEFERRED]`, `[WON'T]`
+   - `[IN PROGRESS]` → `[BLOCKED]`, `[DEFERRED]`, `[SHIPPED]`, `[WON'T]`
+   - `[BLOCKED]` → `[IN PROGRESS]`, `[DEFERRED]`, `[WON'T]`
+   - `[DEFERRED]` → `[IN PROGRESS]`, `[WON'T]`
+   - `[SHIPPED]` → `[VERIFIED]` only
+   - `[VERIFIED]` terminal
+   - `[WON'T]` terminal (revival requires a new P-number)
+   - `[BLOCKED]` ↔ `[DEFERRED]` permitted with a commit-range note referencing a decision file
+2. Additional checks inside the validator:
+   - `[SHIPPED - YYYY-MM-DD]` transition requires a Batch Log entry in the current phase's `docs/build-plans/phase-N.md` referencing the P-number within the commit range
+   - Date in `[SHIPPED - YYYY-MM-DD]` falls inside the commit-range date window
+   - Once P44 ships: `[SHIPPED]` on `[Feature]`/`[Refactor]` over threshold requires a P44-compliant review artifact
+3. `/update-sop` Step 2c calls the validator; hard-block on non-zero exit. Output names the offending P-number and the legal paths available.
+4. sop-checker compliance check `S2` runs retrospective state-transition audit on Backlog history.
+
+**Acceptance criteria:**
+- `scripts/validate-state-transitions.sh` exists, zero-dependency bash, runs <2s on a 200-item Backlog - PENDING
+- `/update-sop` Step 2c invokes validator; hard-block on non-zero exit - PENDING
+- Transition graph documented once in Section 8 of core SOP (single artifact, not one rule per edge) - PENDING
+- `docs/benchmark/state-transition-fixtures/` with legal + illegal sample diffs; script validated against them - PENDING
+- Multi-agent safe: only evaluates diff inside this agent's merge-base range - PENDING
+- Substance-assertion helper (shared with P44) included in same script - PENDING
+- Core SOP instruction delta: +2-3 - PENDING
+
+**Out of scope:** enforcing transition legality at Backlog write-time (editor-integration territory — too heavy); validator runs at session end.
+
+**Source:** Reddit feedback 2026-04-19 — machine-checkable workflow with explicit task states. Assessment flagged this as highest action-per-text ratio of the three proposed items; ship first.
+
+---
+
+### P46 — Mid-session drift detection (actionable, not informational)
+`[OPEN] [Feature]`
+
+External feedback (2026-04-19) named mid-session state drift as the central failure mode of markdown-only SOPs. Initial proposal was a PostToolUse hook printing status reassertions — rejected as ceremony (a printout the agent can ignore). Reframed as an actionable commit-range check: at `/update-sop`, verify the session's actual work matches the declared in-flight P-number.
+
+**Approach:**
+1. `/update-sop` Step 2d: commit-range scope check. Parse commits in `git merge-base <default> HEAD..HEAD` for P-number references (`P<n>` tokens in commit messages + files touched). Compare against `project_resume_<agent-id>.md` In-Progress entry and the newest Batch Log entry. Hard-block if the session committed substantial work (>50 LOC OR >3 files) with no reference to the declared in-flight P-number.
+2. Escape hatch — session-end scope-change declaration. `project_resume_<agent-id>.md` update can include a `## Scope Change` block re-declaring the actual P-number worked on with a one-line reason. Validator accepts this as legitimate redirection and surfaces it in the `docs/recent-work/` entry.
+3. `/restart-sop` gains a one-line reassertion print of the current in-flight P-number read from `Backlog.md` — acceptable because it fires once at session start, not as a recurring ceremony.
+4. sop-checker compliance check `D1` (drift detection): retrospective audit of last 10 `docs/recent-work/` entries counting `Scope Change` blocks and commit-to-P-number mismatches. Recommended-tier (2pts).
+
+**Acceptance criteria:**
+- `/update-sop` Step 2d detects commit-range work that doesn't reference the declared in-flight P-number - PENDING
+- Hard-block with clear message naming the P-number and the commits lacking references - PENDING
+- Legitimate scope-change path via `project_resume` `## Scope Change` block - PENDING
+- Compliance check D1 added; summary table totals updated - PENDING
+- Multi-agent safe: scoped per-agent via commit-range partitioning - PENDING
+- Core SOP instruction delta: +1-2 - PENDING
+
+**Out of scope:** preventing drift within a single tool call (Claude Code doesn't expose runtime hooks for this); PostToolUse print reminders (explicitly rejected — ceremony, not action).
+
+**Source:** Reddit feedback 2026-04-19 — drift after tool calls / edits / context resets. Reframed from initial print-hook proposal after user challenge: "tell me why each item will add value, and not simply add more text and markup without any action or result."
+
+---
+
 ### P33 — Managed Agents integration guide (deferred)
 `[OPEN] [Feature] [has-open-questions]`
 
