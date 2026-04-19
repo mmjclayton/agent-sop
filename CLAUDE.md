@@ -39,7 +39,6 @@ This project IS the Agent SOP library. All agents working on this project still 
 ## Current Priority Items (as of 2026-04-19)
 
 **Next:**
-- P46 — Mid-session drift detection (actionable commit-range check, not print hook)
 - P24 — Multi-agent optimisation guide (informed by P23 benchmark results)
 - P33 — Managed Agents integration guide (deferred — revive when a project uses Managed Agents API)
 - P8 — Web app domain variant `[has-open-questions]`
@@ -133,6 +132,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-04-19.*
 
+- 2026-04-19 `solo`: P46 mid-session drift detection shipped
 - 2026-04-19 `solo`: P45 state-transition validator shipped
 - 2026-04-19 `solo`: P44 reviewer-turn + substance assertion shipped
 - 2026-04-19 `solo`: P44/P45/P46 drafted from Reddit state-drift feedback

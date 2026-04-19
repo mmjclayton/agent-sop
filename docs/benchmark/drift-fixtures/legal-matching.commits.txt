@@ -1,0 +1,2 @@
+feat(P100): validator subcommand
+docs(P100): template for subcommand

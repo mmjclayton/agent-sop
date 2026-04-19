@@ -34,6 +34,12 @@ BEFORE_FILE=""
 AFTER_FILE="Backlog.md"
 TRACKED_PATH="Backlog.md"   # path used with `git show <ref>:<path>`
 ASSERT_REVIEW_FILE=""
+DRIFT_RESUME_FILE=""        # override for --check-drift fixture mode
+DRIFT_COMMITS_FILE=""       # override: file with commit messages (P-numbers extracted via grep)
+DRIFT_SESSION_LOC=""        # fixture: set the session LOC count directly
+DRIFT_SESSION_FILES=""      # fixture: set the session files count directly
+DRIFT_THRESHOLD_LOC=""      # override the LOC threshold (skip config lookup)
+DRIFT_THRESHOLD_FILES=""    # override the files threshold (skip config lookup)
 
 print_help() {
   sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'
@@ -45,6 +51,13 @@ while [ $# -gt 0 ]; do
     --before-file) BEFORE_FILE="$2"; shift 2 ;;
     --after-file) AFTER_FILE="$2"; shift 2 ;;
     --assert-review) MODE="assert-review"; ASSERT_REVIEW_FILE="$2"; shift 2 ;;
+    --check-drift) MODE="check-drift"; shift ;;
+    --drift-resume-file) DRIFT_RESUME_FILE="$2"; shift 2 ;;
+    --drift-commits-file) DRIFT_COMMITS_FILE="$2"; shift 2 ;;
+    --drift-session-loc) DRIFT_SESSION_LOC="$2"; shift 2 ;;
+    --drift-session-files) DRIFT_SESSION_FILES="$2"; shift 2 ;;
+    --drift-threshold-loc) DRIFT_THRESHOLD_LOC="$2"; shift 2 ;;
+    --drift-threshold-files) DRIFT_THRESHOLD_FILES="$2"; shift 2 ;;
     -h|--help) print_help; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
@@ -101,6 +114,190 @@ if [ "$MODE" = "assert-review" ]; then
     exit 1
   fi
   exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# --check-drift: P46 mid-session drift detection
+#
+# Compares the P-numbers mentioned in project_resume_<agent-id>.md (declared
+# in-flight work) against P-numbers referenced in session commits. If the
+# session has non-trivial commits (over threshold) but none reference a
+# declared P-number AND no ## Scope Change block exists in the resume file,
+# hard-block — the agent drifted and hasn't declared it.
+# ---------------------------------------------------------------------------
+if [ "$MODE" = "check-drift" ]; then
+  # Resolve resume file
+  resume_file="$DRIFT_RESUME_FILE"
+  if [ -z "$resume_file" ]; then
+    # Find agent-id
+    agent_id="${CLAUDE_AGENT_ID:-}"
+    if [ -z "$agent_id" ]; then
+      root=$(git rev-parse --show-toplevel 2>/dev/null) || root=""
+      if [ -n "$root" ] && [ -f "$root/.sop-agent-id" ]; then
+        agent_id=$(head -1 "$root/.sop-agent-id" | tr -d '[:space:]')
+      else
+        worktree_count=$(git worktree list 2>/dev/null | wc -l | tr -d '[:space:]')
+        if [ "$worktree_count" = "1" ]; then
+          agent_id="solo"
+        elif [ -n "$root" ]; then
+          if command -v shasum >/dev/null 2>&1; then
+            agent_id=$(printf '%s' "$root" | shasum -a 256 | cut -c1-6)
+          else
+            agent_id=$(printf '%s' "$root" | sha256sum | cut -c1-6)
+          fi
+        fi
+      fi
+    fi
+    [ -z "$agent_id" ] && agent_id="solo"
+    # Locate project memory dir (derived from worktree path). Claude Code
+    # normalises all non-alphanumeric path chars to hyphens, so matt_clayton
+    # becomes matt-clayton. Collapse consecutive hyphens so `My__Projects`
+    # matches the observed single-hyphen naming convention.
+    if [ -n "$root" ]; then
+      project_hash=$(printf '%s' "$root" | sed 's|[^a-zA-Z0-9-]|-|g' | sed 's|--*|-|g' | sed 's|^-||')
+      resume_file="$HOME/.claude/projects/-$project_hash/memory/project_resume_${agent_id}.md"
+      # Fallback: legacy unsuffixed path when agent-id=solo
+      if [ ! -f "$resume_file" ] && [ "$agent_id" = "solo" ]; then
+        resume_file="$HOME/.claude/projects/-$project_hash/memory/project_resume.md"
+      fi
+    fi
+  fi
+
+  if [ -z "$resume_file" ] || [ ! -f "$resume_file" ]; then
+    echo "check-drift: no project_resume file found — skipping (first session, or fresh repo)"
+    exit 0
+  fi
+
+  # Collect session commits + diff size.
+  #
+  # Two critical invariants:
+  #   a) commit_pnums and (loc, files) MUST come from the same range — either
+  #      both committed-only or both including working tree. Mixing causes
+  #      false-positives when an agent has large uncommitted work mid-session
+  #      (large loc, empty commit list → false drift block). We use
+  #      committed-only (`base..HEAD`) so both measurements match.
+  #   b) Fixture mode uses explicit session-size overrides so harness tests
+  #      can exercise the threshold-skip branch without a real git history.
+  commit_pnums=""
+  if [ -n "$DRIFT_COMMITS_FILE" ]; then
+    commit_pnums=$(grep -oE '\bP[0-9]+\b' "$DRIFT_COMMITS_FILE" | sort -u)
+    loc="${DRIFT_SESSION_LOC:-0}"
+    files="${DRIFT_SESSION_FILES:-0}"
+  else
+    # Real mode: derive from git
+    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/@@') || true
+    if [ -z "$default_branch" ]; then
+      for candidate in origin/main origin/master origin/develop; do
+        if git rev-parse --verify "$candidate" >/dev/null 2>&1; then
+          default_branch="$candidate"
+          break
+        fi
+      done
+    fi
+    if [ -z "$default_branch" ]; then
+      echo "check-drift: no default branch — skipping"
+      exit 0
+    fi
+    base=$(git merge-base "$default_branch" HEAD 2>/dev/null) || {
+      echo "check-drift: no merge-base with $default_branch — skipping"
+      exit 0
+    }
+    head_sha=$(git rev-parse HEAD 2>/dev/null)
+    # No committed divergence AND no working-tree changes = nothing to check
+    if [ "$base" = "$head_sha" ] && git diff --quiet HEAD 2>/dev/null; then
+      echo "check-drift: no session commits or working-tree changes — skipping"
+      exit 0
+    fi
+    # When there are no committed commits yet (everything still uncommitted),
+    # skip drift detection — `/update-sop` Step 10 hasn't run. The next
+    # invocation after commit will catch drift from the committed state.
+    if [ "$base" = "$head_sha" ]; then
+      echo "check-drift: no session commits yet — skipping until after first commit"
+      exit 0
+    fi
+    commit_pnums=$(git log "${base}..HEAD" --format='%s%n%b' 2>/dev/null | grep -oE '\bP[0-9]+\b' | sort -u)
+    # Measure diff over the committed range only — stays consistent with
+    # commit_pnums so uncommitted work doesn't trigger a false-positive.
+    loc=$(git diff --numstat "${base}..HEAD" -- 2>/dev/null | awk '{a+=$1; d+=$2} END{print a+d+0}')
+    files=$(git diff --numstat "${base}..HEAD" -- 2>/dev/null | wc -l | tr -d ' ')
+    [ -z "$loc" ] && loc=0
+  fi
+
+  # Thresholds: override flags win; otherwise read from config; otherwise defaults.
+  threshold_loc="${DRIFT_THRESHOLD_LOC:-}"
+  threshold_files="${DRIFT_THRESHOLD_FILES:-}"
+  if [ -z "$threshold_loc" ] || [ -z "$threshold_files" ]; then
+    config_file=""
+    if [ -f ".claude/agent-sop.config.json" ]; then
+      config_file=".claude/agent-sop.config.json"
+    elif [ -f "$HOME/.claude/agent-sop.config.json" ]; then
+      config_file="$HOME/.claude/agent-sop.config.json"
+    fi
+    if [ -n "$config_file" ]; then
+      # `|| true` keeps pipefail + errexit from killing us when a field is
+      # absent (grep exits 1 on no-match).
+      [ -z "$threshold_loc" ] && threshold_loc=$( { grep -oE '"review_loc_threshold"[[:space:]]*:[[:space:]]*[0-9]+' "$config_file" 2>/dev/null || true; } | grep -oE '[0-9]+$' | head -1 || true)
+      [ -z "$threshold_files" ] && threshold_files=$( { grep -oE '"review_files_threshold"[[:space:]]*:[[:space:]]*[0-9]+' "$config_file" 2>/dev/null || true; } | grep -oE '[0-9]+$' | head -1 || true)
+    fi
+    [ -z "$threshold_loc" ] && threshold_loc=50
+    [ -z "$threshold_files" ] && threshold_files=3
+  fi
+
+  # Skip if BOTH dimensions under threshold. This IS the OR-fire semantics
+  # P44 documents (either dimension over fires the check) — by De Morgan:
+  #   fire iff (loc>=T_loc OR files>=T_files)
+  #   skip iff NOT(...) = (loc<T_loc AND files<T_files)
+  # A 200-LOC single-file change correctly fires (loc over, so OR is true).
+  if [ "$loc" -lt "$threshold_loc" ] && [ "$files" -lt "$threshold_files" ]; then
+    echo "check-drift: session under both thresholds (loc=$loc<$threshold_loc, files=$files<$threshold_files) — OK"
+    exit 0
+  fi
+
+  # Extract P-numbers mentioned in the resume file. Wrap with || true so
+  # pipefail+errexit don't kill us when the resume has no P-numbers (grep
+  # exits 1 on no match, sort gets empty input — both legal states).
+  resume_pnums=$( { grep -oE '\bP[0-9]+\b' "$resume_file" 2>/dev/null || true; } | sort -u)
+
+  # Scope Change escape hatch — accept "Scope Change" or "Scope-Change",
+  # case-insensitive. Matches intent over typography.
+  if grep -qiE '^##+[[:space:]]+scope[[:space:]-]+change' "$resume_file"; then
+    echo "check-drift: ## Scope Change block present in $resume_file — accepted as explicit redirection."
+    exit 0
+  fi
+
+  if [ -z "$resume_pnums" ]; then
+    echo "check-drift: no P-numbers declared in $resume_file — cannot establish baseline. Skipping."
+    exit 0
+  fi
+
+  # Intersection: any resume P-number also in commit P-numbers?
+  intersection=""
+  for p in $resume_pnums; do
+    if printf '%s\n' "$commit_pnums" | grep -qxF "$p"; then
+      intersection="$intersection $p"
+    fi
+  done
+
+  if [ -n "$intersection" ]; then
+    echo "check-drift: OK — commits reference declared in-flight item(s):$intersection"
+    exit 0
+  fi
+
+  # No match — hard-block
+  echo "BLOCK: session drift detected." >&2
+  echo "  Declared in-flight (project_resume):$(printf ' %s' $resume_pnums)" >&2
+  if [ -n "$commit_pnums" ]; then
+    echo "  Actual commit P-numbers:$(printf ' %s' $commit_pnums)" >&2
+  else
+    echo "  Commit messages reference no P-numbers." >&2
+  fi
+  echo "  Session diff: loc=$loc files=$files (thresholds: $threshold_loc / $threshold_files)" >&2
+  echo "" >&2
+  echo "Resolve by one of:" >&2
+  echo "  1) If you changed scope deliberately: add a '## Scope Change' block to $resume_file with a one-line reason." >&2
+  echo "  2) If you drifted unintentionally: amend the commit message(s) to reference the in-flight P-number, or split the work so the declared item ships." >&2
+  echo "  3) If the prior resume file is stale: update it (Step 7 of /update-sop) and re-run." >&2
+  exit 1
 fi
 
 # ---------------------------------------------------------------------------

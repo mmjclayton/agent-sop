@@ -280,6 +280,25 @@ Typical violations and fixes:
 
 Soft warnings (`[BLOCKED]` ↔ `[DEFERRED]` with no decision file in the commit range) are non-blocking — re-classification is legitimate, the warning is a prompt to consider writing a decision entry.
 
+## Step 3d: Detect session drift
+
+`/restart-sop` reminds the agent of the declared in-flight P-number at session start. Mid-session context drift — auto-compaction, context resets, tangents into unrelated code — can leave the session committing work that the resume file never predicted. Step 3d compares P-numbers in this session's commit messages against P-numbers mentioned in `project_resume_<agent-id>.md` (the per-agent declaration of in-flight work). Hard-blocks if the session exceeds threshold AND no declared P-number is referenced AND no `## Scope Change` block exists in the resume.
+
+```bash
+if [ -x scripts/validate-state-transitions.sh ]; then
+  bash scripts/validate-state-transitions.sh --check-drift || exit 1
+else
+  echo "Warning: validate-state-transitions.sh not found. Upgrade with /update-agent-sop."
+fi
+```
+
+Thresholds reuse the P44 config fields (`review_loc_threshold` / `review_files_threshold`) — the same "too small to worry about" boundary applies. Below threshold: skip. First session (no prior resume file): skip.
+
+Resolution paths when the gate fires:
+- **Deliberate scope change:** add a `## Scope Change` block to `project_resume_<agent-id>.md` with the actual P-number + one-line reason. The validator accepts this as explicit redirection — documents the drift rather than hiding it.
+- **Unintentional drift:** the commits are under the wrong P-number. Either amend the commit messages to reference the in-flight P-number, or split the work so the declared item ships this session and the drift item becomes its own Backlog entry next session.
+- **Stale resume:** if the declared item already shipped in an earlier session but the resume wasn't refreshed, update the resume (Step 7 would overwrite it anyway) and re-run.
+
 ## Step 4: Update docs/feature-map.md
 
 - Add any newly shipped items to the Shipped table

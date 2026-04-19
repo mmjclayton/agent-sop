@@ -94,6 +94,25 @@ echo "Session commit range: ${SESSION_RANGE:-<empty — on default branch or no 
 
 When `SESSION_RANGE` is empty, the drift guard in Step 4 is a no-op.
 
+## Step 0d: In-flight reassertion
+
+Print a one-line reminder of the P-number(s) declared in `project_resume_<agent-id>.md`. This is informational — the enforcement layer (`/update-sop` Step 3d) checks the session's commits against these declarations at session end, with `## Scope Change` as the escape hatch. The reminder here exists so the agent sees the declaration explicitly before starting work, and notices if it drifted before committing.
+
+```bash
+root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [ -n "$root" ]; then
+  project_hash=$(printf '%s' "$root" | sed 's|[^a-zA-Z0-9-]|-|g' | sed 's|--*|-|g' | sed 's|^-||')
+  resume="$HOME/.claude/projects/-$project_hash/memory/project_resume_${AGENT_ID:-solo}.md"
+  [ ! -f "$resume" ] && [ "${AGENT_ID:-solo}" = "solo" ] && resume="$HOME/.claude/projects/-$project_hash/memory/project_resume.md"
+  if [ -f "$resume" ]; then
+    pnums=$(grep -oE '\bP[0-9]+\b' "$resume" | sort -u | tr '\n' ' ' | sed 's/ *$//')
+    [ -n "$pnums" ] && echo "In-flight declared: $pnums (from $resume)"
+  fi
+fi
+```
+
+If no resume file exists (first session, or fresh repo), the reassertion is silently skipped.
+
 ## Determine checklist type
 
 Check if this session's task is tagged `[ok-for-automation]` in the Backlog, or is a single-file change with fewer than 2 acceptance criteria. If so, use the **Lightweight Start** (steps 1L and 2L only). Otherwise, use the **Full Start** (steps 1-6).

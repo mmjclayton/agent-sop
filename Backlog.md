@@ -744,7 +744,7 @@ Status tags have semantics but no enforcement. Nothing prevents an agent writing
 ---
 
 ### P46 — Mid-session drift detection (actionable, not informational)
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-19] [Feature]`
 
 External feedback (2026-04-19) named mid-session state drift as the central failure mode of markdown-only SOPs. Initial proposal was a PostToolUse hook printing status reassertions — rejected as ceremony (a printout the agent can ignore). Reframed as an actionable commit-range check: at `/update-sop`, verify the session's actual work matches the declared in-flight P-number.
 
@@ -755,14 +755,16 @@ External feedback (2026-04-19) named mid-session state drift as the central fail
 4. sop-checker compliance check `D1` (drift detection): retrospective audit of last 10 `docs/recent-work/` entries counting `Scope Change` blocks and commit-to-P-number mismatches. Recommended-tier (2pts).
 
 **Acceptance criteria:**
-- `/update-sop` Step 2d detects commit-range work that doesn't reference the declared in-flight P-number - PENDING
-- Hard-block with clear message naming the P-number and the commits lacking references - PENDING
-- Legitimate scope-change path via `project_resume` `## Scope Change` block - PENDING
-- Compliance check D1 added; summary table totals updated - PENDING
-- Multi-agent safe: scoped per-agent via commit-range partitioning - PENDING
-- Core SOP instruction delta: +1-2 - PENDING
+- `/update-sop` Step 3d detects commit-range work that doesn't reference the declared in-flight P-number - DONE (renumbered from 2d to match placement after Step 3c)
+- Hard-block with clear message naming the P-number and the commits lacking references - DONE
+- Legitimate scope-change path via `project_resume` `## Scope Change` block - DONE
+- Compliance check D1 added; summary table totals updated - DONE (77→78 / 86→87)
+- Multi-agent safe: scoped per-agent via commit-range partitioning + per-agent resume file - DONE
+- Core SOP instruction delta: +1-2 - DONE (+1 in Section 6)
 
 **Out of scope:** preventing drift within a single tool call (Claude Code doesn't expose runtime hooks for this); PostToolUse print reminders (explicitly rejected — ceremony, not action).
+
+**Files shipped:** `scripts/validate-state-transitions.sh` (new `--check-drift` subcommand, project-hash normalization fix, pipefail-safe config parsing), `docs/benchmark/drift-fixtures/` (3 fixtures + run-tests.sh), `.claude/commands/update-sop.md` (Step 3d), `.claude/commands/restart-sop.md` (Step 0d in-flight reassertion), `docs/sop/claude-agent-sop.md` (Section 6 note on Step 3d), `docs/sop/compliance-checklist.md` (D1 check + summary totals).
 
 **Source:** Reddit feedback 2026-04-19 — drift after tool calls / edits / context resets. Reframed from initial print-hook proposal after user challenge: "tell me why each item will add value, and not simply add more text and markup without any action or result."
 

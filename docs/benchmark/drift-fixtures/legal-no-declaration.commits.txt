@@ -1,0 +1,2 @@
+feat(P500): substantial work committed, no prior declaration to compare against
+refactor(P500): more work on same item

@@ -261,6 +261,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | H1 | Session hooks documented or configured | At least SessionStart and SessionEnd hooks mentioned in CLAUDE.md, `docs/sop/harness-configuration.md`, or `.claude/settings.json` |
 | G1 | At least 2 review agents available | `.claude/agents/` contains at least 2 agent definitions (e.g. code-reviewer + security-reviewer or sop-checker + any other) |
 | R1 | Reviewer-turn gate honoured for shipped [Feature]/[Refactor] items | For every `[SHIPPED]` `[Feature]` or `[Refactor]` item in the last 30 days whose session diff exceeded `review_loc_threshold` or `review_files_threshold` (from `agent-sop.config.json`, defaults 50 LOC / 3 files): verify a matching review artifact exists at `docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md` AND passes `bash scripts/validate-state-transitions.sh --assert-review <path>`. Best-effort retrospective — measure the session diff with `git diff --numstat <merge-base>..<ship-commit>` (sum columns 1+2 for LOC; line count for files). `git show --stat` is per-commit and undercounts multi-commit sessions — do not use. Projects predating P44 (before 2026-04-19) are exempt. |
+| D1 | Drift-detection infrastructure present | `scripts/validate-state-transitions.sh --check-drift` works when invoked; `.claude/commands/update-sop.md` references Step 3d; `.claude/commands/restart-sop.md` includes the in-flight reassertion in Step 0d. Tooling presence is the check — retrospective audit of every past session for drift is out of scope (too expensive; `## Scope Change` blocks in `docs/recent-work/` would already surface legitimate cases). Projects predating P46 (before 2026-04-19) are exempt. |
 
 ---
 
@@ -322,14 +323,14 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | Build Plans Structure | 0 | 4 | 1 | 5 |
 | project_resume.md Structure | 0 | 3 | 0 | 3 |
 | Cross-File Consistency | 0 | 3 | 3 | 6 |
-| Security, Hooks, Quality, Agents | 1 | 2 (+2 code) | 3 | 6 (+2) |
+| Security, Hooks, Quality, Agents | 1 | 2 (+2 code) | 4 | 7 (+2) |
 | Benchmark-Proven Practices | 0 | 0 (+2 code) | 2 | 2 (+2) |
 | Multi-Agent Parallel Sessions | 1 | 3 | 1 | 5 |
-| **Total (non-code)** | **15** | **46** | **16** | **77** |
-| **Total (code)** | **15** | **55** | **16** | **86** |
+| **Total (non-code)** | **15** | **46** | **17** | **78** |
+| **Total (code)** | **15** | **55** | **17** | **87** |
 
 **Maximum deductions:**
-- Non-code: 15 x 10 + 46 x 5 + 16 x 2 = 150 + 230 + 32 = 412
-- Code: 15 x 10 + 55 x 5 + 16 x 2 = 150 + 275 + 32 = 457
+- Non-code: 15 x 10 + 46 x 5 + 17 x 2 = 150 + 230 + 34 = 414
+- Code: 15 x 10 + 55 x 5 + 17 x 2 = 150 + 275 + 34 = 459
 
 **Normalisation:** Score = max(0, 100 - (total deductions / max possible deductions * 100)). Then apply critical cap (49 max) if any critical check fails.
