@@ -1,6 +1,6 @@
 ---
 description: Sync pristine-replica Agent SOP files (SOP docs, guides, slash commands, reference agents) from the upstream agent-sop repo into this project and the user's ~/.claude directory. Three-way diff for locally modified files; never force-overwrites.
-sop_version: "2026-04-17"
+sop_version: "2026-04-19"
 ---
 
 Keep Agent SOP artefacts up to date. Pulls the current pristine-replica files from upstream (local checkout if available, GitHub raw otherwise), diffs them against this project's copies, and applies updates only where safe. Locally modified files are surfaced for reconciliation rather than overwritten.
@@ -36,11 +36,15 @@ These are the files this command keeps in sync. Everything else (CLAUDE.md, Back
 | `docs/sop/compliance-checklist.md` | `docs/sop/compliance-checklist.md` | project |
 | `docs/guides/optional-patterns.md` | `docs/guides/optional-patterns.md` | project |
 | `docs/guides/multi-agent-context-routing.md` | `docs/guides/multi-agent-context-routing.md` | project |
+| `docs/guides/multi-agent-parallel-sessions.md` | `docs/guides/multi-agent-parallel-sessions.md` | project |
 | `docs/guides/managed-agents-integration.md` | `docs/guides/managed-agents-integration.md` | project |
 | `docs/guides/sop-hill-climbing.md` | `docs/guides/sop-hill-climbing.md` | project |
+| `docs/guides/sop-common-mistakes.md` | `docs/guides/sop-common-mistakes.md` | project |
+| `scripts/migrate-to-multi-agent.py` | `scripts/migrate-to-multi-agent.py` | project |
 | `~/.claude/commands/restart-sop.md` | `.claude/commands/restart-sop.md` | user |
 | `~/.claude/commands/update-sop.md` | `.claude/commands/update-sop.md` | user |
 | `~/.claude/commands/update-agent-sop.md` | `.claude/commands/update-agent-sop.md` | user |
+| `~/.claude/commands/migrate-to-multi-agent.md` | `.claude/commands/migrate-to-multi-agent.md` | user |
 | `~/.claude/agents/sop-checker.md` | `.claude/agents/sop-checker.md` | user |
 | `~/.claude/agents/code-reviewer.md` | `.claude/agents/code-reviewer.md` | user |
 | `~/.claude/agents/security-reviewer.md` | `.claude/agents/security-reviewer.md` | user |
