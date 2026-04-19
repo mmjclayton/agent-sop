@@ -770,6 +770,36 @@ External feedback (2026-04-19) named mid-session state drift as the central fail
 
 ---
 
+### P47 — Drift check: resume-file fallback fails on multi-worktree projects with legacy unsuffixed resume
+`[OPEN] [Bug]`
+
+Surfaced during hst-tracker P44/P45/P46 sync on 2026-04-19. The drift-check path resolution:
+```
+resume_file="project_resume_${agent_id}.md"
+if [ ! -f "$resume_file" ] && [ "$agent_id" = "solo" ]; then
+  resume_file="project_resume.md"  # legacy fallback
+fi
+```
+
+Fires fallback **only when agent-id is literally `solo`**. On a multi-worktree project (hst-tracker has a `--design-audit` sibling worktree), agent-id resolves to a 6-char path hash, NOT `solo`. Main worktree still uses the pre-P43 legacy unsuffixed `project_resume.md` because the project predates multi-agent format migration. Fallback never fires → drift check degrades to "no resume file found, skipping" → gate silently no-ops.
+
+**Failure mode:** the most valuable drift-check targets (long-lived projects with parallel worktrees) get no drift enforcement until they've run `/migrate-to-multi-agent`. That's a usability sharp edge — the gate quietly does nothing without signalling why.
+
+**Approach:**
+- Always try the legacy unsuffixed `project_resume.md` as the last fallback, regardless of agent-id value.
+- If that file exists AND agent-id is not `solo`, emit a one-line advisory: "Reading legacy unsuffixed resume file. Run `/migrate-to-multi-agent` to move to per-agent format."
+- Same treatment for the `/restart-sop` Step 0d reassertion snippet.
+
+**Acceptance criteria:**
+- `scripts/validate-state-transitions.sh --check-drift` finds the legacy file on multi-worktree projects
+- `/restart-sop` Step 0d reassertion works for hst-tracker without migration
+- Advisory message only prints once per invocation (not spammy)
+- Migration guide (`docs/guides/multi-agent-parallel-sessions.md`) gets a pointer to this fallback behaviour
+
+**Source:** observed during hst-tracker sync, 2026-04-19. Two-worktree project (main + design-audit). Main worktree uses `project_resume.md` (legacy), sibling has no resume file yet.
+
+---
+
 ### P33 — Managed Agents integration guide (deferred)
 `[OPEN] [Feature] [has-open-questions]`
 
