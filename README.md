@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-v2.1.101+-orange.svg)](https://code.claude.com/docs/en/changelog)
-[![Status](https://img.shields.io/badge/status-active-success.svg)](#status)
+![Status](https://img.shields.io/badge/status-active-success.svg)
 
 Standard operating procedures and product-management discipline for Claude Code sessions. A defined file set, six non-negotiable rules, session start/end checklists, a Backlog with status tags and P-numbers, build plans with phases and batch logs, and a feature map — together they give every session a consistent place to read context from at the start and write state to at the end.
 
@@ -14,7 +14,7 @@ Claude Code sessions are stateful in principle and stateless in practice. Each n
 
 The usual answers are either too heavy (databases, daemons, MCP servers with background capture) or too light (ad-hoc notes scattered across `docs/` that agents may or may not find). Agent SOP is the disciplined middle: a fixed file set, a fixed session workflow, and a fixed tag taxonomy — no tooling that isn't already in git and the shell.
 
-Benchmark data (see [Benchmarks](#benchmarks)) shows SOP-context agents produce 8-33% higher task quality on identical tasks than bare-repo agents, with the gap widening on vague product-level prompts. The compounding benefit across sessions — durable decisions, gotchas, batch logs — is visible in long-running projects: `hst-tracker` has accumulated 125 dated decisions, 26 build-plan batch entries, and 20 rollup session entries over ~2 weeks. Equivalent counts in a no-SOP project of the same age: zero.
+Benchmark data shows SOP-context agents produce 8-33% higher task quality on identical tasks than bare-repo agents, with the gap widening on vague product-level prompts. The compounding benefit across sessions — durable decisions, gotchas, batch logs — is visible in long-running projects. A 15k-line full-stack production codebase running the SOP for ~2 weeks has accumulated 125 dated decisions, 26 build-plan batch entries, and 20 rollup session entries. Equivalent counts in a no-SOP project of the same age: zero.
 
 ## What it gives every project
 
