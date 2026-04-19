@@ -93,6 +93,63 @@ Before updating any tracking files, check your work against the relevant Definit
 
 If any criterion is not met, fix it before proceeding. If it cannot be fixed in this session, note it in Step 4 (agent-memory.md Gotchas).
 
+## Step 1b: Required reviewer turn (Features & Refactors over threshold)
+
+Self-evaluation (Step 1 above) is the agent reviewing its own work. For any item transitioning to `[SHIPPED]` this session AND tagged `[Feature]` or `[Refactor]` AND whose session diff exceeds the threshold, invoke a sibling reviewer agent for an independent pass. The findings file is the gate — no file, no ship. No human sign-off; the reviewer is another agent, the substance assertion is automated.
+
+**Threshold** (configurable in `~/.claude/agent-sop.config.json`, fields `review_loc_threshold` default 50 and `review_files_threshold` default 3):
+
+```bash
+# Count changed lines and files in the session range (merge-base..working-tree).
+# Uses --numstat (machine-readable: "<added>\t<deleted>\t<path>" per file) and
+# sums both columns. --shortstat is human-prose and breaks for deletion-only
+# diffs where "1 deletion(-)" shifts columns.
+count_session_diff() {
+  local base="${1:-HEAD}"
+  local loc files
+  loc=$(git diff --numstat "$base" -- 2>/dev/null | awk '{a+=$1; d+=$2} END{print a+d+0}')
+  files=$(git diff --numstat "$base" -- 2>/dev/null | wc -l | tr -d ' ')
+  [ -z "$loc" ] && loc=0
+  echo "loc=$loc files=$files"
+}
+```
+
+Resolve the range once: prefer `SESSION_RANGE` from Step 0a; fall back to `HEAD` when on the default branch directly. Read thresholds from the config file or use defaults.
+
+**For each P-number that shipped in this session as `[Feature]` or `[Refactor]`** (detected by diff of `Backlog.md` between `HEAD` and working tree — any tag flip to `[SHIPPED - YYYY-MM-DD]`):
+
+1. If session diff is below threshold, skip — the item is small enough that self-eval suffices.
+2. If `docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md` already exists AND passes substance assertion, skip (already reviewed).
+3. Otherwise, invoke a reviewer subagent:
+   - Default: `code-reviewer` (via the Agent tool with `subagent_type: code-reviewer`).
+   - **Security override:** if any file in the session diff matches the auth / crypto / payment / auth-token / input-sanitisation heuristic list below, use `security-reviewer` instead.
+
+    Security-trigger paths — narrowed to reduce false positives on generic prose (e.g. `git rev-parse --verify`, documentation using "sign" in "signature"). Match as case-insensitive substring against changed file paths only (not diff content), and prefer multi-token forms:
+
+    - Auth: `auth`, `login`, `session`, `access_token`, `refresh_token`, `password`, `credential`, `jwt`, `oauth`
+    - Crypto: `crypto`, `cipher`, `encrypt`, `decrypt`, `verify_token`, `verify_password`, `signing`, `signature`, `hash_password`
+    - Web security: `csrf`, `cors`, `xss`, `content-security-policy`
+    - Payments: `payment`, `billing`, `stripe`, `webhook`
+    - Input safety: `sanitize`, `sanitise`, `escape_html`, `escape_sql`, `raw_query`
+
+    Bare tokens like `sign`, `verify`, or `sql` are deliberately excluded — they match too broadly (prose, commit messages, unrelated utilities). Add project-specific trigger paths in `agent-sop.config.json` under a future `security_trigger_paths` field (not yet schemed; extend when a downstream project needs it).
+
+4. Prompt the reviewer: "Review diff in SESSION_RANGE for `P<n>: <title>`. Use the review template at `docs/templates/review-template.md`. Write the result to `docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md`. Include: Summary, Severity (enum), Findings (concrete file:line bullets) OR a reasoned 'No issues — <reason>' statement."
+5. Assert substance:
+   ```bash
+   bash scripts/validate-state-transitions.sh --assert-review "docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md" || exit 1
+   ```
+6. The Batch Log entry (Step 6) for this P-number must reference the review path — the state-transition validator's Batch Log check (Step 3c) keeps this honest.
+
+**Hard-block conditions:**
+- Shipping a `[Feature]`/`[Refactor]` over threshold with no review artifact → fail.
+- Review artifact exists but fails substance assertion (stub / missing sections) → fail.
+- Review artifact's severity is `CRITICAL` or `HIGH` with no matching Gotcha entry in `docs/agent-memory/gotchas/` or Backlog follow-up → warning (not block), but agent should address or note.
+
+**Pre-migration projects:** if `docs/templates/review-template.md` or `docs/reviews/` is absent, skip with a non-blocking warning: "Run `/update-agent-sop` to sync the review template + directory conventions."
+
+Bug fixes, Iterations, and items under threshold are exempt — the self-eval rubric in Step 1 stands alone for them.
+
 ## Step 2: Run tests (code projects only)
 
 If this is a code project with a test suite, run the full test suite now. Fix any failures before proceeding. If tests fail and cannot be fixed quickly, note the failures in agent-memory.md Gotchas and continue with the remaining steps.

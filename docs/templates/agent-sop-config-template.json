@@ -19,6 +19,10 @@
   "agent_id_override": null,
   "_agent_id_override_note": "String or null. Takes precedence over CLAUDE_AGENT_ID env var and .sop-agent-id file. Rarely used — prefer env var or per-worktree file for identity.",
 
+  "review_loc_threshold": 50,
+  "review_files_threshold": 3,
+  "_review_threshold_note": "P44 reviewer-turn gate. When a [Feature] or [Refactor] ships AND the session diff exceeds either threshold, /update-sop Step 1b invokes code-reviewer (or security-reviewer for auth/crypto/payment diffs) and requires a substantive review artifact at docs/reviews/. Set either to 0 to disable the gate entirely.",
+
   "baseline_shas": {
     "_comment": "SHA-256 of each pristine-replica file at last sync. Used for three-way diff (baseline vs local vs upstream) to detect local modifications. Populated by setup.sh at install and updated by /update-agent-sop per file.",
     "docs/sop/claude-agent-sop.md": "<sha256>",

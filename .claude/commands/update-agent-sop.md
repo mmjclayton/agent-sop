@@ -25,7 +25,7 @@ Inform the user, then proceed with first-run bootstrap behaviour (see Step 4).
 
 ## Pristine-replica file set
 
-These are the files this command keeps in sync. Everything else (CLAUDE.md, Backlog, agent-memory, feature-map, build-plans, templates) is per-project and is never touched.
+These are the files this command keeps in sync. Everything else (CLAUDE.md, Backlog, agent-memory, feature-map, build-plans, and project-authored templates like claude-md-template / agent-memory-template / backlog-template / build-plan-template that get stamped into target files at setup) is per-project and is never touched. The `review-template.md` exception is intentional: the substance-assertion validator has structural expectations, so the template ships as a pristine replica.
 
 | Destination in consumer project | Upstream path | Scope |
 |---------------------------------|---------------|-------|
@@ -43,6 +43,7 @@ These are the files this command keeps in sync. Everything else (CLAUDE.md, Back
 | `scripts/migrate-to-multi-agent.py` | `scripts/migrate-to-multi-agent.py` | project |
 | `scripts/refresh-rollup.sh` | `scripts/refresh-rollup.sh` | project |
 | `scripts/validate-state-transitions.sh` | `scripts/validate-state-transitions.sh` | project |
+| `docs/templates/review-template.md` | `docs/templates/review-template.md` | project |
 | `~/.claude/commands/restart-sop.md` | `.claude/commands/restart-sop.md` | user |
 | `~/.claude/commands/update-sop.md` | `.claude/commands/update-sop.md` | user |
 | `~/.claude/commands/update-agent-sop.md` | `.claude/commands/update-agent-sop.md` | user |

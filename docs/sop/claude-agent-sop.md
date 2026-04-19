@@ -407,11 +407,12 @@ Skip agent-memory.md, build plans, and MEMORY.md/project_resume.md. The lightwei
 
 ```
 1. Run tests (code projects) — fix failures before proceeding
+   Step 1b: Reviewer-turn gate. For any [Feature] or [Refactor] shipping this session with diff over threshold (default 50 LOC / 3 files, configurable in agent-sop.config.json), invoke code-reviewer (or security-reviewer for auth/crypto/payment diffs) and require a substantive review artifact at docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md. Hard-block if missing or fails substance assertion. No human sign-off — agent-to-agent review, validator-enforced.
 2. Backlog.md — update status tags in place, append new items (Step 2a: P-number collision check against default branch, hard-block if collision)
-3. Secondary trackers — reconcile any project-specific finding lists (audit-backlog-*.md, security-findings.md, compliance-*.md). Commit range partitioned via `git merge-base <default> HEAD..HEAD`. Hard block: if any ID in this session's commits is still [OPEN] in a tracker, reconcile before step 8.
+3. Secondary trackers — reconcile any project-specific finding lists (audit-backlog-*.md, security-findings.md, compliance-*.md). Commit range partitioned via `git merge-base <default> HEAD..HEAD`. Hard block: if any ID in this session's commits is still [OPEN] in a tracker, reconcile before step 8. Step 3c: state-transition validator hard-blocks illegal tag transitions and [SHIPPED] without Batch Log reference.
 4. docs/feature-map.md — append shipped items
 5. docs/agent-memory.md narrative + decisions/gotchas directories — write new decisions to docs/agent-memory/decisions/YYYY-MM-DD_<agent-id>_<slug>.md, new gotchas to docs/agent-memory/gotchas/, update In-Flight/Completed lines in agent-memory.md by agent-id
-6. docs/build-plans/phase-N.md — append to Batch Log
+6. docs/build-plans/phase-N.md — append to Batch Log (must reference review path for [Feature]/[Refactor] items over threshold — Step 3c validator enforces)
 7. project_resume_<agent-id>.md — overwrite with current state (snapshot, per-agent)
 8. Write session entry to docs/recent-work/ and refresh CLAUDE.md rollup section
 9. Commit docs/ changes with the work

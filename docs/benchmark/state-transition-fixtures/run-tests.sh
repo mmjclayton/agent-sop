@@ -52,13 +52,27 @@ for before in "$SCRIPT_DIR"/*.before.md; do
   # no-ops. We create a minimal phase stub in temp for legal-*.
   tmp=$(mktemp -d)
   mkdir -p "$tmp/docs/build-plans"
-  if [ "$expected" = "0" ]; then
-    # Stub phase file with all possible P-numbers referenced so the Batch Log
-    # check passes for any legal [SHIPPED] transition.
+  # Phase stub: a fixture-specific `<base>.phase-stub.md` wins if present;
+  # otherwise default to a stub that names every possible fixture P-number
+  # with a docs/reviews/ citation so legal [Feature]/[Refactor] ships pass.
+  # Illegal fixtures that need a phase file (e.g. to isolate the new P44
+  # review-path check from the prior no-batch-log check) ship their own stub.
+  if [ -f "${base}.phase-stub.md" ]; then
+    cp "${base}.phase-stub.md" "$tmp/docs/build-plans/phase-test.md"
+  elif [ "$expected" = "0" ]; then
     cat > "$tmp/docs/build-plans/phase-test.md" <<EOF
 # Test phase
 ## Batch Log
-- 2026-04-19 P100 P101 P102 P103 P104 P105 P106 P107 P108 P109
+- 2026-04-19 P100 docs/reviews/fixture_P100.md
+- 2026-04-19 P101 docs/reviews/fixture_P101.md
+- 2026-04-19 P102 docs/reviews/fixture_P102.md
+- 2026-04-19 P103 docs/reviews/fixture_P103.md
+- 2026-04-19 P104 docs/reviews/fixture_P104.md
+- 2026-04-19 P105 docs/reviews/fixture_P105.md
+- 2026-04-19 P106 docs/reviews/fixture_P106.md
+- 2026-04-19 P107 docs/reviews/fixture_P107.md
+- 2026-04-19 P108 docs/reviews/fixture_P108.md
+- 2026-04-19 P109 docs/reviews/fixture_P109.md
 EOF
   fi
   # Copy fixtures into place so relative paths resolve

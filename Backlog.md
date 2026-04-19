@@ -673,7 +673,7 @@ Enforced Section 0 Rule 5 by auditing and trimming the SOP instruction set. Pre-
 ---
 
 ### P44 — Required reviewer turn before ship (with substance assertion)
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-19] [Feature]`
 
 Close the gap identified in external feedback (2026-04-19): `/update-sop` Step 1 is agent self-evaluation against a Definition-of-Done rubric, but no step forces an independent reviewer-agent invocation before the shipping commit lands. Reviewer agents (`code-reviewer`, `security-reviewer`) exist but are not in the required path. Without a substance check, a required reviewer turn becomes ceremony — the agent can write "LGTM" in a file and pass the gate.
 
@@ -685,18 +685,20 @@ Close the gap identified in external feedback (2026-04-19): `/update-sop` Step 1
 5. No human-in-the-loop gate. The reviewer is a sibling agent, the substance check is automated, the hard-block is agent-enforced at `/update-sop`. Review artifacts exist for post-hoc QA and traceability — the human (project owner) reads them later if they want, never blocks on approval for shipping.
 
 **Acceptance criteria:**
-- `/update-sop` Step 1 hard-blocks shipping `[Feature]`/`[Refactor]` without a substantive review artifact when diff exceeds threshold - PENDING
-- `docs/reviews/` filenames follow per-agent convention (matches `docs/recent-work/` pattern) - PENDING
-- Substance validator rejects stub / LGTM-only files - PENDING
-- Compliance check R1 added; summary table totals updated - PENDING
-- Threshold + agent selection configurable in `agent-sop.config.json` - PENDING
-- Core SOP instruction delta: +3-4 (Rule 5 budget respected) - PENDING
+- `/update-sop` Step 1b hard-blocks shipping `[Feature]`/`[Refactor]` without a substantive review artifact when diff exceeds threshold - DONE
+- `docs/reviews/` filenames follow per-agent convention (matches `docs/recent-work/` pattern) - DONE
+- Substance validator rejects stub / LGTM-only files - DONE (via `bash scripts/validate-state-transitions.sh --assert-review <path>`, shipped with P45)
+- Compliance check R1 added; summary table totals updated - DONE (76→77 / 85→86)
+- Threshold + agent selection configurable in `agent-sop.config.json` - DONE (`review_loc_threshold`, `review_files_threshold`)
+- Core SOP instruction delta: +3-4 (Rule 5 budget respected) - DONE (+4 in Section 6 Step 1b + Step 3c note + Batch Log review-path note)
 
 **Out of scope:** blocking the actual git commit or push (pre-push hook is an optional snippet in `docs/guides/`, not default); human-approval gate on merge.
 
-**Source:** Reddit feedback 2026-04-19 — state drift / required reviewer turns / human gate concerns. Substance-assertion caveat added during assessment after being challenged on action-vs-ceremony.
+**Files shipped:** `docs/templates/review-template.md` (new), `.claude/commands/update-sop.md` (Step 1b), `docs/sop/claude-agent-sop.md` (Section 6 extended), `docs/sop/compliance-checklist.md` (R1 + summary totals), `docs/templates/agent-sop-config-template.json` (threshold fields), `.claude/commands/update-agent-sop.md` (manifest), `setup.sh` (review-template copy).
 
-**Depends on:** P45 (validator infrastructure shared).
+**Source:** Reddit feedback 2026-04-19 — state drift / required reviewer turns / human gate concerns. Substance-assertion caveat added during assessment after being challenged on action-vs-ceremony. P44 wording tightened 2026-04-19 to make the no-human-in-loop property explicit.
+
+**Depends on:** P45 (validator infrastructure shared — `--assert-review` subcommand).
 
 ---
 

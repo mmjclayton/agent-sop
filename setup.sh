@@ -177,6 +177,10 @@ copy_if_missing "$CLAUDE_TEMPLATE" "$TARGET/CLAUDE.md"
 copy_if_missing "$TEMPLATE_DIR/backlog-template.md" "$TARGET/Backlog.md"
 copy_if_missing "$TEMPLATE_DIR/agent-memory-template.md" "$TARGET/docs/agent-memory.md"
 copy_if_missing "$TEMPLATE_DIR/build-plan-template.md" "$TARGET/docs/build-plans/phase-0-foundation.md"
+# Review template — pristine replica, referenced by /update-sop Step 1b
+copy_if_missing "$TEMPLATE_DIR/review-template.md" "$TARGET/docs/templates/review-template.md"
+# Reviewer agents (Step 1b) write artifacts here — pre-create so first invocation does not fail on missing dir
+mkdir -p "$TARGET/docs/reviews"
 
 # feature-map.md has no standalone template; generate a minimal one
 FEATURE_MAP_CONTENT="# [Project Name] — Feature Map & Roadmap

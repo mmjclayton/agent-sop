@@ -250,11 +250,46 @@ while IFS=$'\t' read -r p after_status; do
         ;;
     esac
 
-    # [SHIPPED] transitions require a Batch Log reference in some phase file
+    # [SHIPPED] transitions require a Batch Log reference in some phase file.
+    # For [Feature]/[Refactor] items over threshold, the Batch Log entry must
+    # additionally cite a review artifact under docs/reviews/ — enforces P44's
+    # reviewer-turn gate at the state-transition layer, not just by prose.
     if [ "$after_status" = "[SHIPPED]" ] && [ "$before_status" != "[SHIPPED]" ]; then
-      if ! grep -lE "\b${p}\b" docs/build-plans/phase-*.md >/dev/null 2>&1; then
+      batch_match=""
+      batch_match=$(grep -lE "\b${p}\b" docs/build-plans/phase-*.md 2>/dev/null | head -1)
+      if [ -z "$batch_match" ]; then
         echo "BLOCK: $p shipped but no Batch Log reference found in docs/build-plans/phase-*.md"
         violations=$((violations + 1))
+      else
+        # Determine whether this P-number is [Feature]/[Refactor]. If so,
+        # require the Batch Log entry referencing the P-number to also name
+        # a docs/reviews/ path.
+        item_type=$(awk -v p="### ${p}" '
+          $0 ~ "^"p"( |$)" { found=1; next }
+          found && /^`\[/ {
+            line=$0
+            gsub(/`/, "", line)
+            # strip the first bracket block (status) plus trailing whitespace
+            sub(/^\[[^]]+\][[:space:]]*/, "", line)
+            # extract the first bracket block from what remains (type tag)
+            if (match(line, /^\[[^]]+\]/)) {
+              type=substr(line, RSTART+1, RLENGTH-2)
+              print type
+            }
+            exit
+          }
+        ' "$AFTER_FILE")
+        case "$item_type" in
+          "Feature"|"Refactor")
+            # Find the batch-log line that names this P-number and check for a review path on it.
+            batch_line=$(grep -E "\b${p}\b" "$batch_match" | head -1)
+            if ! printf '%s' "$batch_line" | grep -qE 'docs/reviews/'; then
+              echo "BLOCK: $p ([${item_type}]) shipped but Batch Log entry in ${batch_match} does not reference a docs/reviews/ artifact. P44 gate requires review path citation."
+              echo "  Add the review artifact path to the Batch Log line that names ${p}."
+              violations=$((violations + 1))
+            fi
+            ;;
+        esac
       fi
     fi
   else
