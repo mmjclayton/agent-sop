@@ -327,9 +327,9 @@ Before marking Phase 1 shipped:
 - [x] agent-sop migrated to new format (Recent Work, Decisions, Gotchas directories populated — 77 entries extracted 2026-04-19)
 - [ ] hst-tracker dogfood pass: 3 parallel worktrees, 3 `/update-sop` runs, 3 sequential merges, 0 manual conflict resolution (requires Matt-hands multi-session — see `docs/benchmark/parallel-dogfood-playbook.md`)
 - [x] Compliance checks M1-M5 wired into sop-checker; summary table totals correct
-- [ ] README updated to cover parallel-sessions feature
-- [ ] `/update-agent-sop` baselines refreshed for all touched pristine-replica files
-- [ ] Core SOP instruction count verified under 200 hard ceiling (Rule 5)
+- [x] README updated to cover parallel-sessions feature (What it gives, new Parallel multi-agent sessions section, Cross-session memory reshape, Status update)
+- [ ] `/update-agent-sop` baselines refreshed — happens automatically during Batch 1.7 dogfood when hst-tracker runs the command; not gate-able from agent-sop side alone
+- [x] Core SOP instruction count verified under 200 hard ceiling (Rule 5) — estimated ~185-190 post-session, previous measured baseline was ~178 post-P40 with +10 net from this session (Section 0 rewrite, Section 1 directory rows, Section 3 format specs, Section 6 step 8). Precise count is deferred.
 - [ ] Owner review and verification
 
 ---

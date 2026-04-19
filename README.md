@@ -10,11 +10,12 @@ Plain markdown plus three slash commands. No daemon, no database, no MCP server.
 
 ## What it gives every project
 
-- **A standard file set.** `CLAUDE.md` (per-session entry point), `Backlog.md` (work items with status/type tags + P-numbers), `docs/feature-map.md` (shipped + roadmap), `docs/agent-memory.md` (cross-session decisions, gotchas, preferences), `docs/build-plans/phase-N.md` (scope, architecture, batch log), `project_resume.md` (overwrite-each-session snapshot).
-- **A session workflow.** `/restart-sop` reads the standard files and cross-checks against git. `/update-sop` runs the session-end checklist (Backlog, feature-map, agent-memory, batch log, resume snapshot, commit). `/update-agent-sop` syncs upstream SOP changes into your project via three-way diff.
+- **A standard file set.** `CLAUDE.md` (per-session entry point with a derived Recent Work rollup), `Backlog.md` (work items with status/type tags + P-numbers), `docs/feature-map.md` (shipped + roadmap), `docs/agent-memory.md` narrative + `docs/agent-memory/decisions/` and `/gotchas/` directories (one file per entry for conflict-free parallel appends), `docs/recent-work/` per-session entry files, `docs/build-plans/phase-N.md` (scope, architecture, batch log), per-agent `project_resume_<agent-id>.md` snapshots.
+- **A session workflow.** `/restart-sop` reads the standard files and cross-checks against git. `/update-sop` runs the session-end checklist (Backlog, feature-map, agent-memory narrative + decisions/gotchas directories, batch log, resume snapshot, recent-work entry, rollup refresh, commit) with partitioned commit-range reconciliation via `git merge-base`. `/update-agent-sop` syncs upstream SOP changes into your project via three-way diff. `/migrate-to-multi-agent` is a one-shot for projects moving from legacy narrative sections to the Phase 1 directory structure.
+- **Parallel multi-agent support.** 3-5 Claude Code terminal instances can run on separate git worktrees, each executing `/update-sop` independently without manual conflict resolution. Agent-id resolution (env var > `.sop-agent-id` file > `solo` default > 6-char hash of worktree path) keys per-agent resume files and per-entry filenames. See [`docs/guides/multi-agent-parallel-sessions.md`](docs/guides/multi-agent-parallel-sessions.md).
 - **Six non-negotiable rules** in Section 0 of the core SOP — never delete without a trace; one source of truth; state facts not opinions; back-and-forth before plans; instruction budget ≤150/200; surface interpretations before acting.
 - **Five reference agents** — `sop-checker` (compliance audit), `code-reviewer`, `security-reviewer`, `planner`, `e2e-runner`.
-- **A compliance checker** that scores any project 0-100 across 75 checks (66 for non-code projects), three-tier weighted scoring with a critical-failure cap.
+- **A compliance checker** that scores any project 0-100 across 84 checks for code projects (75 for non-code), three-tier weighted scoring with a critical-failure cap, including M1-M5 checks for multi-agent parallel-session readiness.
 - **Templates** for every standard file, plus a setup script that installs them into a target project.
 - **A/B benchmark framework** with 8 task specs, blind scoring, runner script, and three rounds of recorded results.
 
@@ -58,9 +59,11 @@ Full text with extended commentary: [`docs/sop/claude-agent-sop.md`](docs/sop/cl
 
 `Backlog.md` is the single source of truth for work items. Every item is tagged with status (first) and type (second), in that order:
 
-- **Status:** `[OPEN]` `[IN PROGRESS]` `[BLOCKED]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T - Reason: ...]`
+- **Status:** `[OPEN]` `[IN PROGRESS]` `[BLOCKED]` `[DEFERRED]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T - Reason: ...]`
 - **Type:** `[Feature]` `[Iteration]` `[Bug]` `[Refactor]`
 - **Optional:** `[has-open-questions]` `[ok-for-automation]`
+
+`[BLOCKED]` means waiting on external action; `[DEFERRED]` means intentionally postponed with no blocker. The distinction prevents stale `[OPEN]` items that were consciously pushed back.
 
 Items get a sequential `P` number. Shipped items move to a Recently Shipped section but are never removed from the file.
 
@@ -68,11 +71,26 @@ Build plans (`docs/build-plans/phase-N.md`) define the scope, architecture, key 
 
 ## Cross-session memory
 
-`docs/agent-memory.md` is the project's persistent context: decisions made (with dates), gotchas and lessons, completed work, and an Archived section for superseded entries. The file is read at the start of every session and updated at the end.
+`docs/agent-memory.md` holds the narrative: In-Flight Work (per-agent), Completed Work, Preferences, Archived. Decisions and gotchas live as one file per entry in `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/` with filenames `YYYY-MM-DD_<agent-id>_<slug>.md`. Per-entry files eliminate the merge-conflict surface when multiple agents end sessions in the same window — each agent writes a distinct file.
 
-`project_resume.md` is a point-in-time snapshot — overwritten each session, not appended to. It records what was done, what is next, and any blockers. The file lives in machine-local memory (`~/.claude/projects/[project-hash]/memory/`), not in the repo.
+`docs/recent-work/` holds one file per session summary. The `## Recent Work (rollup)` section of `CLAUDE.md` is auto-generated from this directory via `/update-sop` Step 8b — derived, idempotent, regenerates deterministically.
+
+`project_resume_<agent-id>.md` is a point-in-time snapshot per agent — overwritten each session, not appended to. Records what was done, what is next, any blockers. Lives in machine-local memory (`~/.claude/projects/[project-hash]/memory/`), not in the repo. Single-agent projects use id `solo`.
 
 `docs/feature-map.md` lists shipped documents and the roadmap. Updated together with Backlog whenever an item ships.
+
+## Parallel multi-agent sessions
+
+Three to five Claude Code terminal instances can run on separate git worktrees of the same repo, each running `/update-sop` and `/restart-sop` independently. Tracking-file conflicts are prevented structurally — no human-in-the-loop co-ordination required:
+
+- **Per-entry directory filenames** include the agent-id, so two agents writing on the same date produce distinct files that merge cleanly.
+- **Commit-range partitioning** via `git merge-base <default-branch> HEAD..HEAD` scopes secondary-tracker reconciliation, drift guards, and hard-block checks to each agent's own branch.
+- **P-number collision detection** in `/update-sop` Step 2a catches overlaps between an agent's branch and the default branch; a `renumber_p` shell helper updates all references.
+- **Idempotent rollup** in `CLAUDE.md` derives from `docs/recent-work/`; any agent regenerating from identical directory contents produces identical output, so merge order does not matter.
+
+Agent identity resolves as: `CLAUDE_AGENT_ID` env var > `.sop-agent-id` file at worktree root > literal `solo` for single-worktree projects > 6-char hash of worktree path.
+
+Projects on the legacy narrative format migrate with `python3 scripts/migrate-to-multi-agent.py` (supports `--dry-run`). See [`docs/guides/multi-agent-parallel-sessions.md`](docs/guides/multi-agent-parallel-sessions.md) for full mechanics and [`docs/benchmark/parallel-dogfood-playbook.md`](docs/benchmark/parallel-dogfood-playbook.md) for the 3-worktree validation protocol.
 
 ## Keeping the SOP in sync
 
@@ -106,7 +124,10 @@ After the first turn, Anthropic's prompt caching applies a 90% discount on cache
 
 Active. Core SOP, templates, slash commands, compliance checker, reference agents, and cross-project sync mechanism are all shipped.
 
-Recent work (P32-P40, 2026-04-17): six non-negotiable rules in Section 0 (was two), core SOP trimmed ~230 → ~178 instructions, `/update-agent-sop` sync mechanism shipped, R5 post-trim benchmark pilot, measurement gap closed (session-hygiene rubric, continuity methodology, longitudinal exhibit).
+Recent work:
+- **P43 (2026-04-19) — Parallel multi-agent sessions** — `[IN PROGRESS]`. Directory-per-entry structure, commit-range partitioning, P-number collision detection, migration tooling. Six of seven batches shipped; Batch 1.7 dogfood on hst-tracker with three parallel sessions pending.
+- **P42 (2026-04-19)** — secondary-tracker reconciliation in `/update-sop` + `[DEFERRED]` status tag.
+- **P32-P40 (2026-04-17)** — six non-negotiable rules in Section 0 (was two), core SOP trimmed ~230 → ~178 instructions, `/update-agent-sop` sync mechanism shipped, R5 post-trim benchmark pilot, measurement gap closed (session-hygiene rubric, continuity methodology, longitudinal exhibit).
 
 Open work: P24 multi-agent optimisation guide, P8-P10 domain variants (web app, marketing, data/analytics), per-project `exclude` config field, R6 full benchmark. Roadmap and full work history: [`Backlog.md`](Backlog.md).
 
