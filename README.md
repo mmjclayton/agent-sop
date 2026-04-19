@@ -12,7 +12,7 @@ Plain markdown plus four slash commands. No daemon, no database, no MCP server, 
 
 Claude Code sessions are stateful in principle and stateless in practice. Each new session starts with no memory of what the last one shipped, what decisions are locked in, what gotchas a previous agent learned the hard way. If that context isn't written down in files the next agent will read, it evaporates.
 
-The usual answers are either too heavy (databases, daemons, MCP servers with background capture) or too light (ad-hoc notes scattered across `docs/` that agents may or may not find). Agent SOP is the disciplined middle: a fixed file set, a fixed session workflow, and a fixed tag taxonomy — no tooling that isn't already in git and the shell.
+The usual answers are either too heavy (databases, daemons, MCP servers with background capture) or too light (ad-hoc notes scattered across `docs/` that agents may or may not find). Agent SOP is the disciplined middle: a fixed file set, a fixed session workflow, and a fixed tag taxonomy — no tooling that isn't already in git and the shell. The same file set supports a single agent working solo or three to five agents running concurrently on separate git worktrees of the same repo.
 
 The compounding benefit across sessions — durable decisions, gotchas, batch logs that the next session can read — is the thing Agent SOP is designed to deliver. A 15k-line full-stack production codebase running the SOP for ~2 weeks has accumulated 125 dated decisions, 26 build-plan batch entries, and 20 rollup session entries. Equivalent counts in a no-SOP project of the same age: zero.
 
@@ -22,7 +22,7 @@ Single-task A/B benchmarks in [`docs/benchmark/`](docs/benchmark/) also show a +
 
 - **A standard file set.** `CLAUDE.md` (per-session entry point with a derived Recent Work rollup), `Backlog.md` (work items with status/type tags + P-numbers), `docs/feature-map.md` (shipped + roadmap), `docs/agent-memory.md` narrative + `docs/agent-memory/decisions/` and `/gotchas/` directories (one file per entry), `docs/recent-work/` per-session entry files, `docs/build-plans/phase-N.md` (scope, architecture, batch log), per-agent `project_resume_<agent-id>.md` snapshots.
 - **A session workflow.** `/restart-sop` reads the standard files and cross-checks against git. `/update-sop` runs the session-end checklist (tests, Backlog, feature-map, agent-memory narrative + decisions/gotchas directories, batch log, resume snapshot, recent-work entry, rollup refresh, commit) with commit-range reconciliation via `git merge-base`. `/update-agent-sop` syncs upstream SOP changes into your project via three-way diff. `/migrate-to-multi-agent` is a one-shot for projects moving from legacy narrative sections to the Phase 1 directory structure.
-- **Parallel multi-agent support.** Three to five Claude Code terminal instances can run on separate git worktrees of one repo, each running `/update-sop` independently without manual conflict resolution. Agent-id resolution (`CLAUDE_AGENT_ID` env var > `.sop-agent-id` file > `solo` default > 6-char hash of worktree path) keys per-agent resume files and per-entry filenames. See [`docs/guides/multi-agent-parallel-sessions.md`](docs/guides/multi-agent-parallel-sessions.md).
+- **Parallel multi-agent support.** Run three to five Claude Code instances concurrently on the same codebase. Each session works in its own git worktree, runs `/update-sop` independently, and merges to main sequentially without tripping over the other agents' tracking-file changes. Agent-id resolution (`CLAUDE_AGENT_ID` env var > `.sop-agent-id` file > `solo` default > 6-char hash of worktree path) keys per-agent resume files and per-entry filenames. See [`docs/guides/multi-agent-parallel-sessions.md`](docs/guides/multi-agent-parallel-sessions.md).
 - **Six non-negotiable rules** in Section 0 of the core SOP — never delete without a trace; one source of truth; state facts not opinions; back-and-forth before plans; instruction budget ≤150/200; surface interpretations before acting.
 - **Five reference agents** — `sop-checker` (compliance audit), `code-reviewer`, `security-reviewer`, `planner`, `e2e-runner`.
 - **A compliance checker** that scores any project 0-100 across 84 checks for code projects (75 for non-code), three-tier weighted scoring with a critical-failure cap, including M1-M5 checks for multi-agent parallel-session readiness.
@@ -174,7 +174,9 @@ Build plans (`docs/build-plans/phase-N.md`) define scope, architecture, key lock
 
 ## Parallel multi-agent sessions
 
-Three to five Claude Code terminal instances can run on separate git worktrees of one repo, each running `/update-sop` and `/restart-sop` independently. Tracking-file conflicts are prevented structurally — no human-in-the-loop co-ordination required:
+Run three to five Claude Code sessions concurrently on the same codebase. Each session works in its own git worktree on its own branch, runs `/update-sop` and `/restart-sop` independently, and merges to main sequentially — without tripping over the other agents' tracking-file changes. No human co-ordination required.
+
+Four structural choices make this possible:
 
 - **Per-entry directory filenames** include the agent-id, so two agents writing on the same date produce distinct files that merge cleanly.
 - **Commit-range partitioning** via `git merge-base <default-branch> HEAD..HEAD` scopes secondary-tracker reconciliation, drift guards, and hard-block checks to each agent's own branch.
