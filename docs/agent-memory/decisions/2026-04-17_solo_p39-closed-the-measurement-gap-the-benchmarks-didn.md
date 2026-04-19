@@ -1,0 +1,6 @@
+# P39 — Closed the measurement gap the benchmarks didn't cover
+
+**Date:** 2026-04-17
+**Agent:** solo
+
+P39 — Closed the measurement gap the benchmarks didn't cover. R1/R2/R5 score single-task quality only; they end at "code shipped" and ignore the SOP's real product (project state the next session can pick up cleanly). Three supplementary measurements added: (1) session-hygiene scoring rubric — 7 extra 0/1 dimensions (test gate, Backlog, feature-map, agent-memory, batch log, resume, docs commit); baseline scores 0/7 by construction so this is demonstrative not comparative. (2) Continuity benchmark methodology — dependent task pairs where task 2 depends on a gotcha task 1 naturally surfaces; measures whether session N+1 benefits from session N. Sample pair (tonnage client-side fix → adjacent server-side gap) included. (3) Longitudinal exhibit — hst-tracker's actual artefact counts: 86 dated decisions, 23 batch-log entries, 18 Recent Work entries, 64 docs-only commits, 4,628 lines across tracking files. A no-SOP project of equivalent age has 0 of each. Makes continuity value visible without running any agent. Artefacts: docs/benchmark/README.md (hygiene + exhibit sections), docs/benchmark/continuity-methodology.md (new), README.md (new "What the benchmarks don't measure" section). Continuity benchmark execution deferred to R7.

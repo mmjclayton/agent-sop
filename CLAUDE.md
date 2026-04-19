@@ -134,37 +134,15 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-04-19.*
 
 - 2026-04-19 `solo`: P43 Batch 1.2 — directory structure + rollup specs
+- 2026-04-19 `solo`: P42 — Secondary-tracker reconciliation + `[DEFERRED]` tag
+- 2026-04-17 `solo`: P41 — README rewrite, License section, Acknowledgements removed, About refreshed
+- 2026-04-17 `solo`: P40 — Section 14 + Section 15.4 trim, Recent Work + Decisions compaction
+- 2026-04-17 `solo`: P32-P39 — Trim, sync mechanism, two repo reviews, R5 pilot, measurement gap (Batch 0.13, commits 3e452b7, 2350a9f, 0632aad, 8977f46, ee1b012, 988ab69, ca3d57b)
+- 2026-04-13 `solo`: P29-P30 — Pre-launch README polish + research digest review
+- 2026-04-09 `solo`: Batch 0.11 — P23-P28 (benchmark framework, optimisations, Managed Agents, digest changes) + graphify research
+- 2026-04-08 `solo`: Batches 0.4-0.10 — P14-P22, ECC adaptation, token optimisation, slash commands
+- 2026-04-07 `solo`: Batches 0.1-0.3f — Initial scaffold + P1-P2-P11-P12-P13
 <!-- recent-work-rollup:end -->
-
----
-
-## Recent Work (legacy, pending Batch 1.6 migration)
-
-*Pre-2026-04-19 session-day entries preserved here until `/update-sop --migrate-to-multi-agent` lands in Batch 1.6 and extracts them into `docs/recent-work/`. After migration this section will be removed. Full detail for each entry lives in build-plan Batch Log + Backlog.md per item.*
-
-### 2026-04-19: P42 — Secondary-tracker reconciliation + `[DEFERRED]` tag (commit 0c95727)
-Close a gap surfaced by hst-tracker: `/update-sop` treated `Backlog.md` as the sole work tracker and never reconciled project-specific finding files (e.g. `audit-backlog-*.md`) that use the same status-tag discipline. Fixed at four points. Core SOP Section 6 session-end checklist gained new step 3 (reconcile any `.md` in CLAUDE.md Key Documents using heading-level status tags); total 7 → 8 steps. `/update-sop` Step 3b auto-detects trackers (skip `Backlog.md`), reconciles finding IDs from this session's commits; Step 11 hard-blocks the commit if any ID is still `[OPEN]`. `/restart-sop` Step 4 gained an advisory drift guard for prior-session drift. Section 8 gains `[DEFERRED]` as distinct from `[BLOCKED]` (waiting-external vs intentionally-postponed). Templates + compliance checklist propagated (B4 accepts `[DEFERRED]`; new X6 check; totals 66 → 67 / 75 → 76). Heuristic is auto-detect rather than config opt-in — opt-in recreates the failure mode at a different level.
-
-### 2026-04-17: P41 — README rewrite, License section, Acknowledgements removed, About refreshed (commits 38a3476, e36cb53)
-README compressed 465 → 119 lines. Hero reframed to "Standard operating procedures and product management discipline for Claude Code sessions" anchored on the standard file set + three slash commands. New Backlog discipline + Cross-session memory sections make the PM angle concrete. Removed: TOC, token-efficiency math wall, four-table What's Included, repository tree, expanded session-checklist + six-rules commentary, A/B benchmark badge, Acknowledgements. Added: License section. Verbatim review against ECC found no copied prose — pattern inspiration only, MIT attribution not required. Aesthetic aligned with claude-code-action and superpowers reference READMEs. GitHub About description rewritten.
-
-### 2026-04-17: P40 — Section 14 + Section 15.4 trim, Recent Work + Decisions compaction (commit 5b36751)
-Section 14 Common Mistakes table moved to `docs/guides/sop-common-mistakes.md`; Section 15.4 Managed Agents API safety block moved into `docs/guides/managed-agents-integration.md`. Core SOP ~189 → ~178 instructions (under 150 soft cap on first measure since Rule 5 was added). Same session: CLAUDE.md Recent Work compacted (older session-days rolled into one-liners) and agent-memory.md Decisions audited (pre-2026-04-09 entries moved to Archived with a dated relocation note). Token saving from CLAUDE.md alone is the larger win.
-
-### 2026-04-17: P32-P39 — Trim, sync mechanism, two repo reviews, R5 pilot, measurement gap (Batch 0.13, commits 3e452b7, 2350a9f, 0632aad, 8977f46, ee1b012, 988ab69, ca3d57b)
-Eight P-items in one session. Core SOP trim (~230 → ~195 instructions; Section 4 removed; Sections 12/16/17/18 to guides; hooks.md + context-management.md merged into harness-configuration.md; security.md collapsed). Section 0 expanded to six non-negotiable rules with *Prevents:* annotations. `/update-agent-sop` sync command shipped (three-way diff, never force-overwrites). Reviewed forrestchang/andrej-karpathy-skills (trace-to-request ported) and thedotmack/claude-mem (progressive retrieval, capture-time redaction, fail-open hooks ported). R5 post-trim benchmark pilot: SOP +16% aggregate (vs R2's +33%); README badge changed to "directional +16% to +33%". Measurement gap closed: session-hygiene rubric, continuity methodology, longitudinal exhibit (hst-tracker: 86 decisions, 23 batches, 64 docs commits). Full per-item detail in agent-memory.md Decisions.
-
-### 2026-04-13: P29-P30 — Pre-launch README polish + research digest review (commits be449ac, 605cf60)
-MIT LICENSE added; Status rewritten for outside readers; setup paths generalised; badges + TOC added; Claude Code v2.1.101+ noted. Weekly research digest reviewed with source verification (4 sources; AgentKit date in digest was wrong). Tier 1 slate cut 4 → 1 on "sharpening > adding" filter. Meta-decision logged: research digests bias toward additions; default filter is "what does this remove or sharpen".
-
-### 2026-04-09: Batch 0.11 — P23-P28 (benchmark framework, optimisations, Managed Agents, digest changes) + graphify research
-A/B benchmark framework: Round 1 precise prompts +8%, Round 2 vague prompts +33% (sharpening wins). Section 15 Benchmark-Proven Practices added; Common Mistakes mandatory for code projects; intent-rich dispatch. P24 multi-agent guide scoped (deferred). graphify evaluated and rejected (corpus too small for agent-sop; ARCHITECTURE.md preferred for hst-tracker).
-
-### 2026-04-08: Batches 0.4-0.10 — P14-P22, ECC adaptation, token optimisation, slash commands (commits f928a42-3e8d340)
-Security guidance, hooks guidance (6 reference implementations), code quality rules, 4 reference agents (code-reviewer, security-reviewer, planner, e2e-runner), expanded code template sections, continuous learning pattern, 6 new compliance checks. New project walkthrough + migration checklist. setup.sh shipped. `/restart-sop` and `/update-sop` slash commands shipped. README rewritten (em dashes removed, ECC attribution corrected to affaan-m, verified token efficiency section).
-
-### 2026-04-07: Batches 0.1-0.3f — Initial scaffold + P1-P2-P11-P12-P13 (commits 79c5a5c-b0942cf)
-Project scaffold (CLAUDE.md, Backlog.md, agent-memory.md, feature-map.md, phase-0 build plan, README.md). P1 Core SOP. P2 base CLAUDE.md template. P11 code template. P12 SOP v2 owner feedback iteration (10 changes including additive-only → never-delete-without-a-trace, snapshot resume model, conflict precedence). P13 SOP Compliance Checker agent + canonical checklist (~64 checks, three-tier scoring). Self-compliance fixes (49 → 100).
 
 ---
 
