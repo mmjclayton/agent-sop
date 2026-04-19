@@ -20,6 +20,7 @@ Usage:
     python3 scripts/migrate-to-multi-agent.py [--dry-run] [--repo PATH]
 """
 import argparse
+import datetime
 import os
 import re
 import subprocess
@@ -105,14 +106,22 @@ def extract_recent_work(content: str) -> list[dict]:
     return entries
 
 
-def extract_bullet_entries(section_lines: list[str]) -> list[dict]:
+def extract_bullet_entries(
+    section_lines: list[str],
+    fallback_date: str | None = None,
+) -> list[dict]:
     """Extract '- [SUPERSEDED - DATE: reason] YYYY-MM-DD: ...' or '- YYYY-MM-DD: ...' bullets.
 
     Continuation lines (following the bullet, indented or as paragraph) attach
     to the current entry until the next bullet or section break.
+
+    If no dated bullets are found and `fallback_date` is provided, retry with
+    `extract_dateless_bullets` — catches sections whose entries use bare
+    `- **Topic**: body` or `- body` format without a leading date (e.g.
+    hst-tracker's pre-Phase-1 Gotchas section).
     """
-    entries = []
-    current = None
+    entries: list[dict] = []
+    current: dict | None = None
     sup_pattern = re.compile(
         r"^- (?:\[SUPERSEDED - (\d{4}-\d{2}-\d{2}): ([^\]]+)\]\s+)?(\d{4}-\d{2}-\d{2}): (.+)$"
     )
@@ -149,10 +158,76 @@ def extract_bullet_entries(section_lines: list[str]) -> list[dict]:
     for e in entries:
         while e["body_lines"] and not e["body_lines"][-1].strip():
             e["body_lines"].pop()
+
+    # Fallback: no dated entries found but the section has bullets.
+    if not entries and fallback_date is not None:
+        dateless = extract_dateless_bullets(section_lines, fallback_date)
+        if dateless:
+            print(
+                f"  note: no dated bullets found; extracting {len(dateless)} "
+                f"dateless bullet(s) with fallback date {fallback_date}"
+            )
+            return dateless
+
     return entries
 
 
-def extract_decisions(content: str) -> list[dict]:
+def extract_dateless_bullets(
+    section_lines: list[str],
+    fallback_date: str,
+) -> list[dict]:
+    """Extract bullets that have no leading YYYY-MM-DD date.
+
+    Supports two common formats:
+      `- **Topic**: body` — title is the bold phrase
+      `- body without bold` — title is the first sentence or first 100 chars
+
+    All entries are assigned `fallback_date` (typically the migration-run date)
+    because the source bullets have no inherent date.
+    """
+    entries: list[dict] = []
+    current: dict | None = None
+    bullet_pattern = re.compile(r"^- (.+)$")
+    bold_title = re.compile(r"^\*\*([^*]+)\*\*:?\s*(.*)$")
+
+    for line in section_lines:
+        m = bullet_pattern.match(line)
+        if m:
+            if current:
+                entries.append(current)
+            content = m.group(1).strip()
+
+            bold_m = bold_title.match(content)
+            if bold_m:
+                title = bold_m.group(1).strip().rstrip(":")
+            else:
+                sentence_m = re.search(r"[.!?](?:\s|$)", content)
+                end_idx = (
+                    sentence_m.start() if sentence_m else min(len(content), 100)
+                )
+                title = content[:end_idx].strip() or content[:100].strip()
+
+            current = {
+                "date": fallback_date,
+                "superseded_date": None,
+                "superseded_reason": None,
+                "title": title,
+                "body_lines": [content],
+            }
+        elif current is not None:
+            current["body_lines"].append(line.rstrip())
+
+    if current:
+        entries.append(current)
+
+    for e in entries:
+        while e["body_lines"] and not e["body_lines"][-1].strip():
+            e["body_lines"].pop()
+
+    return entries
+
+
+def extract_decisions(content: str, fallback_date: str) -> list[dict]:
     section = find_section(
         content,
         [r"^## Decisions Made \(legacy", r"^## Decisions Made$"],
@@ -160,10 +235,12 @@ def extract_decisions(content: str) -> list[dict]:
     if section is None:
         return []
     start, end = section
-    return extract_bullet_entries(content.split("\n")[start + 1 : end])
+    return extract_bullet_entries(
+        content.split("\n")[start + 1 : end], fallback_date
+    )
 
 
-def extract_gotchas(content: str) -> list[dict]:
+def extract_gotchas(content: str, fallback_date: str) -> list[dict]:
     section = find_section(
         content,
         [
@@ -174,15 +251,19 @@ def extract_gotchas(content: str) -> list[dict]:
     if section is None:
         return []
     start, end = section
-    return extract_bullet_entries(content.split("\n")[start + 1 : end])
+    return extract_bullet_entries(
+        content.split("\n")[start + 1 : end], fallback_date
+    )
 
 
-def extract_archived(content: str) -> list[dict]:
+def extract_archived(content: str, fallback_date: str) -> list[dict]:
     section = find_section(content, [r"^## Archived"])
     if section is None:
         return []
     start, end = section
-    return extract_bullet_entries(content.split("\n")[start + 1 : end])
+    return extract_bullet_entries(
+        content.split("\n")[start + 1 : end], fallback_date
+    )
 
 
 def write_recent_work(entry: dict, out_dir: Path, dry_run: bool) -> Path:
@@ -261,12 +342,14 @@ def main() -> int:
         print("ERROR: CLAUDE.md not found at project root.", file=sys.stderr)
         return 1
 
+    today = datetime.date.today().isoformat()
+
     rw_entries = extract_recent_work(claude_md.read_text())
     if am_md.exists():
         am_content = am_md.read_text()
-        dec_entries = extract_decisions(am_content)
-        got_entries = extract_gotchas(am_content)
-        arch_entries = extract_archived(am_content)
+        dec_entries = extract_decisions(am_content, today)
+        got_entries = extract_gotchas(am_content, today)
+        arch_entries = extract_archived(am_content, today)
     else:
         dec_entries, got_entries, arch_entries = [], [], []
 
