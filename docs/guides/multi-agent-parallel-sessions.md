@@ -184,13 +184,92 @@ Field separator is `_` (underscore). Within-field separator is `-` (hyphen). Thi
 
 `resolve_agent_id` must emit an id containing only `[a-zA-Z0-9-]`. The hash fallback (`sha256(path)[:6]`) is hex-only and always valid. Env var and file overrides are validated: any whitespace or underscore is rejected with a warning; the agent falls through to the next precedence level.
 
+## 5. Commit-range partitioning
+
+Three routines need to identify "which commits belong to this session": `/update-sop` Step 3b (secondary-tracker reconciliation), `/update-sop` Step 11 (hard-block check), and `/restart-sop` Step 4 (drift guard). All three use the same rule: `git merge-base <default-branch> HEAD..HEAD`.
+
+### Why merge-base
+
+Each agent in a parallel session owns its own branch on its own worktree. Its new commits live between `merge-base(main, HEAD)` and `HEAD`. Anything before the merge-base is shared history (possibly another agent's work already merged to main). Anything after is this agent's own.
+
+This partitions cleanly without any explicit agent-identity tagging in commit messages, git config, or trailers. The git data model already provides per-agent scope via the branch.
+
+### Default branch detection
+
+```bash
+default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/@@')
+```
+
+`origin/HEAD` is a symbolic-ref that points to the default branch on the remote. Most clones set it automatically; `git remote set-head origin -a` re-detects it. Fallbacks:
+
+1. `origin/HEAD` symbolic-ref (preferred)
+2. `origin/main` if that ref exists
+3. `origin/master` if that ref exists
+4. `origin/develop` if that ref exists
+5. Empty range (no remote, or no recognisable default) — all three consumer steps become no-ops
+
+### Shared snippet
+
+```bash
+resolve_session_commit_range() {
+  local default_branch
+  default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/@@')
+  if [ -z "$default_branch" ]; then
+    for candidate in origin/main origin/master origin/develop; do
+      if git rev-parse --verify "$candidate" >/dev/null 2>&1; then
+        default_branch="$candidate"
+        break
+      fi
+    done
+  fi
+  if [ -z "$default_branch" ]; then
+    printf ''
+    return
+  fi
+
+  local base head_sha
+  base=$(git merge-base "$default_branch" HEAD 2>/dev/null)
+  head_sha=$(git rev-parse HEAD 2>/dev/null)
+  if [ -z "$base" ] || [ "$base" = "$head_sha" ]; then
+    printf ''
+    return
+  fi
+  printf '%s..HEAD' "$base"
+}
+```
+
+### Behaviour by scenario
+
+| Scenario | Default branch | `SESSION_RANGE` |
+|----------|----------------|-----------------|
+| Agent on `feature/foo`, branched from `main`, 3 commits | `origin/main` | `<base>..HEAD` (3 commits) |
+| Agent on `main` directly (solo mode, no branching) | `origin/main` | empty (`base == HEAD`) |
+| Agent on `main`, one commit ahead of `origin/main` | `origin/main` | `origin/main..HEAD` (1 commit) |
+| No remote configured | none | empty |
+| Freshly initialised repo, no commits | none | empty |
+| On a detached HEAD at an old commit | `origin/main` | `<base>..HEAD` (range valid) |
+
+In all "empty range" cases, consumer steps skip cleanly. No false positives, no false negatives, no need for special-casing in the main flow — guard with `if [ -n "$SESSION_RANGE" ]`.
+
+### Why not commit-author or trailers
+
+Alternatives considered and rejected:
+
+- **`git log --author=`:** requires each agent to set a distinct git author name. Fragile — humans share global git config, most agents would use the same committer identity.
+- **Commit trailers (`Agent: a7c3f2`):** requires every commit command in every agent's workflow to inject a trailer. Easy to forget on manual commits. No fallback.
+- **Last N commits:** old `/restart-sop` behaviour. Works for single-agent but mixes sibling agents' finding IDs in parallel mode, producing false-positive drift reports.
+
+Merge-base requires no discipline beyond the existing worktree+branch workflow. Worktrees already mandate separate branches; merge-base leverages that structure for free.
+
+### Cross-references
+
+- `.claude/commands/update-sop.md` Step 0a (defines `SESSION_RANGE`), Step 3b (consumes it), Step 11 (consumes it)
+- `.claude/commands/restart-sop.md` Step 0c (defines `SESSION_RANGE`), Step 4 (consumes it)
+
 ## Further sections (placeholder)
 
 The remaining mechanics are added to this guide as their batches ship:
 
-- Commit-range partitioning (Batch 1.3)
 - P-number renumber-on-merge (Batch 1.4)
 - Migration command (Batch 1.6)
 - Dogfood protocol results (Batch 1.7)
-
-Each cross-links back to the relevant step in `.claude/commands/update-sop.md` and `.claude/commands/restart-sop.md`.

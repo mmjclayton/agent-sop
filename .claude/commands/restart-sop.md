@@ -18,7 +18,7 @@ If stale, print: *"SOP update overdue — run `/update-agent-sop` to sync pristi
 
 ## Step 0b: Resolve agent identity
 
-Agent identity appears in filenames (`docs/recent-work/YYYY-MM-DD-<agent-id>-<slug>.md`), in per-agent `project_resume_<agent-id>.md`, and in commit-range partitioning for the drift guard (Step 4). Resolve it before reading any project files.
+Agent identity appears in filenames (`docs/recent-work/YYYY-MM-DD_<agent-id>_<slug>.md`), in per-agent `project_resume_<agent-id>.md`, and in commit-range partitioning for the drift guard (Step 4). Resolve it before reading any project files.
 
 Precedence: `CLAUDE_AGENT_ID` env var > `.sop-agent-id` file at worktree root > `solo` (single-worktree default) > 6-char hash of worktree path. See `docs/guides/multi-agent-parallel-sessions.md` Section 1 for full scenarios.
 
@@ -56,6 +56,43 @@ echo "Agent identity: $AGENT_ID"
 ```
 
 When `$AGENT_ID` is `solo`, Step 2 reads `project_resume.md` (legacy filename). When any other value, Step 2 reads `project_resume_<agent-id>.md` instead — see Step 2 note.
+
+## Step 0c: Resolve session commit range
+
+Step 4 (secondary-tracker drift guard) scans only this agent's own branch commits since branching from the default branch. In parallel multi-agent work, scanning last-N commits on main would mix sibling agents' finding IDs with this agent's — producing false-positive drift reports. Branch-since-main scanning partitions cleanly.
+
+```bash
+resolve_session_commit_range() {
+  local default_branch
+  default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/@@')
+  if [ -z "$default_branch" ]; then
+    for candidate in origin/main origin/master origin/develop; do
+      if git rev-parse --verify "$candidate" >/dev/null 2>&1; then
+        default_branch="$candidate"
+        break
+      fi
+    done
+  fi
+  if [ -z "$default_branch" ]; then
+    printf ''
+    return
+  fi
+
+  local base head_sha
+  base=$(git merge-base "$default_branch" HEAD 2>/dev/null)
+  head_sha=$(git rev-parse HEAD 2>/dev/null)
+  if [ -z "$base" ] || [ "$base" = "$head_sha" ]; then
+    printf ''
+    return
+  fi
+  printf '%s..HEAD' "$base"
+}
+
+SESSION_RANGE=$(resolve_session_commit_range)
+echo "Session commit range: ${SESSION_RANGE:-<empty — on default branch or no divergence>}"
+```
+
+When `SESSION_RANGE` is empty, the drift guard in Step 4 is a no-op.
 
 ## Determine checklist type
 
@@ -119,14 +156,16 @@ Run `git log --oneline -10` and cross-check against:
 
 If anything is inconsistent, flag it before proceeding.
 
-**Secondary-tracker drift guard:** if any of the last 10 commit messages reference a finding ID (e.g. `fix(audit): A1`, `fix(security): H-3`, `feat(migration): M5`), verify the matching entries are marked `[SHIPPED - YYYY-MM-DD]` in their tracker file. Detect trackers the same way `/update-sop` Step 3b does — `.md` files in CLAUDE.md's Key Documents that use heading-level status tags.
+**Secondary-tracker drift guard:** partition commits by branch — use `SESSION_RANGE` from Step 0c. In parallel multi-agent work this restricts the scan to this agent's own branch, so sibling agents' finding IDs are not miscounted as this agent's drift. Detect trackers the same way `/update-sop` Step 3b does — `.md` files in CLAUDE.md's Key Documents that use heading-level status tags.
 
 ```bash
-git log --format='%s' -10 | grep -oE '\b[A-Z]+-?[0-9]+\b' | sort -u
-# For each ID, grep tracker files; any still-[OPEN] is drift from a prior session
+if [ -n "$SESSION_RANGE" ]; then
+  git log "$SESSION_RANGE" --format='%s' | grep -oE '\b[A-Z]+-?[0-9]+\b' | sort -u
+  # For each ID, grep tracker files; any still-[OPEN] is drift from a prior session on this branch
+fi
 ```
 
-Flag any stale `[OPEN]` entries in Step 6 so the user can choose to reconcile before new work begins. Do not auto-reconcile — prior sessions may have had a reason to leave them open.
+When `SESSION_RANGE` is empty (agent on default branch directly, no diverging commits), the drift guard is a no-op. Flag any stale `[OPEN]` entries in Step 6 so the user can choose to reconcile before new work begins. Do not auto-reconcile — prior sessions may have had a reason to leave them open.
 
 ### Step 5: Read the current work item
 

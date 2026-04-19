@@ -7,7 +7,7 @@ Execute the Agent SOP session end checklist. Complete every step below before th
 
 ## Step 0: Resolve agent identity
 
-Agent identity appears in filenames (`docs/recent-work/YYYY-MM-DD-<agent-id>-<slug>.md`), in per-agent `project_resume_<agent-id>.md`, and in commit-range partitioning routines (Step 3b, Step 11). Resolve it first so every subsequent step uses a consistent value.
+Agent identity appears in filenames (`docs/recent-work/YYYY-MM-DD_<agent-id>_<slug>.md`), in per-agent `project_resume_<agent-id>.md`, and in commit-range partitioning routines (Step 3b, Step 11). Resolve it first so every subsequent step uses a consistent value.
 
 Precedence: `CLAUDE_AGENT_ID` env var > `.sop-agent-id` file at worktree root > `solo` (single-worktree default) > 6-char hash of worktree path. See `docs/guides/multi-agent-parallel-sessions.md` Section 1 for full scenarios.
 
@@ -45,6 +45,43 @@ echo "Agent identity: $AGENT_ID"
 ```
 
 If `$AGENT_ID` is `solo`, single-agent conventions apply. If it is any other value, parallel-session conventions apply — see `docs/guides/multi-agent-parallel-sessions.md`.
+
+## Step 0a: Resolve session commit range
+
+Step 3b (secondary-tracker reconciliation) and Step 11 (hard-block reconciliation check) both partition commits by "what this session added to its branch, not yet on the default branch". Resolve the range once so both steps use it consistently.
+
+```bash
+resolve_session_commit_range() {
+  local default_branch
+  default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/@@')
+  if [ -z "$default_branch" ]; then
+    for candidate in origin/main origin/master origin/develop; do
+      if git rev-parse --verify "$candidate" >/dev/null 2>&1; then
+        default_branch="$candidate"
+        break
+      fi
+    done
+  fi
+  if [ -z "$default_branch" ]; then
+    printf ''
+    return
+  fi
+
+  local base head_sha
+  base=$(git merge-base "$default_branch" HEAD 2>/dev/null)
+  head_sha=$(git rev-parse HEAD 2>/dev/null)
+  if [ -z "$base" ] || [ "$base" = "$head_sha" ]; then
+    printf ''
+    return
+  fi
+  printf '%s..HEAD' "$base"
+}
+
+SESSION_RANGE=$(resolve_session_commit_range)
+echo "Session commit range: ${SESSION_RANGE:-<empty — on default branch or no divergence>}"
+```
+
+When `SESSION_RANGE` is empty, Step 3b and Step 11's commit enumeration become no-ops — correct behaviour when an agent is committing directly to `main` or has made no commits yet. Guard every consumer with `if [ -n "$SESSION_RANGE" ]; then ... fi`.
 
 ## Step 1: Self-evaluate against Definition of Done
 
@@ -88,12 +125,17 @@ done
 
 **For each detected tracker:**
 
-1. Identify this session's commits that reference a finding ID — e.g. `fix(audit): A1`, `fix(security): H-3`, `feat(migration): M5`. Run `git log --format='%s' [since-last-/update-sop]` to enumerate.
+1. Identify this session's commits that reference a finding ID — e.g. `fix(audit): A1`, `fix(security): H-3`, `feat(migration): M5`. Use the `SESSION_RANGE` resolved in Step 0a — it naturally partitions commits per-agent via `git merge-base`, so parallel sessions on sibling branches never contaminate each other's reconciliation.
+   ```bash
+   if [ -n "$SESSION_RANGE" ]; then
+     git log "$SESSION_RANGE" --format='%s' | grep -oE '\b[A-Z]+-?[0-9]+\b' | sort -u
+   fi
+   ```
 2. For each referenced ID, locate the matching entry in the tracker and update its status tag: `[OPEN]` → `[SHIPPED - YYYY-MM-DD]`. Preserve the entry body. Never delete.
 3. Update the tracker's `Last updated:` header (if present) to today's date.
 4. Apply the same tag discipline as `Backlog.md`: status first, `[WON'T]` requires an inline reason, `[DEFERRED]` for intentional postponement.
 
-Skip this step only if no `.md` files in Key Documents match the tracker detection. Projects with no secondary trackers see a no-op.
+Skip this step entirely when `SESSION_RANGE` is empty (agent is on the default branch directly with no diverging commits). Projects with no secondary trackers also see a no-op regardless of range.
 
 ## Step 4: Update docs/feature-map.md
 
@@ -264,8 +306,20 @@ After completing all steps, report:
 
 **Reconciliation check (hard block):** before finalising Step 10 (commit), verify that every finding ID referenced in this session's commit messages is now marked `[SHIPPED - YYYY-MM-DD]` (or explicitly `[DEFERRED]` / `[BLOCKED]`) in its tracker. Any ID still `[OPEN]` means Step 3b missed it — return to Step 3b and reconcile before committing. Do not proceed to Step 10 with unreconciled IDs.
 
+Use `SESSION_RANGE` from Step 0a so the check partitions per-agent in parallel sessions — sibling agents' finding IDs in other branches do not count as this agent's drift.
+
 ```bash
-# Enumerate IDs referenced in this session's commits
-git log --format='%s' [range] | grep -oE '\b[A-Z]+-?[0-9]+\b' | sort -u
-# For each ID, grep the tracker files — any still-[OPEN] match is a block
+if [ -n "$SESSION_RANGE" ]; then
+  IDS=$(git log "$SESSION_RANGE" --format='%s' | grep -oE '\b[A-Z]+-?[0-9]+\b' | sort -u)
+  for id in $IDS; do
+    for tracker in $(detect_trackers); do  # same detection as Step 3b
+      if grep -qE "^##+ .*${id}.*\[OPEN\]" "$tracker"; then
+        echo "BLOCK: ${id} still [OPEN] in ${tracker}"
+        exit 1
+      fi
+    done
+  done
+fi
 ```
+
+When `SESSION_RANGE` is empty, the check is a no-op — correct for agents on the default branch directly.
