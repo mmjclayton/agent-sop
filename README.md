@@ -127,48 +127,15 @@ Both target the "Claude Code has no memory across sessions" problem. They solve 
 
 **When to use both together:** the Agent SOP's prescriptive file set is your canonical project state (decisions, backlog, build plan). claude-mem or an equivalent becomes an optional retrieval layer over conversation transcripts — useful for recalling "how did that debugging session actually go" without polluting the curated `docs/agent-memory/decisions/` store. Agent SOP even ports three patterns from claude-mem (progressive retrieval, capture-time redaction, fail-open hooks) — see `docs/guides/optional-patterns.md` for the integration notes.
 
-### vs [`affaan-m/everything-claude-code`](https://github.com/affaan-m/everything-claude-code)
-
-everything-claude-code is a reference collection of hooks, commands, skills, and rules you can adopt à la carte. Agent SOP is a coherent opinionated system — a smaller surface designed to be adopted as a whole. The two are compatible: Agent SOP references ECC-style patterns in its guides and takes inspiration for some of the agent definitions.
-
-### vs [`thedotmack/superpowers`](https://github.com/thedotmack/superpowers)
-
-superpowers is a skill-discovery framework. Agent SOP doesn't discover anything — it's a fixed, small library with an explicit update command. Use superpowers to find skills; use Agent SOP to write down decisions.
-
 ### vs no tooling
 
 The common alternative is free-form notes in `README.md` or `docs/`, updated when someone remembers. That works for solo projects until you try to come back after a month or hand off to another agent. The benchmark gap (+33% on vague prompts) is mostly this: agents with structured context don't waste tool calls reconstructing what was already decided.
-
-## Benchmarks
-
-The SOP has been A/B tested against a baseline (no SOP context) using blind-scored agent pairs on identical tasks against a real production codebase (hst-tracker, ~15K lines, 7 models, 855 tests).
-
-| Round | Date | Conditions | Result |
-|-------|------|-----------|--------|
-| R1 | 2026-04-09 | Precise prompts, Opus 4.6, fresh CLI sessions | SOP +8% (68/72 vs 62/72) |
-| R2 | 2026-04-09 | Vague prompts, Opus 4.6, fresh CLI sessions | SOP +33% (78/84 vs 50/84) |
-| R5 | 2026-04-17 | Vague prompts, Opus 4.7, subagent methodology, post-P32-P36 trim | SOP +16% directional (75/84 vs 61/84) |
-
-R5 is methodologically weaker than R1-R2 (subagents not fresh CLI; Opus 4.7 baseline more capable than R2's 4.6; single round). A full R6 on the post-P40 SOP, fresh CLI sessions, model matched to R2, is open work.
-
-The single-task scores measure code quality on individual tasks. The SOP also produces durable artefacts that compound across sessions — the session-hygiene rubric and longitudinal exhibit in [`docs/benchmark/`](docs/benchmark/) capture that dimension.
 
 ## Token efficiency
 
 Session start reads ~6,400 raw tokens (~10,900 with Claude Code's 1.7× file-read overhead) on a mature project — about 1.1% of a 1M context window or 5.5% of a 200k window. The full library totals ~38-49K tokens; the session start checklist reads about 8% of that. The remaining 92% is accessed on demand through the dispatch table and line-range hints.
 
 After the first turn, Anthropic's prompt caching applies a 90% discount on cache hits, reducing recurring per-turn cost of loaded files to ~1,000 effective tokens.
-
-## Status
-
-Active. Core SOP, templates, slash commands, compliance checker, reference agents, cross-project sync mechanism, and parallel multi-agent session support are all shipped.
-
-Recent work:
-- **P43 (2026-04-19) — Parallel multi-agent sessions** — `[SHIPPED]`. Directory-per-entry structure, commit-range partitioning via `git merge-base`, P-number collision detection, idempotent rollup, per-agent resume snapshots, migration tooling. Dogfood-validated on hst-tracker with three parallel subagents; 2 expected merge conflicts resolved mechanically, 855/855 tests pass on merged main.
-- **P42 (2026-04-19)** — secondary-tracker reconciliation in `/update-sop` + `[DEFERRED]` status tag.
-- **P32-P40 (2026-04-17)** — six non-negotiable rules in Section 0 (was two), core SOP trimmed ~230 → ~178 instructions, `/update-agent-sop` sync mechanism shipped, R5 post-trim benchmark pilot, measurement gap closed (session-hygiene rubric, continuity methodology, longitudinal exhibit).
-
-Open work: P24 multi-agent optimisation guide, P8-P10 domain variants (web app, marketing, data/analytics), per-project `exclude` config field, R6 full benchmark. Roadmap and full work history: [`Backlog.md`](Backlog.md).
 
 ## Requirements
 
@@ -181,4 +148,8 @@ Other dependencies:
 
 ## License
 
-MIT. See [`LICENSE`](LICENSE).
+MIT License. Copyright (c) 2026 Matt Clayton.
+
+Use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of this software freely — commercial or personal, closed-source or open. The single condition is that the copyright notice and the MIT permission notice are included in all copies or substantial portions. No warranty of any kind, express or implied.
+
+Full legal text: [`LICENSE`](LICENSE).
