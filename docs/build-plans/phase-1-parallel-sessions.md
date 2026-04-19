@@ -206,18 +206,21 @@ Derived summary that replaces prepend-semantic Recent Work:
 
 ---
 
-## Batch 1.4 — P-number renumber-on-merge
+## Batch 1.4 — P-number collision detection + manual renumber helper
+
+**Scope narrowed:** auto-renumber is deferred because the renumber surface (filenames in three directories, body references in archived narrative, rollup lines, Batch Log) is too broad to apply mechanically without human review. Batch 1.4 ships detection + hard-block + a shell helper the agent runs manually. Auto-renumber becomes a follow-up if dogfood shows the manual helper is frictional.
 
 **Files touched:**
-- `.claude/commands/update-sop.md` (Step 3 pre-check: fetch + compare + renumber)
-- `docs/guides/multi-agent-parallel-sessions.md` (P-number collision section)
+- `.claude/commands/update-sop.md` (new Step 2a: P-number collision detection + hard block)
+- `docs/guides/multi-agent-parallel-sessions.md` (Section 6: collision mechanics + `renumber_p` shell helper)
 
 **Acceptance criteria:**
-- Script detects overlap between local new P-numbers and `origin/main` P-numbers
-- Renumbers in-place: Backlog.md, feature-map.md, CLAUDE.md rollup entries, recent-work/, decisions/, gotchas/, build plan Batch Log entries
-- Surfaces the renumber action in Step 11 report ("P50 → P53 to avoid collision with main's P50")
-- No-op when no overlap
-- Does not trigger when agent is on `main` directly
+- Step 2a detects P-numbers that exist on both this branch and the default branch with different content (heuristic: title line comparison)
+- When a collision is detected, `/update-sop` prints the colliding P-numbers + the next free P-number on the default branch + the exact `renumber_p` commands to run; exits non-zero
+- When no collisions exist, Step 2a is silent and `/update-sop` proceeds to Step 3
+- When `git fetch origin` fails, Step 2a warns but does not block (degrade gracefully for offline work)
+- `renumber_p` helper in the guide covers: heading + body references via `perl -i -pe '\\bP<old>\\b/P<new>/g'`, filename renames via `git mv` across recent-work/, decisions/, gotchas/
+- Document `git diff` review step and why auto-renumber was deferred
 
 ---
 

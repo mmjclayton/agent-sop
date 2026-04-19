@@ -266,10 +266,84 @@ Merge-base requires no discipline beyond the existing worktree+branch workflow. 
 - `.claude/commands/update-sop.md` Step 0a (defines `SESSION_RANGE`), Step 3b (consumes it), Step 11 (consumes it)
 - `.claude/commands/restart-sop.md` Step 0c (defines `SESSION_RANGE`), Step 4 (consumes it)
 
+## 6. P-number collisions and the `renumber_p` helper
+
+Backlog.md P-numbers are sequential and non-reusable (core SOP Section 9). When parallel agents discover new work items before either merges to main, they can independently pick the same next integer. `/update-sop` Step 2a detects the collision by diffing P-number headings on the branch against the default branch; the collision is hard-blocked with a specific renumber command.
+
+Rather than auto-renumber, `/update-sop` reports and the agent runs a shell helper. Auto-renumber is deferred because the renumber touches too many surfaces (headings, body references, filenames in three directories, rollup lines, build plan Batch Log entries) to apply safely without human review.
+
+### When collisions happen
+
+| Scenario | Collision? |
+|----------|-----------|
+| Agent A on feat/a adds P50 at T1; agent B on feat/b adds P50 at T2; A merges to main first; B runs /update-sop | Yes — B's P50 overlaps main's P50 with different content |
+| Both agents pick P50 for the same item (e.g. same refactor the user asked both to do) | Detected, but titles match — treated as a no-op by the heuristic |
+| Agent A ships P50 and merges; agent B pulls main, then adds P51 fresh | No — B is strictly above main_max |
+| Agent branches from main one day, works offline, returns after main advanced past their local P-number | Yes — exactly the collision case |
+
+### The helper
+
+Paste this into the shell in the affected worktree and run it per collision surfaced by Step 2a:
+
+```bash
+renumber_p() {
+  local old=$1 new=$2
+  if [ -z "$old" ] || [ -z "$new" ]; then
+    echo "usage: renumber_p <old-pnum> <new-pnum>"
+    return 1
+  fi
+
+  echo "Renumber P${old} → P${new}"
+
+  # Rename files in per-entry directories where filenames encode the P-number
+  for dir in docs/recent-work docs/agent-memory/decisions docs/agent-memory/gotchas; do
+    [ -d "$dir" ] || continue
+    for old_path in "$dir"/*_p${old}-*.md "$dir"/*_p${old}.md; do
+      [ -f "$old_path" ] || continue
+      local new_path
+      new_path=$(printf '%s' "$old_path" | sed "s/_p${old}-/_p${new}-/g; s/_p${old}\\.md\$/_p${new}.md/")
+      git mv "$old_path" "$new_path"
+    done
+  done
+
+  # Body substitution via perl (cross-platform word boundaries)
+  local files
+  files=$(find Backlog.md CLAUDE.md docs/feature-map.md docs/build-plans \
+          docs/recent-work docs/agent-memory/decisions docs/agent-memory/gotchas \
+          -type f -name '*.md' 2>/dev/null)
+  [ -n "$files" ] && perl -i -pe "s/\\bP${old}\\b/P${new}/g" $files
+
+  echo "Done. Review with: git diff"
+  echo "Then run /update-sop again; the collision check will pass."
+}
+```
+
+### Review before commit
+
+Always run `git diff` after `renumber_p` and verify:
+
+1. All references changed are P-number references (not incidental `P${old}` substrings in prose)
+2. Filenames renamed correctly (check with `git status`)
+3. No references survived in older archived files that shouldn't change
+
+If any incidental match is wrong, fix by hand before the next `/update-sop` run.
+
+### Why not auto-renumber
+
+- Filename-in-slug coupling: `2026-04-18_a7c3f2_p50-fix-tonnage.md` encodes the P-number in the filename. Auto-rename via `git mv` plus body substitution requires traversing three directories.
+- Prose-reference risk: an Archived decision may mention "P50 was superseded by P60". Mechanical substitution could corrupt historical narrative.
+- Commit-message references: git log messages mentioning the old P-number are immutable (except via history rewrite). Renaming doesn't update them.
+
+Ship the detection now; defer auto-renumber until dogfood surfaces whether the manual helper is too frictional.
+
+### Cross-references
+
+- `.claude/commands/update-sop.md` Step 2a (detection + block)
+- Core SOP Section 9 (P-number assignment rules)
+
 ## Further sections (placeholder)
 
 The remaining mechanics are added to this guide as their batches ship:
 
-- P-number renumber-on-merge (Batch 1.4)
 - Migration command (Batch 1.6)
 - Dogfood protocol results (Batch 1.7)

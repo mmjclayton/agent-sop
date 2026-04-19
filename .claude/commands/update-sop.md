@@ -99,6 +99,69 @@ If this is a code project with a test suite, run the full test suite now. Fix an
 
 Skip this step for documentation-only or markdown-only projects.
 
+## Step 2a: Check for P-number collisions with the default branch
+
+When multiple agents run in parallel, two sessions can assign the same P-number to different items before either merges to main. This step detects the collision before `/update-sop` writes conflicting entries. Hard-blocks if found — resolution is manual, via the `renumber_p` helper in `docs/guides/multi-agent-parallel-sessions.md` Section 6.
+
+```bash
+detect_pnumber_collisions() {
+  git fetch origin --quiet 2>/dev/null || {
+    echo "Warning: could not fetch origin. Skipping P-number collision check."
+    return 0
+  }
+
+  local default_branch
+  default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/@@')
+  if [ -z "$default_branch" ]; then
+    for candidate in origin/main origin/master origin/develop; do
+      if git rev-parse --verify "$candidate" >/dev/null 2>&1; then
+        default_branch="$candidate"; break
+      fi
+    done
+  fi
+  [ -z "$default_branch" ] && return 0
+
+  local branch_pnums main_pnums collisions=""
+  branch_pnums=$(grep -oE '^### P[0-9]+' Backlog.md 2>/dev/null | grep -oE '[0-9]+' | sort -u)
+  main_pnums=$(git show "${default_branch}:Backlog.md" 2>/dev/null | grep -oE '^### P[0-9]+' | grep -oE '[0-9]+' | sort -u)
+
+  for p in $branch_pnums; do
+    if printf '%s\n' "$main_pnums" | grep -qx "$p"; then
+      # Same P-number on both sides — check if content differs (titles only as a cheap heuristic)
+      local branch_title main_title
+      branch_title=$(awk -v p="### P${p}" '$0 ~ "^"p"($| )" {getline; getline; print; exit}' Backlog.md 2>/dev/null)
+      main_title=$(git show "${default_branch}:Backlog.md" 2>/dev/null | awk -v p="### P${p}" '$0 ~ "^"p"($| )" {getline; getline; print; exit}')
+      if [ "$branch_title" != "$main_title" ]; then
+        collisions="$collisions $p"
+      fi
+    fi
+  done
+
+  if [ -n "$collisions" ]; then
+    local max_main
+    max_main=$(printf '%s\n' "$main_pnums" | sort -n | tail -1)
+    echo ""
+    echo "BLOCK: P-number collision(s) detected with ${default_branch}"
+    echo "The following P-numbers exist on both this branch and ${default_branch} with different content:"
+    for p in $collisions; do echo "  - P${p}"; done
+    echo ""
+    echo "Next free P-number on ${default_branch}: P$((max_main + 1))"
+    echo ""
+    echo "Resolve with the renumber_p helper from docs/guides/multi-agent-parallel-sessions.md Section 6:"
+    local next=$((max_main + 1))
+    for p in $collisions; do echo "  renumber_p ${p} ${next}"; next=$((next + 1)); done
+    echo ""
+    echo "Then re-run /update-sop."
+    return 1
+  fi
+  return 0
+}
+
+detect_pnumber_collisions || exit 1
+```
+
+When no collisions are found, this step is silent. When a collision is found, stop — do not proceed to Step 3 until the agent has run the renumber helper and verified the result with `git diff`.
+
 ## Step 3: Update Backlog.md
 
 - Update status tags for any items worked on this session (e.g. `[OPEN]` to `[IN PROGRESS]`, or `[IN PROGRESS]` to `[SHIPPED - YYYY-MM-DD]`)
