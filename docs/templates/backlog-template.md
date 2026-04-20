@@ -16,6 +16,15 @@ Single source of truth for all work items. Never delete without a trace — upda
 - `[VERIFIED]` means tested in production (code projects) or reviewed and confirmed accurate (docs projects).
 - P-numbers are assigned sequentially, never reused, and do not imply priority.
 
+## Item Sizing
+
+Each item should be small enough to ship in a single PR with a single clear outcome. **Rule of thumb:** if the title or description needs "and" or multiple top-level bullets, split it into separate P-numbered items.
+
+- BAD: `### P12 — Implement user authentication` (scope unbounded: routes, schema, UI, emails, rate limiting, tests all bundled)
+- GOOD: `### P12 — Add \`/api/auth/login\` endpoint with Zod schema + tests`, plus `### P13 — Add login form component`, plus `### P14 — Add session token storage`, and so on
+
+Small items review faster, roll back cleanly, and let multiple agents work in parallel. A P-number that never ships because it was too big is worse than three that do.
+
 ---
 
 ## P-Numbered Items

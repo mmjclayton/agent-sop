@@ -770,6 +770,24 @@ External feedback (2026-04-19) named mid-session state drift as the central fail
 
 ---
 
+### P48 — Reviewer voice rules + Backlog item-sizing pedagogy
+`[IN PROGRESS] [Iteration]`
+
+Source: direct review of `levu304/claude-code-boilerplate` (2026-04-20). Two transferable patterns identified; the rest of the repo is aspirational prose or duplicates `~/.claude/rules/`.
+
+**Scope:**
+- Lift the reviewer-voice rules (format, drop-list, keep-list, auto-clarity carve-out, before/after examples) from the boilerplate's `review-local-changes` SKILL into `.claude/agents/code-reviewer.md`. Tightens every finding's prose without changing the severity taxonomy or output template.
+- Add a brief "Item Sizing" section to `docs/templates/backlog-template.md` teaching the "split if it needs 'and' or multiple bullets" heuristic plus a single BAD/GOOD example pair.
+
+**Out of scope:** absorbing the boilerplate CLAUDE.md, forking a sibling coding-standards project, pulling any other agents or skills. See decision file for the full "not worth engaging" rationale.
+
+**Acceptance criteria:**
+- `code-reviewer.md` gains a "Finding Voice" section with format, drop/keep lists, examples; severity taxonomy and output template unchanged.
+- `backlog-template.md` gains ~6 lines of item-sizing guidance with one BAD/GOOD pair.
+- No net increase in core SOP instruction count (templates and agents are not counted against the ceiling).
+
+---
+
 ### P47 — Drift check: resume-file fallback fails on multi-worktree projects with legacy unsuffixed resume
 `[SHIPPED - 2026-04-20] [Bug]`
 
