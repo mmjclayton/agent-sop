@@ -24,7 +24,7 @@ See CLAUDE.md Key Documents table.
 
 ## In-Flight Work
 
-*(none — P43 dogfood completed 2026-04-19; P44/P45/P46/P47 all shipped 2026-04-19/20)*
+- solo (2026-04-20): P49 — `/update-sop` step-timing instrumentation. Sample 1 of 3 captured this session. Two more sessions needed before deciding on refactor.
 
 ---
 

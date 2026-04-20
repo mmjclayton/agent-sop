@@ -788,6 +788,29 @@ Source: direct review of `levu304/claude-code-boilerplate` (2026-04-20). Two tra
 
 ---
 
+### P49 — Instrument `/update-sop` step timing before any trim refactor
+`[OPEN] [Iteration]`
+
+Surfaced 2026-04-20. Commands feel slow; first-pass estimate claimed ~35-40% line cut possible by extracting bash gates to scripts. That estimate conflated two kinds of slowness — token read cost per invocation vs wall-clock time the agent spends thinking through steps — and was not grounded in measurement. Refactoring before measuring risks churn without hitting the real bottleneck.
+
+**Hypothesis (to confirm or disprove):**
+- Perceived slowness is dominated by Step 1b reviewer-turn (subagent spawn), Step 5 decision/gotcha file writing, and Step 8 recent-work entry drafting — not by the 446-line command read cost.
+- If true, extracting bash gates to scripts is cosmetic. The useful interventions would be making the reviewer-turn opt-out cheaper, or templating Step 5/8 more aggressively.
+
+**Approach:**
+- Over the next 2-3 real `/update-sop` runs, capture wall-clock per step. Simplest instrumentation: wrap each step with `date +%s` before/after in a session log (e.g. `docs/instrumentation/YYYY-MM-DD_update-sop-timing.md`). No code changes to the command itself — the agent records times as it works.
+- Log session characteristics: solo vs multi-agent, docs-only vs code, which gates fired vs no-op'd, whether Step 1b triggered.
+- After 3 sessions, summarise which steps dominate. File a follow-up refactor item (P50) only if the data supports it.
+
+**Acceptance criteria:**
+- Three instrumented sessions captured with per-step timings
+- Summary table of median/max time per step across the three
+- Explicit decision recorded in `docs/agent-memory/decisions/`: refactor (with scope) or abandon (with reason)
+
+**Out of scope:** any actual refactor of `/update-sop`, `/update-agent-sop`, or gate extraction. This item is measurement only.
+
+---
+
 ### P47 — Drift check: resume-file fallback fails on multi-worktree projects with legacy unsuffixed resume
 `[SHIPPED - 2026-04-20] [Bug]`
 
