@@ -130,8 +130,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 ## Recent Work (rollup)
 
 <!-- recent-work-rollup:start -->
-*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-04-19.*
+*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-04-20.*
 
+- 2026-04-20 `solo`: P47 legacy-resume fallback shipped
 - 2026-04-19 `solo`: README update + hst-tracker sync + P47 filing
 - 2026-04-19 `solo`: P46 mid-session drift detection shipped
 - 2026-04-19 `solo`: P45 state-transition validator shipped

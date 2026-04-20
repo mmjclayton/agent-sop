@@ -55,7 +55,7 @@ AGENT_ID=$(resolve_agent_id)
 echo "Agent identity: $AGENT_ID"
 ```
 
-When `$AGENT_ID` is `solo`, Step 2 reads `project_resume.md` (legacy filename). When any other value, Step 2 reads `project_resume_<agent-id>.md` instead — see Step 2 note.
+When `$AGENT_ID` is `solo`, Step 2 reads `project_resume.md` (legacy filename). When any other value, Step 2 reads `project_resume_<agent-id>.md` first, and falls back to the legacy unsuffixed `project_resume.md` if the per-agent file is absent — supports long-lived projects that predate the per-agent convention. See Step 2 note.
 
 ## Step 0c: Resolve session commit range
 
@@ -103,7 +103,18 @@ root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
 if [ -n "$root" ]; then
   project_hash=$(printf '%s' "$root" | sed 's|[^a-zA-Z0-9-]|-|g' | sed 's|--*|-|g' | sed 's|^-||')
   resume="$HOME/.claude/projects/-$project_hash/memory/project_resume_${AGENT_ID:-solo}.md"
-  [ ! -f "$resume" ] && [ "${AGENT_ID:-solo}" = "solo" ] && resume="$HOME/.claude/projects/-$project_hash/memory/project_resume.md"
+  # Fallback: legacy unsuffixed project_resume.md. Always tried when the
+  # per-agent file is absent, regardless of AGENT_ID. Long-lived projects
+  # predating the per-agent filename convention keep the reassertion working
+  # without forcing `/migrate-to-multi-agent` first. On non-`solo` agents,
+  # emit a one-line advisory so the operator knows to migrate.
+  if [ ! -f "$resume" ]; then
+    legacy="$HOME/.claude/projects/-$project_hash/memory/project_resume.md"
+    if [ -f "$legacy" ]; then
+      resume="$legacy"
+      [ "${AGENT_ID:-solo}" != "solo" ] && echo "Reading legacy unsuffixed resume ($resume). Run \`/migrate-to-multi-agent\` to move to per-agent format."
+    fi
+  fi
   if [ -f "$resume" ]; then
     pnums=$(grep -oE '\bP[0-9]+\b' "$resume" | sort -u | tr '\n' ' ' | sed 's/ *$//')
     [ -n "$pnums" ] && echo "In-flight declared: $pnums (from $resume)"

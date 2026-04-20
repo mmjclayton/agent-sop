@@ -105,6 +105,8 @@ AGENT_ID=$(resolve_agent_id)
 
 **Not in a git repo:** `git rev-parse --show-toplevel` fails; falls through to `solo`. Non-git usage is supported for documentation-only test runs.
 
+**Long-lived project predating per-agent filenames (legacy `project_resume.md`):** if a project has multiple worktrees but only a legacy unsuffixed `project_resume.md` in its memory directory, both the `/restart-sop` Step 0d reassertion and `validate-state-transitions.sh --check-drift` fall back to that file even when `$AGENT_ID` is a hash or role name. On the fallback path an advisory prints: *"reading legacy unsuffixed resume file. Run `/migrate-to-multi-agent` to move to per-agent format."* Enforcement keeps working without forcing migration first; the advisory signals that migration is overdue.
+
 ## 2. Directory-per-entry structure
 
 The single biggest source of merge conflicts between parallel agents is concurrent appends to narrative sections — especially prepends to `CLAUDE.md` Recent Work and appends to `docs/agent-memory.md` Decisions and Gotchas. Phase 1 moves those sections to per-entry directories:

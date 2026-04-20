@@ -771,7 +771,7 @@ External feedback (2026-04-19) named mid-session state drift as the central fail
 ---
 
 ### P47 — Drift check: resume-file fallback fails on multi-worktree projects with legacy unsuffixed resume
-`[OPEN] [Bug]`
+`[SHIPPED - 2026-04-20] [Bug]`
 
 Surfaced during hst-tracker P44/P45/P46 sync on 2026-04-19. The drift-check path resolution:
 ```

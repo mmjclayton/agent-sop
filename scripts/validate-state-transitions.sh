@@ -129,10 +129,13 @@ if [ "$MODE" = "check-drift" ]; then
   # Resolve resume file
   resume_file="$DRIFT_RESUME_FILE"
   if [ -z "$resume_file" ]; then
+    # Always resolve worktree root first — used both for agent-id derivation
+    # and for the memory-dir path below. Without this, `$root` is only set on
+    # the auto-detect branch and `set -u` trips when CLAUDE_AGENT_ID is preset.
+    root=$(git rev-parse --show-toplevel 2>/dev/null) || root=""
     # Find agent-id
     agent_id="${CLAUDE_AGENT_ID:-}"
     if [ -z "$agent_id" ]; then
-      root=$(git rev-parse --show-toplevel 2>/dev/null) || root=""
       if [ -n "$root" ] && [ -f "$root/.sop-agent-id" ]; then
         agent_id=$(head -1 "$root/.sop-agent-id" | tr -d '[:space:]')
       else
@@ -156,9 +159,19 @@ if [ "$MODE" = "check-drift" ]; then
     if [ -n "$root" ]; then
       project_hash=$(printf '%s' "$root" | sed 's|[^a-zA-Z0-9-]|-|g' | sed 's|--*|-|g' | sed 's|^-||')
       resume_file="$HOME/.claude/projects/-$project_hash/memory/project_resume_${agent_id}.md"
-      # Fallback: legacy unsuffixed path when agent-id=solo
-      if [ ! -f "$resume_file" ] && [ "$agent_id" = "solo" ]; then
-        resume_file="$HOME/.claude/projects/-$project_hash/memory/project_resume.md"
+      # Fallback: legacy unsuffixed project_resume.md. Always tried, regardless
+      # of agent-id. Long-lived projects predating the per-agent filename
+      # convention keep drift enforcement without forcing `/migrate-to-multi-agent`
+      # first. When agent-id is non-`solo` (parallel worktree) and the fallback
+      # actually fires, emit a one-line advisory so the operator knows to migrate.
+      if [ ! -f "$resume_file" ]; then
+        legacy_resume="$HOME/.claude/projects/-$project_hash/memory/project_resume.md"
+        if [ -f "$legacy_resume" ]; then
+          resume_file="$legacy_resume"
+          if [ "$agent_id" != "solo" ]; then
+            echo "check-drift: reading legacy unsuffixed resume file ($resume_file). Run \`/migrate-to-multi-agent\` to move to per-agent format." >&2
+          fi
+        fi
       fi
     fi
   fi

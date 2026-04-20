@@ -319,6 +319,7 @@ Derived summary that replaces prepend-semantic Recent Work:
 - 2026-04-19 `solo`: Phase 1 close-out — README parallel-sessions coverage, Deploy Checklist updates, Rule 5 instruction-count audit (estimate ~185-190, under 200 ceiling). Commit 81952c6.
 - 2026-04-19 `solo`: Session pause — Matt handling hst-tracker `feat/catalogue-ui` merge separately. Dogfood deferred; resumes when hst-tracker tree is clean.
 - 2026-04-19 `solo`: Batch 1.7 dogfood complete on hst-tracker. 3 parallel subagents (A/B/C on separate worktrees) each ran /update-sop discipline. Sequential merge: 0 Backlog/directory conflicts, 2 expected rollup conflicts (resolved canonically). 855/855 tests pass on merged main. P43 SHIPPED. Full log at docs/benchmark/parallel-dogfood-log.md.
+- 2026-04-20 `solo`: P47 follow-up fix — drift-check and /restart-sop Step 0d legacy-resume fallback now fires regardless of agent-id; non-solo path emits one-line advisory pointing at /migrate-to-multi-agent. Adjacent set-u bug fixed (unbound $root when CLAUDE_AGENT_ID preset). User-scope slash command mirrored. Guide updated with scenario bullet. Dogfooded across four synthetic scenarios.
 
 ---
 

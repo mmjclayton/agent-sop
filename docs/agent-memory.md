@@ -24,7 +24,7 @@ See CLAUDE.md Key Documents table.
 
 ## In-Flight Work
 
-- solo (2026-04-19): P43 Phase 1 parallel-session support — Batches 1.1-1.6 shipped; Batch 1.7 dogfood playbook drafted and awaiting Matt-hands multi-session run on hst-tracker.
+*(none — P43 dogfood completed 2026-04-19; P44/P45/P46/P47 all shipped 2026-04-19/20)*
 
 ---
 
@@ -49,6 +49,7 @@ See docs/agent-memory/gotchas/. One file per gotcha. Migrated from legacy narrat
 
 ## Completed Work
 
+- 2026-04-20: P47 — Drift-check legacy-resume fallback now fires regardless of agent-id. `/restart-sop` Step 0d mirrored. One-line advisory on non-`solo` fallback points at `/migrate-to-multi-agent`. Adjacent `set -u` bug fixed (`$root` unbound when `CLAUDE_AGENT_ID` preset). Four dogfood scenarios pass. User-scope slash command mirrored.
 - 2026-04-09: P28 — Research digest: S3 skip-permissions check, context-management.md (compaction/clearing/memory API), memory API note in Section 1, Section 18 SOP evolution loop, sop-hill-climbing.md guide. 8 digest suggestions evaluated; 5 implemented, 8 skipped (would add tokens without proven quality improvement).
 - 2026-04-09: P27 — Managed Agents integration. Outcome rubrics (Definition of Done) added to SOP Section 12 and both templates. Permission policy safety for benchmarks. Multi-agent callable patterns in Section 16 with coordinator/specialist configs. Section 17 Managed Agents Integration Guide (memory store mapping, skills guidance, session lifecycle, outcome grading). Benchmark README updated with Managed Agents harness design.
 - 2026-04-09: P26 — Benchmark-driven optimisations applied. Common Mistakes mandatory for code projects. 300-line limit for code CLAUDE.md. Intent-only dispatch enforced (Area|File deprecated). Lightweight start for [ok-for-automation]. Multi-agent context routing (Section 16). agent-memory.md optional <10 sessions. Benchmark safety rules (no push to main). Naming convention gotcha requirement.
