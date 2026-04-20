@@ -771,7 +771,7 @@ External feedback (2026-04-19) named mid-session state drift as the central fail
 ---
 
 ### P48 — Reviewer voice rules + Backlog item-sizing pedagogy
-`[IN PROGRESS] [Iteration]`
+`[SHIPPED - 2026-04-20] [Iteration]`
 
 Source: direct review of `levu304/claude-code-boilerplate` (2026-04-20). Two transferable patterns identified; the rest of the repo is aspirational prose or duplicates `~/.claude/rules/`.
 
