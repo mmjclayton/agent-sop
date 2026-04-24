@@ -789,7 +789,9 @@ Source: direct review of `levu304/claude-code-boilerplate` (2026-04-20). Two tra
 ---
 
 ### P49 — Instrument `/update-sop` step timing before any trim refactor
-`[OPEN] [Iteration]`
+`[SHIPPED - 2026-04-24] [Iteration]`
+
+**Decision:** ABANDON the `/update-sop` refactor. Per-step median/max across 3 samples shows no step dominates enough to justify rewrite; agent-side drafting for the decision / feature-map / resume / recent-work writes sums to ~140-155 s but each write produces a durable artifact serving a distinct audience, and the reviewer-turn cost (~95 s in sample 3) fires only on the Feature/Refactor subset where it pays. Full summary at `docs/agent-memory/decisions/2026-04-24_solo_p49-update-sop-timing-summary.md`. Samples at `docs/instrumentation/2026-04-20_update-sop-timing.md`, `2026-04-24_update-sop-timing.md`, and `2026-04-24_hst-tracker_update-sop-timing.md`.
 
 Surfaced 2026-04-20. Commands feel slow; first-pass estimate claimed ~35-40% line cut possible by extracting bash gates to scripts. That estimate conflated two kinds of slowness — token read cost per invocation vs wall-clock time the agent spends thinking through steps — and was not grounded in measurement. Refactoring before measuring risks churn without hitting the real bottleneck.
 
@@ -812,7 +814,12 @@ Surfaced 2026-04-20. Commands feel slow; first-pass estimate claimed ~35-40% lin
 ---
 
 ### P51 — Safe optimisations to `/restart-sop` read phase (parallel reads + targeted Backlog load)
-`[IN PROGRESS] [Iteration]`
+`[SHIPPED - 2026-04-24] [Iteration]`
+
+**Dogfood result (hst-tracker session, 2026-04-24):**
+- A1 parallel reads: fired partially. The Steps 1-4 block was a single parallel round (6 concurrent tool calls), but setup + Step 0c/0d preceded it in 2 separate rounds. Not a protocol violation — those calls produce values the later round consumes — but also not a textbook "everything in one batch" implementation. Acceptable.
+- A2 targeted Backlog read: fired cleanly. Session read ~15 KB of a 308 KB `Backlog.md` (~4.9 %) across all lookups. No full-file reads occurred. ~20× reduction vs the worst-case old pattern.
+- Dogfood artifact: `docs/instrumentation/2026-04-24_hst-tracker_update-sop-timing.md`.
 
 Surfaced 2026-04-24 while analysing why `/restart-sop` and `/update-sop` feel slower in hst-tracker than in agent-sop. Measurement:
 - hst-tracker default-loaded state is ~4x larger than agent-sop (`Backlog.md` 305 KB vs 63 KB; `agent-memory.md` 38 KB vs 7 KB; `CLAUDE.md` 25 KB vs 8 KB).

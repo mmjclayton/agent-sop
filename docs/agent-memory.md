@@ -24,7 +24,7 @@ See CLAUDE.md Key Documents table.
 
 ## In-Flight Work
 
-- solo (2026-04-24): P49 — `/update-sop` step-timing instrumentation (sample 2 captured this session). P51 — `/restart-sop` parallel-reads + targeted-Backlog-read optimisations shipped; dogfood AC pending in next hst-tracker session.
+*(none — P49 and P51 closed 2026-04-24 after hst-tracker dogfood + 3-sample summary)*
 
 ---
 
