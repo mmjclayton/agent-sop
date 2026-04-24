@@ -132,6 +132,8 @@ Check if this session's task is tagged `[ok-for-automation]` in the Backlog, or 
 
 ## Full Start (default — use for multi-file tasks, features, bug fixes, refactors)
 
+**Execution note:** Steps 1-4 are numbered for readability, not for order of execution. Their reads and shell calls are independent — issue all of them as parallel tool calls in a single batch (one Read per file, plus the `ls` and `git log`). Only Step 5 depends on Step 1's output (it reads what CLAUDE.md's Current Priority Items points to), and Step 6 depends on everything. Sequential execution of Steps 1-4 is a measurable waste on large projects.
+
 ### Step 1: Read CLAUDE.md
 
 Read the project's `CLAUDE.md` at the repo root. This is the master context file containing stack, conventions, Common Mistakes, intent-rich dispatch table, Definition of Done rubrics, priority items, and session checklists.
@@ -199,9 +201,19 @@ When `SESSION_RANGE` is empty (agent on default branch directly, no diverging co
 
 ### Step 5: Read the current work item
 
-Read the specific Backlog item(s) listed under Current Priority Items in CLAUDE.md. Read the full item in `Backlog.md` including acceptance criteria.
+Read the specific Backlog item(s) listed under Current Priority Items in CLAUDE.md. **Do not load the full `Backlog.md`** — locate the item first, then read only its range. The file is often 3,000-5,000 lines on active projects and only ~40-80 lines belong to any one item.
 
-If there is an active build plan (linked in CLAUDE.md under Build Plans), read its Architecture and Batch Log sections.
+```bash
+# Numeric-anchor backlogs (agent-sop style)
+grep -n "^### P<N>" Backlog.md
+
+# Descriptive-anchor backlogs (hst-tracker style)
+grep -n "^## \[.*\].*<keyword from item>" Backlog.md
+```
+
+Then use the `Read` tool with `offset` pointing at the grep match and `limit: 40-80`. Acceptance criteria usually sit inside that window. Widen only if the item runs longer. On grep miss, widen the search before falling back to a full-file read.
+
+If there is an active build plan (linked in CLAUDE.md under Build Plans), read its Architecture and Batch Log sections — same pattern: grep for the relevant batch anchor, then read its range.
 
 ### Step 6: Report readiness
 
@@ -229,6 +241,10 @@ Skip: agent-memory.md, build plans, MEMORY.md, project_resume.md.
 
 ### Step 2L: Read the Backlog item
 
-Read the specific item from `Backlog.md` including acceptance criteria. Then begin work.
+Locate the item anchor with `grep -n`, then `Read` with `offset` + `limit: 40-80`. **Do not load the full `Backlog.md`.** Then begin work.
 
-Saves ~3-4K tokens compared to the full start. Use only when the task is truly self-contained.
+```bash
+grep -n "^### P<N>\|^## \[.*\].*<keyword>" Backlog.md
+```
+
+Saves ~3-4K tokens compared to the full start, plus the full-file read avoidance (significant on backlogs over ~1,000 lines). Use only when the task is truly self-contained.

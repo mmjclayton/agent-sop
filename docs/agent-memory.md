@@ -24,7 +24,7 @@ See CLAUDE.md Key Documents table.
 
 ## In-Flight Work
 
-- solo (2026-04-20): P49 — `/update-sop` step-timing instrumentation. Sample 1 of 3 captured this session. Two more sessions needed before deciding on refactor.
+- solo (2026-04-24): P49 — `/update-sop` step-timing instrumentation (sample 2 captured this session). P51 — `/restart-sop` parallel-reads + targeted-Backlog-read optimisations shipped; dogfood AC pending in next hst-tracker session.
 
 ---
 
@@ -49,6 +49,7 @@ See docs/agent-memory/gotchas/. One file per gotcha. Migrated from legacy narrat
 
 ## Completed Work
 
+- 2026-04-24: P51 (Iteration, in progress) — `/restart-sop` parallel-reads execution note + targeted Backlog-read pattern (`grep -n` + `Read offset/limit`) added to Full and Lightweight starts. User-scope mirror updated. P49 sample 2 captured as part of this session's `/update-sop`. Decision file: `2026-04-24_solo_p51-safe-optimisations-before-full-trim.md`.
 - 2026-04-20: P48 — Reviewer voice rules lifted into `code-reviewer.md` (Finding Voice section: drop/keep lists, three before/after examples, auto-clarity carve-out). Backlog item-sizing pedagogy added to `backlog-template.md`. Both patterns sourced from direct review of `levu304/claude-code-boilerplate`; wholesale absorption rejected. User-scope `code-reviewer.md` mirrored, baselines refreshed.
 - 2026-04-20: P47 — Drift-check legacy-resume fallback now fires regardless of agent-id. `/restart-sop` Step 0d mirrored. One-line advisory on non-`solo` fallback points at `/migrate-to-multi-agent`. Adjacent `set -u` bug fixed (`$root` unbound when `CLAUDE_AGENT_ID` preset). Four dogfood scenarios pass. User-scope slash command mirrored.
 - 2026-04-09: P28 — Research digest: S3 skip-permissions check, context-management.md (compaction/clearing/memory API), memory API note in Section 1, Section 18 SOP evolution loop, sop-hill-climbing.md guide. 8 digest suggestions evaluated; 5 implemented, 8 skipped (would add tokens without proven quality improvement).

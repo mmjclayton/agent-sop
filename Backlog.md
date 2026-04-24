@@ -811,6 +811,34 @@ Surfaced 2026-04-20. Commands feel slow; first-pass estimate claimed ~35-40% lin
 
 ---
 
+### P51 — Safe optimisations to `/restart-sop` read phase (parallel reads + targeted Backlog load)
+`[IN PROGRESS] [Iteration]`
+
+Surfaced 2026-04-24 while analysing why `/restart-sop` and `/update-sop` feel slower in hst-tracker than in agent-sop. Measurement:
+- hst-tracker default-loaded state is ~4x larger than agent-sop (`Backlog.md` 305 KB vs 63 KB; `agent-memory.md` 38 KB vs 7 KB; `CLAUDE.md` 25 KB vs 8 KB).
+- Command-file read overhead is constant and small relative to project state.
+- Step 5 tells agents to "read the specific Backlog item(s)" without a pattern, so on large backlogs agents often load the whole file.
+- Steps 1-3 are presented sequentially though their reads are independent, biasing serial execution.
+
+**Scope (this item):**
+1. Execution note above Step 1 (Full Start) — explicit instruction that Steps 1-4 reads/shell calls are independent and should be issued as a single parallel batch.
+2. Targeted Backlog-read pattern in Step 5 (Full Start) and Step 2L (Lightweight Start) — `grep -n` for the item anchor, then `Read` with `offset` + `limit`. Full-file read remains the fallback on grep miss.
+
+**Out of scope:**
+- Step count, reviewer-turn, decision/gotcha authoring behaviour.
+- Any change to `/update-sop` — P49 is still gathering timing samples there.
+- hst-tracker project-level trims (`CLAUDE.md`, `agent-memory.md`) — revisit if P49 sample 2+ shows those files still hot after A1/A2.
+
+**Acceptance criteria:**
+- `.claude/commands/restart-sop.md` gains the parallel-reads execution note and targeted-read pattern in Full + Lightweight starts.
+- User-scope mirror `~/.claude/commands/restart-sop.md` updated identically.
+- Dogfood run (next `/restart-sop` in hst-tracker) issues reads in parallel and does not load full `Backlog.md` for item lookup.
+- No net behaviour change — same files read, same checks performed.
+
+**Safety:** both are prompt-wording changes, reversible in one edit. Targeted-read failure mode (grep miss → no item found) is immediate and visible; the agent re-reads with a wider window. No silent regressions possible.
+
+---
+
 ### P47 — Drift check: resume-file fallback fails on multi-worktree projects with legacy unsuffixed resume
 `[SHIPPED - 2026-04-20] [Bug]`
 
