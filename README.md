@@ -222,6 +222,10 @@ Both target the "Claude Code has no memory across sessions" problem. They solve 
 
 The common alternative is free-form notes in `README.md` or `docs/`, updated when someone remembers. That works for solo projects until you try to come back after a month or hand off to another agent. The benchmark gap (+33% on vague prompts) is mostly this: agents with structured context don't waste tool calls reconstructing what was already decided.
 
+## Companion projects
+
+[**ship-sop**](https://github.com/mmjclayton/ship-sop) — pre-merge quality gates (tests, security, compliance, diagrams + API catalog) that fire automatically on session-end via a SessionStop hook, or manually via `/ship`. Independent of Agent SOP but composes with it: ship-sop auto-files findings as `[OPEN][Bug][needs-triage]` Backlog entries using the Agent SOP tag taxonomy when both are installed. Different decision point (per-ship gate, not per-session discipline), separate install, separate release cycle.
+
 ## Requirements
 
 Claude Code **v2.1.101 or later**. Earlier versions have a long-session memory leak, permission rule bypasses, and `--resume` chain recovery bugs that affect SOP workflows. Check with `claude --version`.
