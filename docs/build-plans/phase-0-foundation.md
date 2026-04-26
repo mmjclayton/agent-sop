@@ -95,6 +95,11 @@ agent-sop/
 
 ---
 
+- 2026-04-24: Batch 0.19 — P49 + P51 closed. P49: `/update-sop` step-timing across 3 samples; ABANDON refactor (no step dominates). P51: `/restart-sop` parallel-reads execution note + targeted Backlog-read (`grep -n` + `Read offset/limit`); user-scope mirrored. Commits 3602e30, 0fb0fd6, 8d9cc3d.
+- 2026-04-26: Batch 0.20 — P52 shipped. Learnings capture pattern (doc-only). `harness-configuration.md` section f rewrite, `docs/agent-memory/learnings/` folder + README, `/update-sop` Step 5 sub-step (project + user-scope mirror), `.gitignore` rule. Scope cuts: no runtime script, no setup.sh changes, no new step, archive over carve-out. Decision file: `2026-04-26_solo_p52-learnings-doc-only.md`. Review: `docs/reviews/2026-04-26_solo_P52.md` (APPROVE WITH NITS — three MEDIUMs caught; jq snippet phantom-script and Stop-stdout qualifier fixed before commit 2).
+
+---
+
 ## Deploy Checklist
 
 Before marking Phase 0 shipped:

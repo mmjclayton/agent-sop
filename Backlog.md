@@ -847,7 +847,7 @@ Surfaced 2026-04-24 while analysing why `/restart-sop` and `/update-sop` feel sl
 ---
 
 ### P52 — Learnings capture pattern (doc-only, `/update-sop` integration)
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-04-26] [Feature]`
 
 Doc-only learnings-capture pattern. PreCompact and Stop hooks (documented in `harness-configuration.md`, not installed by `setup.sh`) prompt the agent to write `docs/agent-memory/learnings/YYYY-MM-DDTHH-MM_<agent-id>_<slug>.md` capturing four categories: (1) surprises about the codebase, (2) key learnings for future sessions, (3) hook/workflow recommendations, (4) skill recommendations. `/update-sop` Step 5 lists the folder and acts on each file: crystallise into a decision/gotcha, file a Backlog item, or archive as no-longer-relevant. Never delete — archive is `git mv` to `learnings/archive/YYYY-MM/`.
 

@@ -193,17 +193,11 @@ Captures ephemeral mid-session signal — surprises about the codebase, friction
 }
 ```
 
-**Why stdout, not `decision: block`.** PreCompact stdout injects into the post-compact session. Stop stdout injects into the next user turn. Lighter than block-decision (which forces an extra turn at session end and requires a `stop_hook_active` guard against infinite loop). The SOP-side safety net is `/update-sop` Step 5 — even if a session ignores the prompt, the next `/update-sop` reviews the folder and acts.
+**Why stdout, not `decision: block`.** PreCompact stdout injects into the post-compact session. Stop stdout injects into the next user turn if one occurs; if the session genuinely ends with no follow-up prompt, the stdout is lost. The SOP-side safety net is `/update-sop` Step 5 — captured-but-not-acted-on files (or sessions that captured nothing) are caught next time `/update-sop` reviews the folder.
 
-**Coexistence with other Stop hooks** (e.g. ship-sop's auto-ship-hook). Multiple entries in `.hooks.Stop[]` all fire. The learnings hook is non-blocking (exits 0 with stdout), so it never interferes with sibling Stop hooks. Idempotent jq merge example for installing alongside existing entries:
+The alternative — `decision: block` at Stop — has two distinct downsides. It forces an extra Claude turn after the user has signalled "I'm done", which is user-disruptive. And if the blocking hook itself triggers another Claude response that re-fires Stop, you can loop indefinitely without a `stop_hook_active` guard reading the input payload. We avoid both by staying stdout-only.
 
-```bash
-jq '.hooks //= {} | .hooks.PreCompact //= [] | .hooks.Stop //= [] |
-    if (.hooks.PreCompact | map(select(.command | contains("learnings"))) | length) == 0
-    then .hooks.PreCompact += [{"command": "scripts/learnings-hook.sh"}] else . end |
-    if (.hooks.Stop | map(select(.command | contains("learnings"))) | length) == 0
-    then .hooks.Stop += [{"command": "scripts/learnings-hook.sh"}] else . end' .claude/settings.json
-```
+**Coexistence with other Stop hooks** (e.g. ship-sop's auto-ship-hook). Multiple entries in `.hooks.Stop[]` all fire. The learnings hook is non-blocking (exits 0 with stdout), so it never interferes with sibling Stop hooks. For the install pattern (idempotent jq-merge against an existing `.claude/settings.json`), see ship-sop's `setup.sh` — the same merge shape works for either hook. agent-sop itself does not install this hook; consumers wire the snippet above into their own settings.
 
 **Filename and folder lifecycle:** see `docs/agent-memory/learnings/README.md`. Archived (never deleted) during `/update-sop` Step 5 per CLAUDE.md Rule 2.
 
