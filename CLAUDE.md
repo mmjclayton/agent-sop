@@ -131,8 +131,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 ## Recent Work (rollup)
 
 <!-- recent-work-rollup:start -->
-*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-04-26.*
+*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-04-29.*
 
+- 2026-04-29 `solo`: P53 `/go` skill — end-to-end verify, simplify, ship
 - 2026-04-26 `solo`: P52 learnings capture pattern (doc-only)
 - 2026-04-24 `solo`: P51 `/restart-sop` optimisations + P49 sample 2
 - 2026-04-20 `solo`: P49 filed + sample 1 of `/update-sop` timing captured
