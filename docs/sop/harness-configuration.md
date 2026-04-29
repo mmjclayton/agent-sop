@@ -168,25 +168,40 @@ Warns but does not block. Change exit code to 1 to make blocking (recommended fo
 
 Swap `tsc` for `mypy`/`pyright` (Python), `cargo check` (Rust), `go vet` (Go).
 
-### f. Pattern extraction on Stop
+### f. Learnings capture (PreCompact + Stop)
+
+Captures ephemeral mid-session signal — surprises about the codebase, friction worth fixing, hook or skill recommendations — into `docs/agent-memory/learnings/`. Reviewed and archived by `/update-sop` Step 5. Distinct from durable decisions/gotchas: learnings are pre-decision signal that may turn into a Backlog item, a decision file, or get archived as no-longer-relevant.
 
 ```json
 {
   "hooks": {
+    "PreCompact": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "echo 'Context compaction imminent. If anything has surprised you about this codebase mid-session, write docs/agent-memory/learnings/YYYY-MM-DDTHH-MM_<agent-id>_<slug>.md with: (1) surprises about the codebase, (2) key learnings for future sessions, (3) hook or workflow recommendations, (4) skill recommendations. Skip if nothing noteworthy.'"
+      }]
+    }],
     "Stop": [{
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "echo 'If this response contained a reusable decision, invariant, gotcha, or named utility, append to docs/agent-memory.md.'",
-        "async": true,
-        "timeout": 5
+        "command": "echo 'Session ending. If this session surfaced anything surprising about the codebase that did not crystallise into a decision/gotcha file, drop a learning at docs/agent-memory/learnings/YYYY-MM-DDTHH-MM_<agent-id>_<slug>.md. Skip if nothing noteworthy.'"
       }]
     }]
   }
 }
 ```
 
-Prompt, not automation. True extraction requires transcript parsing. See `docs/guides/optional-patterns.md` for the continuous-learning pattern.
+**Why stdout, not `decision: block`.** PreCompact stdout injects into the post-compact session. Stop stdout injects into the next user turn if one occurs; if the session genuinely ends with no follow-up prompt, the stdout is lost. The SOP-side safety net is `/update-sop` Step 5 — captured-but-not-acted-on files (or sessions that captured nothing) are caught next time `/update-sop` reviews the folder.
+
+The alternative — `decision: block` at Stop — has two distinct downsides. It forces an extra Claude turn after the user has signalled "I'm done", which is user-disruptive. And if the blocking hook itself triggers another Claude response that re-fires Stop, you can loop indefinitely without a `stop_hook_active` guard reading the input payload. We avoid both by staying stdout-only.
+
+**Coexistence with other Stop hooks** (e.g. ship-sop's auto-ship-hook). Multiple entries in `.hooks.Stop[]` all fire. The learnings hook is non-blocking (exits 0 with stdout), so it never interferes with sibling Stop hooks. For the install pattern (idempotent jq-merge against an existing `.claude/settings.json`), see ship-sop's `setup.sh` — the same merge shape works for either hook. agent-sop itself does not install this hook; consumers wire the snippet above into their own settings.
+
+**Filename and folder lifecycle:** see `docs/agent-memory/learnings/README.md`. Archived (never deleted) during `/update-sop` Step 5 per CLAUDE.md Rule 2.
+
+**Boundary note:** the agent-sop project documents this hook pattern but does not install it. Consumers who want the capture flow wire it themselves into their own `.claude/settings.json`. The same applies to the older one-line "pattern extraction on Stop" sketch this section replaces (which prompted appends to `agent-memory.md` directly — superseded by the dedicated `learnings/` folder).
 
 ---
 

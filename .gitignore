@@ -1,2 +1,8 @@
 .archive/
 .DS_Store
+
+# Learnings folder: live entries are ephemeral mid-session signal (uncommitted).
+# README.md and the archive/ subtree (post-/update-sop) ARE committed — the
+# archive preserves the audit trail per CLAUDE.md Rule 2.
+docs/agent-memory/learnings/*.md
+!docs/agent-memory/learnings/README.md

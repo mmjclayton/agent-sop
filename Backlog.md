@@ -846,6 +846,36 @@ Surfaced 2026-04-24 while analysing why `/restart-sop` and `/update-sop` feel sl
 
 ---
 
+### P52 — Learnings capture pattern (doc-only, `/update-sop` integration)
+`[SHIPPED - 2026-04-26] [Feature]`
+
+Doc-only learnings-capture pattern. PreCompact and Stop hooks (documented in `harness-configuration.md`, not installed by `setup.sh`) prompt the agent to write `docs/agent-memory/learnings/YYYY-MM-DDTHH-MM_<agent-id>_<slug>.md` capturing four categories: (1) surprises about the codebase, (2) key learnings for future sessions, (3) hook/workflow recommendations, (4) skill recommendations. `/update-sop` Step 5 lists the folder and acts on each file: crystallise into a decision/gotcha, file a Backlog item, or archive as no-longer-relevant. Never delete — archive is `git mv` to `learnings/archive/YYYY-MM/`.
+
+Inspired by CodeLeash's session-end learnings capture. Adapted for agent-sop:
+- **stdout context injection only** (no `decision: block`). Avoids `stop_hook_active` infinite-loop guard logic and forced extra-turn-at-Stop disruption. PreCompact stdout injects post-compact; Stop stdout injects into the next user turn. SOP-side safety net is `/update-sop` Step 5 — even if a session ignores the prompt, the next `/update-sop` reviews the folder.
+- **Separate folder for ephemeral signal vs durable decisions.** Keeps `decisions/` and `gotchas/` clean. Replaces the older one-line "pattern extraction on Stop" sketch in `harness-configuration.md` section f (which prompted appends to `agent-memory.md` directly).
+- **Filename matches existing convention** (`YYYY-MM-DDTHH-MM_<agent-id>_<slug>.md`) — same shape as `decisions/` and `gotchas/`, with HH-MM precision because multiple captures per session are expected.
+- **Archive, don't delete.** Sidesteps a Rule 2 carve-out. Cost is negligible (`git mv`); preserves audit trail.
+
+**Scope cuts vs original proposal:**
+- No `scripts/learnings-hook.sh` runtime script. agent-sop is the doc-time tool; ship-sop is the install-time tool. Crossing that boundary needs evidence the pattern delivers signal, which we don't have yet.
+- No `setup.sh` changes. Consumers wire the documented snippet themselves into their own `.claude/settings.json` if they want the capture flow.
+- No new `/update-sop` step. Folded into Step 5 — same directory tree, same audience, same lifecycle. Respects P49's "no step dominates" verdict (2026-04-24).
+- No CLAUDE.md Rule 2 carve-out for deletion. Archive sidesteps the rule conflict.
+- No `.gitkeep`. README.md keeps the folder.
+
+**Acceptance criteria** (all met):
+- `docs/sop/harness-configuration.md` section f rewritten as "Learnings capture (PreCompact + Stop)" with full 4-category prompt structure, idempotent jq merge example for ship-sop coexistence, boundary note.
+- `docs/agent-memory/learnings/README.md` explains purpose, lifecycle, filename convention, file format.
+- `.claude/commands/update-sop.md` Step 5 has the review-and-archive sub-step. User-scope mirror at `~/.claude/commands/update-sop.md` updated identically.
+- agent-sop's own `.gitignore` excludes `docs/agent-memory/learnings/*.md` except `README.md` (project-internal hygiene; archive subtree IS committed because it preserves trace).
+
+**Safety:** all four changes are documentation/wording. No new runtime code. Reversible in single-file edits. Failure mode is "no learnings captured" — same as the pre-P52 state.
+
+**Follow-up (deferred, not this item):** if dogfood across 2-3 sessions shows real signal volume from the capture flow, file P53 to install the hook via `setup.sh` (mirroring ship-sop's consent-prompt + idempotent jq merge pattern). Until then, doc-only. Measurement-led, P49-style.
+
+---
+
 ### P47 — Drift check: resume-file fallback fails on multi-worktree projects with legacy unsuffixed resume
 `[SHIPPED - 2026-04-20] [Bug]`
 
@@ -975,6 +1005,28 @@ Integrated Claude Managed Agents API patterns into the SOP. Six components:
 
 ---
 
+### P53 — `/go` skill: end-to-end verify, simplify, ship
+`[SHIPPED - 2026-04-29] [Feature]`
+
+New slash command at `.claude/commands/go.md` (mirrored to `~/.claude/commands/go.md`). Three hard-blocking phases that run after Claude believes the work is done:
+
+1. **Verify end-to-end.** Detect surface from the diff (backend / frontend / desktop / CLI / docs-only); for backend run the service via bash and exercise endpoints with curl; for frontend drive the browser via the Claude Chrome extension; for desktop drive the app via computer-use. Hard-fails if the change does not actually work against the real surface.
+2. **Run `/simplify`.** Scoped to the session diff only. Re-runs Phase 1 if production code changed.
+3. **Ship.** Reconcile `Backlog.md`, run `/update-sop` (the existing session-end checklist), then push and open a PR via `/prp-pr`.
+
+Motivation: passing types and unit tests is not the same as exercising the change. `/go` makes Claude prove the work runs before the SOP trail and PR get created.
+
+**Acceptance criteria:**
+- Command exists in `agent-sop/.claude/commands/go.md` so it ships with new SOP installs - DONE
+- Command mirrored to `~/.claude/commands/go.md` for immediate use across all projects - DONE
+- Detection logic covers backend, frontend, desktop, CLI, and docs-only - DONE
+- Phase 2 re-triggers Phase 1 if production code changed under simplification - DONE
+- Phase 3 chains `/update-sop` and `/prp-pr` rather than duplicating their logic - DONE
+- Listed in CLAUDE.md Key Documents table - DONE
+- Recorded in `docs/feature-map.md` - DONE
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
@@ -1003,3 +1055,4 @@ Integrated Claude Managed Agents API patterns into the SOP. Six components:
 - P26 — Benchmark-driven SOP optimisations — SHIPPED 2026-04-09
 - P27 — Managed Agents integration and outcome rubrics — SHIPPED 2026-04-09
 - P28 — Research digest implementation — SHIPPED 2026-04-09
+- P53 — `/go` skill: end-to-end verify, simplify, ship — SHIPPED 2026-04-29

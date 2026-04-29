@@ -330,6 +330,19 @@ Create `docs/agent-memory/gotchas/YYYY-MM-DD_${AGENT_ID}_<slug>.md` with the sam
 
 **Superseded entries:** do not delete. Edit the superseded file to add a trailing `*Superseded by:* <new-file-name>` line, then `git mv` the file into `archive/` subdirectory once the replacement lands.
 
+**Review the learnings folder** (skip if `docs/agent-memory/learnings/` does not exist):
+
+```bash
+ls -1 docs/agent-memory/learnings/*.md 2>/dev/null | grep -v '/README.md$' || true
+```
+
+For each file listed:
+- If it crystallised into a decision or gotcha this session: write the corresponding `decisions/` or `gotchas/` file as above, reference the learning slug in the body, then `git mv docs/agent-memory/learnings/<file> docs/agent-memory/learnings/archive/$(date +%Y-%m)/`.
+- If the surprise points at a real issue worth fixing: file a Backlog item (next available P-number), then archive the learning with the P-number in the commit message.
+- If it is no longer relevant or was already addressed: archive with a one-line trailing note explaining why.
+
+Never delete. Archive is `git mv` — same cost as decisions/gotchas archive, preserves the audit trail per CLAUDE.md Rule 2. The folder ends every `/update-sop` empty (or near-empty). Drift signal: files persisting across multiple `/update-sop` runs without action.
+
 **Narrative updates in `docs/agent-memory.md`:**
 
 - **In-Flight Work:** if the work this agent was tracking completed, remove this agent's `- <agent-id> (YYYY-MM-DD): ...` line. If new work started but did not finish, add or update this agent's line. Each agent manages only its own line — never touch another agent's entry.
