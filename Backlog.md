@@ -1005,6 +1005,28 @@ Integrated Claude Managed Agents API patterns into the SOP. Six components:
 
 ---
 
+### P53 — `/go` skill: end-to-end verify, simplify, ship
+`[SHIPPED - 2026-04-29] [Feature]`
+
+New slash command at `.claude/commands/go.md` (mirrored to `~/.claude/commands/go.md`). Three hard-blocking phases that run after Claude believes the work is done:
+
+1. **Verify end-to-end.** Detect surface from the diff (backend / frontend / desktop / CLI / docs-only); for backend run the service via bash and exercise endpoints with curl; for frontend drive the browser via the Claude Chrome extension; for desktop drive the app via computer-use. Hard-fails if the change does not actually work against the real surface.
+2. **Run `/simplify`.** Scoped to the session diff only. Re-runs Phase 1 if production code changed.
+3. **Ship.** Reconcile `Backlog.md`, run `/update-sop` (the existing session-end checklist), then push and open a PR via `/prp-pr`.
+
+Motivation: passing types and unit tests is not the same as exercising the change. `/go` makes Claude prove the work runs before the SOP trail and PR get created.
+
+**Acceptance criteria:**
+- Command exists in `agent-sop/.claude/commands/go.md` so it ships with new SOP installs - DONE
+- Command mirrored to `~/.claude/commands/go.md` for immediate use across all projects - DONE
+- Detection logic covers backend, frontend, desktop, CLI, and docs-only - DONE
+- Phase 2 re-triggers Phase 1 if production code changed under simplification - DONE
+- Phase 3 chains `/update-sop` and `/prp-pr` rather than duplicating their logic - DONE
+- Listed in CLAUDE.md Key Documents table - DONE
+- Recorded in `docs/feature-map.md` - DONE
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
@@ -1033,3 +1055,4 @@ Integrated Claude Managed Agents API patterns into the SOP. Six components:
 - P26 — Benchmark-driven SOP optimisations — SHIPPED 2026-04-09
 - P27 — Managed Agents integration and outcome rubrics — SHIPPED 2026-04-09
 - P28 — Research digest implementation — SHIPPED 2026-04-09
+- P53 — `/go` skill: end-to-end verify, simplify, ship — SHIPPED 2026-04-29

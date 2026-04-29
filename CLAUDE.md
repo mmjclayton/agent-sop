@@ -33,6 +33,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 | Guides | `docs/guides/` | Optional patterns, multi-agent routing, Managed Agents (deferred), SOP hill-climbing |
 | Templates | `docs/templates/claude-md-template.md` | Base template for new projects |
 | SOP Checker | `.claude/agents/sop-checker.md` | Compliance audit agent |
+| `/go` command | `.claude/commands/go.md` | End-to-end verify + `/simplify` + ship (Backlog, `/update-sop`, PR) |
 
 ---
 
