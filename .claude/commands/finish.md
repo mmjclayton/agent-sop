@@ -3,7 +3,7 @@ description: End-to-end verify the work, run /simplify, then ship — update Bac
 sop_version: "2026-04-29"
 ---
 
-`/go` is the "I'm done" wrapper. It exists to keep Claude honest: code only ships after Claude has actually exercised it end-to-end (not just compiled it), simplified the diff, and produced a reviewable PR with the SOP trail intact.
+`/finish` is the "I'm done" wrapper. It exists to keep Claude honest: code only ships after Claude has actually exercised it end-to-end (not just compiled it), simplified the diff, and produced a reviewable PR with the SOP trail intact.
 
 Three phases. Each phase is hard-blocking — do not advance with failures.
 
@@ -45,13 +45,13 @@ If detection is ambiguous or nothing matches, **ask the user which surface to ve
 ```bash
 # Pattern — adapt to the actual stack
 PORT=${PORT:-3000}
-npm run dev > /tmp/go-server.log 2>&1 &
+npm run dev > "${TMPDIR:-/tmp}/finish-server.log" 2>&1 &
 SERVER_PID=$!
 trap 'kill $SERVER_PID 2>/dev/null' EXIT
 until curl -fsS "http://localhost:${PORT}/" >/dev/null 2>&1; do sleep 0.5; done
 
 # Exercise the diff
-curl -fsS "http://localhost:${PORT}/api/<endpoint-from-diff>" | tee /tmp/go-response.json
+curl -fsS "http://localhost:${PORT}/api/<endpoint-from-diff>" | tee "${TMPDIR:-/tmp}/finish-response.json"
 
 kill "$SERVER_PID"
 ```
@@ -177,7 +177,7 @@ If a PR already exists for this branch, push the new commits and add a PR commen
 End the run with a single block:
 
 ```
-/go complete
+/finish complete
   Phase 1 (verify):  PASS
   Phase 2 (simplify): PASS — N file(s) touched
   Phase 3 (ship):
@@ -186,9 +186,9 @@ End the run with a single block:
     PR:         #<num> — <url>
 ```
 
-If any phase failed and was resolved, note the failure in the summary so the user sees what was caught. If `/go` was halted before reaching Phase 3, state which phase blocked and what needs human attention.
+If any phase failed and was resolved, note the failure in the summary so the user sees what was caught. If `/finish` was halted before reaching Phase 3, state which phase blocked and what needs human attention.
 
-## When not to use `/go`
+## When not to use `/finish`
 
 - Mid-task checkpoints — use `/checkpoint` or commit directly.
 - Pure exploration / spike branches that aren't shipping.

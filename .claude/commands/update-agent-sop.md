@@ -48,7 +48,7 @@ These are the files this command keeps in sync. Everything else (CLAUDE.md, Back
 | `~/.claude/commands/update-sop.md` | `.claude/commands/update-sop.md` | user |
 | `~/.claude/commands/update-agent-sop.md` | `.claude/commands/update-agent-sop.md` | user |
 | `~/.claude/commands/migrate-to-multi-agent.md` | `.claude/commands/migrate-to-multi-agent.md` | user |
-| `~/.claude/commands/go.md` | `.claude/commands/go.md` | user |
+| `~/.claude/commands/finish.md` | `.claude/commands/finish.md` | user |
 | `~/.claude/agents/sop-checker.md` | `.claude/agents/sop-checker.md` | user |
 | `~/.claude/agents/code-reviewer.md` | `.claude/agents/code-reviewer.md` | user |
 | `~/.claude/agents/security-reviewer.md` | `.claude/agents/security-reviewer.md` | user |
