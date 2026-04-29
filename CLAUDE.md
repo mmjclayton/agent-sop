@@ -33,7 +33,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 | Guides | `docs/guides/` | Optional patterns, multi-agent routing, Managed Agents (deferred), SOP hill-climbing |
 | Templates | `docs/templates/claude-md-template.md` | Base template for new projects |
 | SOP Checker | `.claude/agents/sop-checker.md` | Compliance audit agent |
-| `/go` command | `.claude/commands/go.md` | End-to-end verify + `/simplify` + ship (Backlog, `/update-sop`, PR) |
+| `/finish` command | `.claude/commands/finish.md` | End-to-end verify + `/simplify` + ship (Backlog, `/update-sop`, PR) |
 
 ---
 
@@ -133,7 +133,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-04-29.*
 
-- 2026-04-29 `solo`: P53 `/go` skill — end-to-end verify, simplify, ship
+- 2026-04-29 `solo`: P53 `/finish` skill — end-to-end verify, simplify, ship
 - 2026-04-26 `solo`: P52 learnings capture pattern (doc-only)
 - 2026-04-24 `solo`: P51 `/restart-sop` optimisations + P49 sample 2
 - 2026-04-20 `solo`: P49 filed + sample 1 of `/update-sop` timing captured
