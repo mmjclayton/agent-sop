@@ -876,6 +876,35 @@ Inspired by CodeLeash's session-end learnings capture. Adapted for agent-sop:
 
 ---
 
+### P54 — Multi-agent hardening + perf gates + worktree advisory
+`[IN PROGRESS - 2026-05-02] [Iteration]`
+
+Tightens parallel-session safety and `/update-sop` perf, prompted by a hst-tracker code review where the local SOP commands were 32–38% the size of pristine and missing all parallel-safety machinery. Five concrete changes:
+
+1. **Sibling-worktree safety advisory.** `/restart-sop` Step 0a prints a soft warning when `git worktree list | wc -l` > 1 and any sibling has uncommitted changes. Documents the wipe hazard (`docs/agent-memory/gotchas/2026-05-02_solo_worktree-uncommitted-wipe.md`) — sibling-worktree branch operations can discard uncommitted edits across the shared `.git` directory.
+2. **Per-agent in-flight files.** New `scripts/refresh-in-flight.sh` regenerates the In-Flight Work section of `agent-memory.md` from `docs/agent-memory/in-flight/<agent-id>.md` per-agent files. Idempotent and conflict-free across parallel agents (each agent only writes its own file). Replaces the legacy "edit your own line" discipline-only protection. Sentinel block added to `agent-memory-template.md`. Migration is per-project; pre-migration projects fall back to legacy flat-line edit until `/update-agent-sop` syncs the sentinel template.
+3. **`/update-sop` perf gates.** Step 4 + 7 + 8 (feature-map, resume snapshot, recent-work) declared as a parallel tool-call batch — independent writes, no inter-dependencies. Step 4 skip predicate: no-op when nothing in this session was tagged `[SHIPPED]`. Step 5 substance gate for decisions/gotchas: skip unless the decision fills "We chose X over Y because Z" without padding. Step 8b skip predicate: no rollup refresh when no new file in `docs/recent-work/`. Each gate eliminates a writing pass when the session content doesn't warrant it.
+4. **Multi-agent guide §7 + §8.** `docs/guides/multi-agent-parallel-sessions.md` gains a "Pre-flight: sibling-worktree safety" section (cross-worktree dirty-tree check + recovery via `git fsck --lost-found`) and an explicit "Assumptions and constraints" section (one Claude per worktree, sequential merges to default, branch-per-agent, no coordination protocol).
+5. **`/update-agent-sop` manifest + setup.sh.** Pristine-replica set extended with `scripts/refresh-in-flight.sh` and `docs/agent-memory/in-flight/README.md` so downstream projects pick up the new infrastructure on next sync. `setup.sh` seeds `docs/agent-memory/in-flight/` alongside `decisions/` and `gotchas/` for first-install. README updated: cross-session memory section documents the in-flight per-agent file pattern; parallel multi-agent sessions section bumped from "four structural choices" to five.
+
+**Acceptance criteria** (all met):
+- `/restart-sop` Step 0a sibling-worktree advisory prints when multi-worktree active.
+- `scripts/refresh-in-flight.sh` is idempotent (verified against fixture: two consecutive runs produce no diff). Sorts agents alphabetically; preserves within-file line ordering.
+- `agent-memory-template.md` has `<!-- in-flight:start -->` / `<!-- in-flight:end -->` sentinels under `## In-Flight Work`.
+- `/update-sop` Step 4 prints "skipped: no [SHIPPED] tags added this session" when SESSION_RANGE empty AND no SHIPPED tag added.
+- `/update-sop` Step 8b prints "skipped: no new recent-work entry this session" when `docs/recent-work/` is unchanged.
+- `/update-sop` Step 5 documents the substance gate prose for decisions and gotchas.
+- `docs/guides/multi-agent-parallel-sessions.md` §7 documents the pre-flight check + recovery; §8 lists the four structural assumptions.
+- `/update-agent-sop` manifest includes `scripts/refresh-in-flight.sh` and `docs/agent-memory/in-flight/README.md`.
+- `setup.sh` per-entry directory loop includes `agent-memory/in-flight`.
+- README.md cross-session memory + parallel multi-agent sessions sections reflect the new pattern; quick-start blurb lists the full slash-command + script set.
+
+**Files touched:** `.claude/commands/restart-sop.md`, `.claude/commands/update-sop.md`, `.claude/commands/update-agent-sop.md`, `docs/guides/multi-agent-parallel-sessions.md`, `docs/templates/agent-memory-template.md`, `docs/agent-memory/gotchas/2026-05-02_solo_worktree-uncommitted-wipe.md` (new), `docs/agent-memory/in-flight/README.md` (new), `scripts/refresh-in-flight.sh` (new), `setup.sh`, `README.md`, `~/.claude/commands/update-agent-sop.md` (user-scope mirror).
+
+**Commits:** `1f105b6` (feat: machinery), `da279f6` (docs: README + manifest + setup.sh).
+
+---
+
 ### P47 — Drift check: resume-file fallback fails on multi-worktree projects with legacy unsuffixed resume
 `[SHIPPED - 2026-04-20] [Bug]`
 
