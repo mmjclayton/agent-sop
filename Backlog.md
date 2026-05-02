@@ -877,7 +877,7 @@ Inspired by CodeLeash's session-end learnings capture. Adapted for agent-sop:
 ---
 
 ### P54 — Multi-agent hardening + perf gates + worktree advisory
-`[IN PROGRESS - 2026-05-02] [Iteration]`
+`[SHIPPED - 2026-05-02] [Iteration]`
 
 Tightens parallel-session safety and `/update-sop` perf, prompted by a hst-tracker code review where the local SOP commands were 32–38% the size of pristine and missing all parallel-safety machinery. Five concrete changes:
 
