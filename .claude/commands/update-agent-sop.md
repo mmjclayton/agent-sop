@@ -42,8 +42,10 @@ These are the files this command keeps in sync. Everything else (CLAUDE.md, Back
 | `docs/guides/sop-common-mistakes.md` | `docs/guides/sop-common-mistakes.md` | project |
 | `scripts/migrate-to-multi-agent.py` | `scripts/migrate-to-multi-agent.py` | project |
 | `scripts/refresh-rollup.sh` | `scripts/refresh-rollup.sh` | project |
+| `scripts/refresh-in-flight.sh` | `scripts/refresh-in-flight.sh` | project |
 | `scripts/validate-state-transitions.sh` | `scripts/validate-state-transitions.sh` | project |
 | `docs/templates/review-template.md` | `docs/templates/review-template.md` | project |
+| `docs/agent-memory/in-flight/README.md` | `docs/agent-memory/in-flight/README.md` | project |
 | `~/.claude/commands/restart-sop.md` | `.claude/commands/restart-sop.md` | user |
 | `~/.claude/commands/update-sop.md` | `.claude/commands/update-sop.md` | user |
 | `~/.claude/commands/update-agent-sop.md` | `.claude/commands/update-agent-sop.md` | user |
