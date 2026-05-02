@@ -301,6 +301,18 @@ Resolution paths when the gate fires:
 
 ## Step 4: Update docs/feature-map.md
 
+**Execution note:** Steps 4, 7, and 8 are independent writes (feature-map, per-agent resume snapshot, recent-work entry). Their tool calls have no inter-dependencies. When you reach Step 4, issue all three writes as a parallel tool-call batch in a single message rather than three sequential turns. Step 5 (decisions/gotchas) and Step 6 (build-plan Batch Log) depend on Step 1's self-eval output and stay sequential.
+
+**Skip predicate:** if `SESSION_RANGE` is empty OR `git diff --name-only HEAD..HEAD` (i.e. the working-tree diff against `HEAD`) shows no `Backlog.md` change with a `[SHIPPED - YYYY-MM-DD]` tag added this session, skip Step 4 entirely. Nothing shipped this session means feature-map has nothing to update.
+
+```bash
+if [ -z "$SESSION_RANGE" ] && ! git diff HEAD -- Backlog.md | grep -qE '^\+.*\[SHIPPED - [0-9]{4}-[0-9]{2}-[0-9]{2}\]'; then
+  echo "Step 4 skipped: no [SHIPPED] tags added this session."
+fi
+```
+
+When the gate does not skip:
+
 - Add any newly shipped items to the Shipped table
 - Move any roadmap items that shipped from the Roadmap section to the Shipped table
 - Update the `Last updated` date at the top
@@ -309,7 +321,11 @@ Resolution paths when the gate fires:
 
 Decisions and gotchas live as one file per entry in `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/`. The narrative sections (In-Flight Work, Completed Work, Archived, Preferences) remain in `docs/agent-memory.md`.
 
-**For each architectural decision made this session:**
+**Decision substance gate:** before writing any decision file, name the decision in one sentence using the form *"We chose X over Y because Z"*. If you cannot fill all three slots without padding, the session did not produce a real architectural decision — skip the decisions write for that candidate. Decisions about variable names, file layout, or task ordering are not decisions in the SOP sense; they are routine work. The gate exists because over-writing decisions floods `docs/agent-memory/decisions/` with low-signal entries that future sessions then have to skim past.
+
+The same gate applies to gotchas: name the surprise, the misleading prior expectation, and the rule that prevents a repeat. If any slot is empty, the discovery was probably routine debugging — note it in the recent-work entry instead.
+
+**For each architectural decision made this session that passes the gate above:**
 
 Create `docs/agent-memory/decisions/YYYY-MM-DD_${AGENT_ID}_<slug>.md`:
 
@@ -345,7 +361,20 @@ Never delete. Archive is `git mv` — same cost as decisions/gotchas archive, pr
 
 **Narrative updates in `docs/agent-memory.md`:**
 
-- **In-Flight Work:** if the work this agent was tracking completed, remove this agent's `- <agent-id> (YYYY-MM-DD): ...` line. If new work started but did not finish, add or update this agent's line. Each agent manages only its own line — never touch another agent's entry.
+- **In-Flight Work:** edit `docs/agent-memory/in-flight/${AGENT_ID}.md` only — one file per agent, never touch another agent's file. Format: one line per in-flight item, `(YYYY-MM-DD): description`, no leading dash. Remove lines whose work completed in this session; add lines for new work that did not finish. Then regenerate the agent-memory.md section:
+
+  ```bash
+  if [ -x scripts/refresh-in-flight.sh ]; then
+    bash scripts/refresh-in-flight.sh
+  elif [ -x ~/Projects/agent-sop/scripts/refresh-in-flight.sh ]; then
+    bash ~/Projects/agent-sop/scripts/refresh-in-flight.sh
+  fi
+  ```
+
+  The script is idempotent and conflict-free across parallel agents — each agent only writes its own per-agent file, and the rendered section is a pure function of the directory contents. See `docs/agent-memory/in-flight/README.md` for the file format and migration steps from flat lines.
+
+  **Pre-migration projects:** if `docs/agent-memory.md` lacks the `<!-- in-flight:start -->` sentinel block, fall back to the legacy flat-line edit ("update only your own line") and run `/update-agent-sop` to pick up the sentinel template at next sync.
+
 - **Completed Work:** append `- YYYY-MM-DD ${AGENT_ID}: description — commit [hash]` when work completes.
 - **Archived:** historical narrative content only (superseded decisions/gotchas move to their respective `archive/` subdirectories, not here).
 
@@ -403,6 +432,16 @@ Slug convention: same as Step 5 (lowercase alphanumeric + hyphens, no underscore
 ## Step 8b: Refresh CLAUDE.md Recent Work rollup
 
 The `## Recent Work (rollup)` section in CLAUDE.md is a derived summary of `docs/recent-work/*.md`. Regenerate it between the sentinel markers on every `/update-sop` run. The refresh is idempotent — two agents producing identical directory contents produce identical output, so the rollup converges regardless of merge order.
+
+**Skip predicate:** if Step 8 wrote no new file (no working-tree diff under `docs/recent-work/`), the rollup inputs are unchanged and re-running the script just rewrites the same bytes. Skip when:
+
+```bash
+if [ -z "$(git status --porcelain docs/recent-work/ 2>/dev/null)" ]; then
+  echo "Step 8b skipped: no new recent-work entry this session."
+fi
+```
+
+When the gate does not skip:
 
 ```bash
 bash scripts/refresh-rollup.sh

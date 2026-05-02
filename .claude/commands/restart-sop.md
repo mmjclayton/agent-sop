@@ -16,6 +16,28 @@ Compare `last_update_check` against `update_reminder`:
 
 If stale, print: *"SOP update overdue — run `/update-agent-sop` to sync pristine-replica files."* Then continue with the checklist. Do not block.
 
+## Step 0a: Sibling-worktree safety check
+
+When more than one worktree is checked out on this repo, branch operations in any worktree can wipe uncommitted edits in a sibling worktree (shared `.git` directory; ref rewrites reach across). Print a soft advisory before the agent does anything else; do not block.
+
+```bash
+wt_count=$(git worktree list 2>/dev/null | wc -l | tr -d ' ')
+if [ "${wt_count:-0}" -gt 1 ]; then
+  echo "Multi-worktree active ($wt_count worktrees). Sibling-worktree branch operations can wipe uncommitted edits."
+  git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}' | while read -r wt; do
+    [ -d "$wt" ] || continue
+    dirty=$(git -C "$wt" status --porcelain 2>/dev/null)
+    if [ -n "$dirty" ]; then
+      printf '  uncommitted in %s:\n%s\n' "$wt" "$dirty" | sed 's/^/    /'
+    fi
+  done
+  echo "If any sibling shows uncommitted changes, commit or stash there before running cross-worktree git operations."
+  echo "See docs/guides/multi-agent-parallel-sessions.md §7 for recovery if work is lost."
+fi
+```
+
+This is informational. Proceed with the checklist either way.
+
 ## Step 0b: Resolve agent identity
 
 Agent identity appears in filenames (`docs/recent-work/YYYY-MM-DD_<agent-id>_<slug>.md`), in per-agent `project_resume_<agent-id>.md`, and in commit-range partitioning for the drift guard (Step 4). Resolve it before reading any project files.

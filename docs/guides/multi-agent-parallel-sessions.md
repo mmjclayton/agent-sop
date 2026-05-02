@@ -345,6 +345,46 @@ Ship the detection now; defer auto-renumber until dogfood surfaces whether the m
 - `.claude/commands/update-sop.md` Step 2a (detection + block)
 - Core SOP Section 9 (P-number assignment rules)
 
+## 7. Pre-flight: sibling-worktree safety
+
+When `git worktree list` shows more than one worktree on a repo, branch-mutating git operations in any worktree can discard uncommitted edits in a sibling worktree. The shared `.git` directory means refspec rewrites (`git checkout`, `git reset --hard`, `git rebase`, ref-touching branch deletes) reach across worktrees.
+
+Before any branch-mutating operation in parallel mode:
+
+```bash
+# Multi-worktree active?
+[ "$(git worktree list | wc -l | tr -d ' ')" -gt 1 ] || exit 0
+
+# Every worktree must have a clean tree before proceeding
+git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt; do
+  dirty=$(git -C "$wt" status --porcelain 2>/dev/null)
+  if [ -n "$dirty" ]; then
+    printf 'Sibling worktree has uncommitted changes: %s\n' "$wt"
+    printf '%s\n' "$dirty"
+    exit 1
+  fi
+done
+```
+
+If any sibling has uncommitted edits, the operator should commit or stash in that worktree (or accept the loss explicitly) before the operation that triggered the check.
+
+**Recovery if hit:** dangling objects usually survive in the object store. `git fsck --lost-found` enumerates them; `git show <hash>` identifies content; `git checkout <hash> -- <path>` restores. Slow, error-prone, and avoidable — pre-flight cleanly.
+
+The Step 0 advisory in `/restart-sop` is a soft warning, not a hard block. The decision to proceed with dirty siblings is the operator's; the SOP just makes the state visible.
+
+See `docs/agent-memory/gotchas/2026-05-02_solo_worktree-uncommitted-wipe.md` for the source incident.
+
+## 8. Assumptions and constraints
+
+The Phase 1 mechanics work because of these assumptions. Violating them re-introduces the conflict modes the design is meant to prevent.
+
+1. **One Claude per worktree.** Two Claude instances in the same worktree share filesystem state with no isolation, defeating per-agent file conventions and commit-range partitioning. Use `git worktree add` to create a fresh checkout per agent.
+2. **Sequential merges to the default branch.** Two `/update-sop` runs landing on `main` simultaneously can race on Backlog status flips and rollup regeneration. The lock-free design assumes humans serialise the final merge to `main`. Rebase-merge or squash-merge one agent's branch before opening the next agent's PR for merge.
+3. **Each agent on its own branch.** Commit-range partitioning uses `git merge-base <default> HEAD..HEAD`. Two agents committing directly to the same branch break the partition.
+4. **No coordination protocol.** There is no lock file, no mutex, no cross-agent message channel. Conflict avoidance is structural: distinct worktrees, distinct branches, distinct agent-ids in filenames, idempotent regeneration of derived sections.
+
+If any assumption cannot hold for a given workflow (e.g. CI-driven concurrent merges to `main`), file a Backlog item to extend the mechanics rather than working around them.
+
 ## Further sections (placeholder)
 
 The remaining mechanics are added to this guide as their batches ship:

@@ -23,9 +23,15 @@ See CLAUDE.md Key Documents & Dispatch table.
 
 ## In-Flight Work
 
-<!-- Per-agent lines. Format: `- <agent-id> (YYYY-MM-DD): description`. Each agent manages their own line. When work completes, the agent moves their line to ## Completed Work. Empty is fine. -->
+<!--
+Auto-generated between the sentinel markers below from `docs/agent-memory/in-flight/<agent-id>.md`.
+Each agent owns one file — never edit another agent's file.
+Refresh with `bash scripts/refresh-in-flight.sh` (called by /update-sop Step 5).
+-->
 
+<!-- in-flight:start -->
 *(none)*
+<!-- in-flight:end -->
 
 ---
 
