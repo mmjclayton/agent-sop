@@ -228,7 +228,10 @@ if [ "$MODE" = "check-drift" ]; then
       echo "check-drift: no session commits yet — skipping until after first commit"
       exit 0
     fi
-    commit_pnums=$(git log "${base}..HEAD" --format='%s%n%b' 2>/dev/null | grep -oE '\bP[0-9]+\b' | sort -u)
+    # `|| true` keeps pipefail+errexit from killing the script when no
+    # P-numbers appear in commit messages — empty result is a legal state
+    # (drift detection's whole point is "do commits reference declared work?").
+    commit_pnums=$( { git log "${base}..HEAD" --format='%s%n%b' 2>/dev/null | grep -oE '\bP[0-9]+\b' || true; } | sort -u)
     # Measure diff over the committed range only — stays consistent with
     # commit_pnums so uncommitted work doesn't trigger a false-positive.
     loc=$(git diff --numstat "${base}..HEAD" -- 2>/dev/null | awk '{a+=$1; d+=$2} END{print a+d+0}')
