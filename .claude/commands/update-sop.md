@@ -1,6 +1,6 @@
 ---
 description: Run the Agent SOP session end checklist. Updates all tracking files, writes the resume snapshot, and commits.
-sop_version: "2026-04-19"
+sop_version: "2026-05-02"
 ---
 
 Execute the Agent SOP session end checklist. Complete every step below before the session ends. Do not skip any step. Never delete without a trace: update in place, mark superseded, or archive.
@@ -429,6 +429,33 @@ Stage all modified docs/ files along with CLAUDE.md, Backlog.md, and any other c
 ```
 docs: session end housekeeping — [brief description of what was updated]
 ```
+
+## Step 10b: Prune merged local branches
+
+Local branches accumulate every session — `gh pr merge --delete-branch` only removes
+the *remote* copy, leaving the local one behind forever. After a few weeks the
+output of `git branch` becomes unreadable and `git fetch` slows down on the
+prune walk.
+
+Delete every local branch whose upstream remote was deleted:
+
+```bash
+git fetch --prune --quiet
+git branch -vv | awk '/: gone\]/ {print $1}' | grep -v "^$(git branch --show-current)$" | xargs -r git branch -D
+```
+
+Notes:
+- `[gone]` in `git branch -vv` means the branch tracked an upstream that has
+  since been deleted — that is the squash-merge-then-auto-delete-branch
+  signal. Safe to nuke locally.
+- Excluded: the current branch (can't delete what's checked out) and any
+  branch with no upstream (local-only experiments).
+- Does NOT catch worktree-isolated branches with stale local copies in the
+  parent repo; those need manual review (rare).
+
+If the pruning trips a hook denial, defer to the user — branch nukes are
+reversible via `git fsck --lost-found` but warrant explicit consent
+when the harness flags them.
 
 ## Step 11: Report completion
 
