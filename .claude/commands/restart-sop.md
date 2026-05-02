@@ -24,7 +24,7 @@ When more than one worktree is checked out on this repo, branch operations in an
 wt_count=$(git worktree list 2>/dev/null | wc -l | tr -d ' ')
 if [ "${wt_count:-0}" -gt 1 ]; then
   echo "Multi-worktree active ($wt_count worktrees). Sibling-worktree branch operations can wipe uncommitted edits."
-  git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}' | while read -r wt; do
+  git worktree list --porcelain 2>/dev/null | awk '/^worktree /{sub(/^worktree /, ""); print}' | while read -r wt; do
     [ -d "$wt" ] || continue
     dirty=$(git -C "$wt" status --porcelain 2>/dev/null)
     if [ -n "$dirty" ]; then

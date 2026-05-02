@@ -355,15 +355,24 @@ Before any branch-mutating operation in parallel mode:
 # Multi-worktree active?
 [ "$(git worktree list | wc -l | tr -d ' ')" -gt 1 ] || exit 0
 
-# Every worktree must have a clean tree before proceeding
-git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt; do
+# Every worktree must have a clean tree before proceeding.
+# Note: `exit 1` inside a piped `while read` only exits the subshell on
+# bash. Append a marker to a temp flag file inside the loop and check it
+# outside so the outer script can hard-block.
+_dirty_flag=$(mktemp)
+git worktree list --porcelain | awk '/^worktree /{sub(/^worktree /, ""); print}' | while read -r wt; do
   dirty=$(git -C "$wt" status --porcelain 2>/dev/null)
   if [ -n "$dirty" ]; then
     printf 'Sibling worktree has uncommitted changes: %s\n' "$wt"
     printf '%s\n' "$dirty"
-    exit 1
+    echo dirty >> "$_dirty_flag"
   fi
 done
+if [ -s "$_dirty_flag" ]; then
+  rm -f "$_dirty_flag"
+  exit 1
+fi
+rm -f "$_dirty_flag"
 ```
 
 If any sibling has uncommitted edits, the operator should commit or stash in that worktree (or accept the loss explicitly) before the operation that triggered the check.

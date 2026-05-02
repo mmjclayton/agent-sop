@@ -303,10 +303,10 @@ Resolution paths when the gate fires:
 
 **Execution note:** Steps 4, 7, and 8 are independent writes (feature-map, per-agent resume snapshot, recent-work entry). Their tool calls have no inter-dependencies. When you reach Step 4, issue all three writes as a parallel tool-call batch in a single message rather than three sequential turns. Step 5 (decisions/gotchas) and Step 6 (build-plan Batch Log) depend on Step 1's self-eval output and stay sequential.
 
-**Skip predicate:** if `SESSION_RANGE` is empty OR `git diff --name-only HEAD..HEAD` (i.e. the working-tree diff against `HEAD`) shows no `Backlog.md` change with a `[SHIPPED - YYYY-MM-DD]` tag added this session, skip Step 4 entirely. Nothing shipped this session means feature-map has nothing to update.
+**Skip predicate:** if `SESSION_RANGE` is empty OR `git diff HEAD -- Backlog.md` (the working-tree diff against `HEAD`) shows no added `[SHIPPED - YYYY-MM-DD]` tag this session, skip Step 4 entirely. Nothing shipped this session means feature-map has nothing to update.
 
 ```bash
-if [ -z "$SESSION_RANGE" ] && ! git diff HEAD -- Backlog.md | grep -qE '^\+.*\[SHIPPED - [0-9]{4}-[0-9]{2}-[0-9]{2}\]'; then
+if [ -z "$SESSION_RANGE" ] || ! git diff HEAD -- Backlog.md | grep -qE '^\+.*\[SHIPPED - [0-9]{4}-[0-9]{2}-[0-9]{2}\]'; then
   echo "Step 4 skipped: no [SHIPPED] tags added this session."
 fi
 ```
