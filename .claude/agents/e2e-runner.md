@@ -94,6 +94,11 @@ test('flaky: [description]', async ({ page }) => {
 })
 ```
 
+## Before / after — selector quality
+
+- *Before:* `await page.click('.btn-primary:nth-child(2)')` — brittle: breaks when the button order changes or a sibling is added.
+  *After:* `await page.getByRole('button', { name: 'Submit order' }).click()` — auto-waits, reads as an assertion of intent, survives DOM restructuring as long as the accessible name holds.
+
 ## Success Metrics
 
 - All critical journeys passing (100%)

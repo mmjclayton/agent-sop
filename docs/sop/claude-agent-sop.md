@@ -25,6 +25,8 @@ How this works:
 - project_resume.md: overwrite each session — this is a snapshot, not a log. Historical context belongs in build-plan batch logs.
 - Memory files: mark stale files `Status: Superseded - YYYY-MM-DD`. Never delete the file.
 
+*Before:* user says "we don't need P12 any more" → agent deletes the P12 entry and the `feature-map.md` row. *After:* flip P12 to `[WON'T]` in place, append a one-line `Reason:`. `feature-map.md` row stays.
+
 Git history is the backstop for in-repo files, but documents must remain human-readable records without requiring a git dig.
 
 **Rule 2 — One source of truth per information type.**
@@ -77,6 +79,8 @@ How to stay under: trim before adding. Every new instruction must identify what 
 *Prevents: hidden interpretation picks surfacing later as rework.*
 
 When a request has multiple valid interpretations — ambiguous scope, target, or output — list the interpretations, name the one you'd default to, and ask. Do not pick silently. Exception: trivial reversible choices (variable naming in a one-liner) — pick and note the choice rather than stalling.
+
+*Before:* "tighten the validator" → agent silently picks (stricter regex / additional check / refactor) and ships. *After:* "Three reads — stricter regex, additional check, refactor. Defaulting to additional check (recent failures pointed at missed case X). OK?"
 
 **Override hierarchy:** `CLAUDE.md` can override any project-specific convention defined in this SOP (tag taxonomy, file paths, stack-specific rules). It cannot override the six non-negotiable rules above. They apply to every project regardless of what CLAUDE.md says.
 

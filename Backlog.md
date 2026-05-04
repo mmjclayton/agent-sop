@@ -1091,7 +1091,7 @@ Add an `exclude: []` array field to `agent-sop.config.json`. Files listed are sk
 ---
 
 ### P58 — Karpathy before/after pattern (extend across SOP)
-`[OPEN] [Iteration]`
+`[SHIPPED - 2026-05-04] [Iteration]`
 
 Extend the "show one bad example next to one good example" pedagogy across additional SOP sections. Pattern proven in `code-reviewer.md` Finding Voice (3 pairs from P48) and `claude-agent-sop.md` §15.1 (strong-vs-weak gotcha entry — prevented a benchmark agent from removing a `Math.max` multiplier). Deferred from P34 (2026-04-17) pending evidence of broader value; the P55 sycophancy-gate work and 2026-05-04 digest reinforced the principle.
 
@@ -1154,3 +1154,4 @@ Document that the SOP body, compliance scoring, and reviewer-substance gates wer
 - P24 — Multi-agent optimisation guide — SHIPPED 2026-05-04
 - P55 — Sycophantic reviewer detection: tighten substance assertion — SHIPPED 2026-05-04
 - P57 — Config `exclude` field for `/update-agent-sop` — SHIPPED 2026-05-04
+- P58 — Karpathy before/after pattern (extend across SOP) — SHIPPED 2026-05-04
