@@ -131,8 +131,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 ## Recent Work (rollup)
 
 <!-- recent-work-rollup:start -->
-*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-05-02.*
+*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-05-04.*
 
+- 2026-05-04 `solo`: P56 — Backend assumptions + non-Anthropic backend advisory
 - 2026-05-02 `solo`: P54 — Multi-agent hardening + perf gates + worktree advisory
 - 2026-04-29 `solo`: P53 `/finish` skill — end-to-end verify, simplify, ship
 - 2026-04-26 `solo`: P52 learnings capture pattern (doc-only)

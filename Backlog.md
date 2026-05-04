@@ -1058,6 +1058,39 @@ Originally shipped as `/go`; renamed to `/finish` later the same day — `/go` c
 
 ---
 
+### P55 — Sycophantic reviewer detection: tighten substance assertion
+`[OPEN] [Iteration]`
+
+Tighten `scripts/validate-state-transitions.sh --assert-review` to flag reviews that pass the structural check but contain no substance. Current implementation accepts `No issues — looks great` (any 2 words after the dash). Sycophancy data from Anthropic's 30 April 2026 personal-guidance research quantifies the failure mode: even a frontier model trained against sycophancy validates the user 9% baseline, 25-38% in emotionally-loaded domains. Reviewer-as-peer-agent has the same emotional load — the implementer just shipped this work, the reviewer is a peer in the same session, and the path of least resistance is to nod through.
+
+**Source:** `agent-sop-research-digest-2026-05-04.md` (Finding 1).
+
+**Acceptance criteria:**
+- `--assert-review` requires findings (or reasoned-no-issues) to cite either a file path (`*.ts:N`, `*.md:N`) or a backticked code symbol from the diff
+- `code-reviewer.md` Finding Voice section gains a short note tying the rule to the published baseline
+- `claude-agent-sop.md` Section 6 Step 1b gains a paragraph citing the 9% / 25-38% baseline as load-bearing rationale
+- New fixture under `docs/benchmark/state-transition-fixtures/` covering the slippery sycophancy-style review (passes today, must fail after the change)
+
+**Why filed not built now:** filed alongside P56 from the 2026-05-04 digest; build order is P56 then P24, P55 deferred.
+
+---
+
+### P56 — Backend assumptions: gateway / non-Anthropic backend warning
+`[SHIPPED - 2026-05-04] [Iteration]`
+
+Document that the SOP body, compliance scoring, and reviewer-substance gates were authored against Anthropic-hosted Claude (Opus / Sonnet). DeepClaude (3 May 2026 HN front page) routes Claude Code through cheaper backends via `ANTHROPIC_BASE_URL`; the 1 May 2026 Claude Code changelog formalised gateway support (`/model picker now lists models from gateway's /v1/models endpoint when ANTHROPIC_BASE_URL points at an Anthropic-compatible gateway`). Swapped-backend usage is now a first-class scenario. Reviewer-substance and instruction-following gates depend on instruction-following quality that smaller or cheaper backends may not match.
+
+**Source:** `agent-sop-research-digest-2026-05-04.md` (Finding 2).
+
+**Acceptance criteria:**
+- New short section in `claude-agent-sop.md` after Section 15.4 naming the models the SOP was authored against and warning that gateway-routed sessions may degrade reviewer-substance and instruction-following gates
+- `/restart-sop` gains a Step 0e advisory that prints when `ANTHROPIC_BASE_URL` is set to a non-empty value not matching `*.anthropic.com`
+- User-scope `~/.claude/commands/restart-sop.md` mirrored
+- Baseline SHA refreshed in `.claude/agent-sop.config.json` for restart-sop.md
+- No claim about specific token-budget numbers (the 5,200-5,900 number from the digest is unmeasured)
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
@@ -1087,3 +1120,5 @@ Originally shipped as `/go`; renamed to `/finish` later the same day — `/go` c
 - P27 — Managed Agents integration and outcome rubrics — SHIPPED 2026-04-09
 - P28 — Research digest implementation — SHIPPED 2026-04-09
 - P53 — `/finish` skill: end-to-end verify, simplify, ship — SHIPPED 2026-04-29 (originally shipped as `/go`, renamed same day)
+- P54 — Multi-agent hardening + perf gates + worktree advisory — SHIPPED 2026-05-02
+- P56 — Backend assumptions: gateway / non-Anthropic backend warning — SHIPPED 2026-05-04

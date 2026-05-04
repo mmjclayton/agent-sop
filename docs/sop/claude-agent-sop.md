@@ -684,6 +684,21 @@ When running A/B benchmarks or any agent testing against a real codebase:
 
 **Managed Agents API safety:** when benchmarks run via the Managed Agents API instead of local Claude Code, see `docs/guides/managed-agents-integration.md` (Benchmark safety section) for permission-policy and isolation rules.
 
+### 15.5 Backend Assumptions
+
+This SOP, its compliance scoring, and the reviewer-substance gates (Section 6 Step 1b, P44 / P45) were authored and benchmarked against Anthropic-hosted Claude (Opus and Sonnet, 4.x family). Gateway routing via `ANTHROPIC_BASE_URL` to non-Anthropic backends (DeepSeek, OpenRouter, Bedrock, Vertex relays, local models) is a first-class scenario as of the 1 May 2026 Claude Code changelog, but is not the authoring substrate for this document.
+
+Treat backend-substituted sessions as **advisory mode** for the gates that depend on instruction-following quality:
+- Reviewer-substance assertion (`scripts/validate-state-transitions.sh --assert-review`) may pass structurally complete but contentless reviews more often.
+- Reviewer voice rules (`code-reviewer.md` Finding Voice) depend on the model honouring drop-list / keep-list discipline.
+- Drift detection (Step 3d) depends on the model declaring the right P-numbers up front.
+
+The SOP's structural checks (file presence, tag format, transition graph, P-number collision) are model-agnostic and unaffected.
+
+`/restart-sop` Step 0e prints a soft advisory when `ANTHROPIC_BASE_URL` is set to a non-Anthropic value. The advisory does not block; it informs the operator that compliance scores and reviewer findings should be read with extra scepticism in that session.
+
+This section makes no claim about token-budget arithmetic on swapped backends — tokeniser and context-window behaviour vary by provider and have not been measured against this SOP.
+
 ---
 
 ## 16. Multi-Agent Context Routing
