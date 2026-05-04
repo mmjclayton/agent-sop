@@ -1075,6 +1075,35 @@ Tighten `scripts/validate-state-transitions.sh --assert-review` to flag reviews 
 
 ---
 
+### P57 — Config `exclude` field for `/update-agent-sop`
+`[SHIPPED - 2026-05-04] [Feature]`
+
+Add an `exclude: []` array field to `agent-sop.config.json`. Files listed are skipped entirely by `/update-agent-sop` — no classification, no baseline tracking, no sync attempt. Eliminates the current workaround pattern of freezing a baseline at an old SHA and adding a long explanatory note (see `~/.claude/agent-sop.config.json` notes for `docs/sop/security.md` — frozen at `33c651b1` because hst-tracker runs a project-specific Supabase/Render security doc that collides with agent-sop's pristine).
+
+**Acceptance criteria:**
+- `agent-sop-config-template.json` gains `"exclude": []` with explanatory `_exclude_note`
+- `/update-agent-sop` Step 2 (classification) introduces an EXCLUDED bucket; Step 3 / Step 4 / Step 5 skip excluded files
+- Step 6 report counts EXCLUDED separately
+- User-scope `~/.claude/commands/update-agent-sop.md` mirrored
+- Baseline SHA refreshed for `update-agent-sop.md` and the template
+- Backlog note: hst-tracker can migrate the `docs/sop/security.md` baseline-freeze note to `"exclude": ["docs/sop/security.md"]` next time its config is touched
+
+---
+
+### P58 — Karpathy before/after pattern (extend across SOP)
+`[OPEN] [Iteration]`
+
+Extend the "show one bad example next to one good example" pedagogy across additional SOP sections. Pattern proven in `code-reviewer.md` Finding Voice (3 pairs from P48) and `claude-agent-sop.md` §15.1 (strong-vs-weak gotcha entry — prevented a benchmark agent from removing a `Math.max` multiplier). Deferred from P34 (2026-04-17) pending evidence of broader value; the P55 sycophancy-gate work and 2026-05-04 digest reinforced the principle.
+
+**Acceptance criteria:**
+- Audit "do this not that" sections in the core SOP and reference agents; identify 4-5 candidates that materially benefit
+- Add 2-3 before/after pairs per chosen section
+- Net token cost stays under +500 bytes for the core SOP body (Rule 5 instruction budget unaffected — examples don't count as instructions but bytes still cost)
+- User-scope mirrors updated where reference agents change
+- Baselines refreshed
+
+---
+
 ### P56 — Backend assumptions: gateway / non-Anthropic backend warning
 `[SHIPPED - 2026-05-04] [Iteration]`
 
@@ -1124,3 +1153,4 @@ Document that the SOP body, compliance scoring, and reviewer-substance gates wer
 - P56 — Backend assumptions: gateway / non-Anthropic backend warning — SHIPPED 2026-05-04
 - P24 — Multi-agent optimisation guide — SHIPPED 2026-05-04
 - P55 — Sycophantic reviewer detection: tighten substance assertion — SHIPPED 2026-05-04
+- P57 — Config `exclude` field for `/update-agent-sop` — SHIPPED 2026-05-04

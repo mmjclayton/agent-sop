@@ -47,8 +47,6 @@ This project IS the Agent SOP library. All agents working on this project still 
 - P10 — Data/analytics domain variant `[has-open-questions]`
 
 **Follow-ups still open:**
-- Config `exclude` field for per-project file skipping (gap found during hst-tracker audit — security.md filename collision). Also doubles as `exclude_from_tracker_scan` escape hatch for the P42 auto-detect heuristic if false positives emerge.
-- Karpathy-skills before/after examples pattern (Common Mistakes pedagogy — deferred from P34)
 - R6 full-framework benchmark on fresh CLI sessions, Opus 4.6, 2+ rounds (deferred from P38 — run if publicly citing a post-trim percentage)
 
 ---
@@ -133,6 +131,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-05-04.*
 
+- 2026-05-04 `solo`: P57 — Config `exclude` field for `/update-agent-sop`
 - 2026-05-04 `solo`: P55 — Sycophantic reviewer detection (substance-assertion tightening)
 - 2026-05-04 `solo`: P24 — Multi-agent optimisation guide (entry point)
 - 2026-05-04 `solo`: P56 — Backend assumptions + non-Anthropic backend advisory

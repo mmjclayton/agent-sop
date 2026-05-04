@@ -23,6 +23,9 @@
   "review_files_threshold": 3,
   "_review_threshold_note": "P44 reviewer-turn gate. When a [Feature] or [Refactor] ships AND the session diff exceeds either threshold, /update-sop Step 1b invokes code-reviewer (or security-reviewer for auth/crypto/payment diffs) and requires a substantive review artifact at docs/reviews/. Set either to 0 to disable the gate entirely.",
 
+  "exclude": [],
+  "_exclude_note": "Array of pristine-replica paths (relative to project root) to skip during /update-agent-sop sync. Excluded files are reported as EXCLUDED, never classified, never synced, and have no baseline tracked. Use this when the project deliberately runs a local override of a file with the same path as an upstream pristine — e.g. ['docs/sop/security.md'] for a project that ships its own project-specific security doc rather than agent-sop's generic one. Replaces the older workaround of freezing a baseline SHA and adding an explanatory note.",
+
   "baseline_shas": {
     "_comment": "SHA-256 of each pristine-replica file at last sync. Used for three-way diff (baseline vs local vs upstream) to detect local modifications. Populated by setup.sh at install and updated by /update-agent-sop per file.",
     "docs/sop/claude-agent-sop.md": "<sha256>",
