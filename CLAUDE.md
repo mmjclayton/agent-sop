@@ -25,6 +25,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 | Feature Map | `docs/feature-map.md` | Shipped documents + roadmap |
 | Backlog | `Backlog.md` | Single source of truth for work items |
 | Core SOP | `docs/sop/claude-agent-sop.md` | Non-negotiable rules (Section 0), file specs, session checklists |
+| Multi-Agent | `docs/sop/multi-agent.md` | Entry point, decision tree, optimisation rules, Common Mistakes (deep mechanics in `docs/guides/multi-agent-*.md`) |
 | Build Plan | `docs/build-plans/phase-0-foundation.md` | Current phase |
 | Compliance | `docs/sop/compliance-checklist.md` | Audit checks + scoring (used by sop-checker agent) |
 | Security | `docs/sop/security.md` | Core security rules |
@@ -37,10 +38,10 @@ This project IS the Agent SOP library. All agents working on this project still 
 
 ---
 
-## Current Priority Items (as of 2026-04-19)
+## Current Priority Items (as of 2026-05-04)
 
 **Next:**
-- P24 — Multi-agent optimisation guide (informed by P23 benchmark results)
+- P55 — Sycophantic reviewer detection (filed 2026-05-04 from research digest, ready to build)
 - P33 — Managed Agents integration guide (deferred — revive when a project uses Managed Agents API)
 - P8 — Web app domain variant `[has-open-questions]`
 - P9 — Marketing domain variant `[has-open-questions]`
@@ -133,6 +134,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-05-04.*
 
+- 2026-05-04 `solo`: P24 — Multi-agent optimisation guide (entry point)
 - 2026-05-04 `solo`: P56 — Backend assumptions + non-Anthropic backend advisory
 - 2026-05-02 `solo`: P54 — Multi-agent hardening + perf gates + worktree advisory
 - 2026-04-29 `solo`: P53 `/finish` skill — end-to-end verify, simplify, ship

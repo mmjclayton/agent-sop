@@ -34,6 +34,7 @@ Current phase files:
 | Check shipped features or roadmap | `docs/feature-map.md` | Shipped inventory + priority tiers |
 | Read phase architecture | `docs/build-plans/*.md` | Batch logs, locked decisions |
 | Check copy/tone rules | `.claude/brand-voice.md` | Brand voice, terminology |
+| Run more than one agent on this repo | `docs/sop/multi-agent.md` (deep mechanics in `docs/guides/multi-agent-parallel-sessions.md`) | Decision tree, optimisation rules, Common Mistakes |
 | Change the data model | `[path/to/schema]` | Always create a migration. Follow schema change protocol. |
 | Change colours, spacing, layout | `[path/to/styles]` (lines N-N) | CSS tokens. Never hardcode hex values. |
 | [Change X] | `[path]` | [what to know when you arrive — name related components, gotchas] |

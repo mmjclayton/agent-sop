@@ -34,6 +34,7 @@ Current phase files:
 | Check or update work items | `Backlog.md` | Single source of truth for all items |
 | Read phase architecture | `docs/build-plans/*.md` | Batch logs, locked decisions |
 | Check copy/tone rules | `.claude/brand-voice.md` | Brand voice, terminology |
+| Run more than one agent on this repo | `docs/sop/multi-agent.md` (deep mechanics in `docs/guides/multi-agent-parallel-sessions.md`) | Decision tree, optimisation rules, Common Mistakes |
 | [Change X] | `[path]` | [what to know when you arrive] |
 | [Change Y] | `[path]` (lines N-N) | [include line range for large files] |
 

@@ -80,14 +80,7 @@ When a request has multiple valid interpretations — ambiguous scope, target, o
 
 **Override hierarchy:** `CLAUDE.md` can override any project-specific convention defined in this SOP (tag taxonomy, file paths, stack-specific rules). It cannot override the six non-negotiable rules above. They apply to every project regardless of what CLAUDE.md says.
 
-**Multi-agent parallel sessions:** Multiple agents on the same project work in separate git worktrees on separate branches. Tracking-file conflicts are prevented by structural choices — no human-in-the-loop co-ordination required:
-- **Per-entry directories:** Recent Work, Decisions, and Gotchas live as one file per entry with agent-id in the filename. Two agents writing on the same date produce distinct filenames. The CLAUDE.md `## Recent Work (rollup)` section is derived from `docs/recent-work/` via `/update-sop` Step 8b; regeneration is idempotent so merges converge.
-- **Per-agent resume snapshots:** `project_resume_<agent-id>.md` keyed by agent-id. No cross-agent clobber.
-- **Commit-range partitioning:** secondary-tracker reconciliation, drift guard, and hard-block checks use `git merge-base <default> HEAD..HEAD` so sibling agents' finding IDs never contaminate this agent's scope.
-- **P-number collision detection:** `/update-sop` Step 2a hard-blocks when two agents independently pick the same P-number; resolved via the `renumber_p` helper.
-- **Code files:** worktrees typically give each agent a mutually exclusive file set. When code conflicts do arise, the agent merging second reads both versions and produces a correct merge; flag non-trivial cases in a new `docs/agent-memory/gotchas/` entry.
-
-See `docs/guides/multi-agent-parallel-sessions.md` for the full mechanics, agent-id resolution, `renumber_p` helper, and dogfood protocol.
+**Multi-agent parallel sessions:** When more than one agent works the same repo (separate worktrees, separate branches), tracking-file conflicts are prevented by structural choices — no human-in-the-loop co-ordination required. See `docs/sop/multi-agent.md` for the entry point, decision tree, and Common Mistakes; `docs/guides/multi-agent-parallel-sessions.md` for the full concurrency mechanics (agent-id resolution, per-entry directories, commit-range partitioning, P-number collision detection, `renumber_p` helper, dogfood protocol).
 
 ---
 
@@ -701,9 +694,9 @@ This section makes no claim about token-budget arithmetic on swapped backends �
 
 ---
 
-## 16. Multi-Agent Context Routing
+## 16. Multi-Agent
 
-Applies only when multiple agents work in parallel on the same project. See `docs/guides/multi-agent-context-routing.md` for the context-tier table, routing rules, conflict avoidance, and Managed Agents API mapping.
+Applies when more than one agent works the same project — either in parallel sessions across worktrees, or as coordinator + specialist sub-agents within one session. See `docs/sop/multi-agent.md` for the canonical entry point, decision tree, optimisation rules, and Common Mistakes. Deep mechanics live in `docs/guides/multi-agent-parallel-sessions.md` (concurrency, agent-id, P-number collision) and `docs/guides/multi-agent-context-routing.md` (context tiers, coordinator + specialist).
 
 ---
 

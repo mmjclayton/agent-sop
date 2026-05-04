@@ -956,7 +956,7 @@ Bring `docs/guides/managed-agents-integration.md` back into active use when a pr
 ---
 
 ### P24 — Multi-agent optimisation guide
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-05-04] [Feature]`
 
 Standalone guide at `docs/sop/multi-agent.md` for multiple agents working the same repo. Consolidates and extends existing coverage (Section 0 contention, Section 16 context routing, Section 17 Managed Agents) into a single reference.
 
@@ -1122,3 +1122,4 @@ Document that the SOP body, compliance scoring, and reviewer-substance gates wer
 - P53 — `/finish` skill: end-to-end verify, simplify, ship — SHIPPED 2026-04-29 (originally shipped as `/go`, renamed same day)
 - P54 — Multi-agent hardening + perf gates + worktree advisory — SHIPPED 2026-05-02
 - P56 — Backend assumptions: gateway / non-Anthropic backend warning — SHIPPED 2026-05-04
+- P24 — Multi-agent optimisation guide — SHIPPED 2026-05-04
