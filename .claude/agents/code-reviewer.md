@@ -98,6 +98,8 @@ How the `Issue:` and `Fix:` lines are written. Severity (CRITICAL/HIGH/MEDIUM/LO
 
 After the carve-out finding, resume terse style for the rest.
 
+**Why this matters (sycophancy gate).** Anthropic's 30 April 2026 personal-guidance research measured a 9% baseline rate at which even a frontier model trained against sycophancy validates the user, rising to 25-38% in emotionally-loaded domains. Code review has the same emotional load — the implementer just shipped, you are a peer in the same session, the easy move is to approve. The substance-assertion validator (`scripts/validate-state-transitions.sh --assert-review`, run by `/update-sop` Step 1b) blocks any review whose Findings or `No issues — <words>` line cites no concrete anchor — no file path with line number, no backticked symbol or path. A structurally complete `No issues — looks great` fails. Cite specific code or the review will be rejected.
+
 ## Output Format
 
 ```

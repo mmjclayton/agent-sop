@@ -411,6 +411,8 @@ Skip agent-memory.md, build plans, and MEMORY.md/project_resume.md. The lightwei
 9. Commit docs/ changes with the work
 ```
 
+**Why the reviewer-turn substance assertion exists (Step 1b rationale).** Anthropic's 30 April 2026 personal-guidance research measured a 9% baseline rate at which even a frontier model trained against sycophancy validates the user, rising to 25-38% in emotionally-loaded domains. Code review carries an analogous emotional load: the implementer just shipped this work, the reviewer is a peer agent in the same session, and the path of least resistance is to nod through. Step 1b therefore enforces *substance*, not just *presence* — the validator (`scripts/validate-state-transitions.sh --assert-review`) blocks reviews that have a Findings section with no concrete anchor, or a `No issues — <words>` line that names nothing specific. A review without at least one file path with line number (e.g. `foo.ts:42`) or a backticked symbol or path (e.g. `` `processOrder` ``, `` `scripts/foo.sh` ``) is treated as sycophantic and rejected. Cite or fail.
+
 **Context compaction threshold:** When context reaches approximately 60% capacity, wrap up the current batch and run `/update-sop` (or complete the session end checklist manually) before continuing. Do not push to 95% — compaction at that point causes context loss and unreliable behaviour in the remainder of the session. Treat 60% as the session boundary signal, not a warning to ignore.
 
 ---

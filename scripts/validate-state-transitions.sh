@@ -84,33 +84,55 @@ if [ "$MODE" = "assert-review" ]; then
     missing="$missing severity-line"
   fi
 
-  # 3. At least one concrete finding OR a reasoned no-issues statement.
-  #    Accepts: a "Findings" section with any non-empty line beneath, OR
-  #    a line matching "No issues — <at least one more word>".
+  # 3. At least one concrete finding OR a reasoned no-issues statement,
+  #    AND the finding/no-issues body must contain a concrete anchor — a
+  #    file path with line number (`foo.ts:42`) or a backticked symbol/path
+  #    (`processOrder`, `scripts/foo.sh`). Sycophancy gate (P55): reviews
+  #    that pass structurally but cite nothing concrete are blocked here.
+  #    Reasoning lives in claude-agent-sop.md §6 Step 1b — Anthropic's
+  #    30 April 2026 personal-guidance research measured 9% baseline /
+  #    25-38% emotional-domain validation rates even in frontier models
+  #    trained against sycophancy. Reviewer-as-peer-agent carries the
+  #    same load. Cite or fail.
   has_findings=0
+  has_anchor=0
+  ANCHOR_RE='(`[A-Za-z_][A-Za-z0-9_./:-]*`|[A-Za-z0-9_./-]+\.[a-zA-Z]+:[0-9]+)'
+
   if grep -qiE '^##+[[:space:]]+findings?\b' "$ASSERT_REVIEW_FILE"; then
-    # a Findings heading with *some* content beneath it (any non-empty line
-    # before the next heading)
-    if awk '
+    # awk exits 0 if Findings has body+anchor, 2 if body but no anchor,
+    # 1 if no body at all. Defused with `|| awk_exit=$?` to keep set -e happy.
+    awk_exit=0
+    awk '
       tolower($0) ~ /^##+[[:space:]]+findings?([[:space:]]|$)/ { in_f=1; next }
       in_f && /^##+ / { in_f=0 }
       in_f && NF { found=1 }
-      END { exit found ? 0 : 1 }
-    ' "$ASSERT_REVIEW_FILE"; then
-      has_findings=1
-    fi
+      in_f && /(`[A-Za-z_][A-Za-z0-9_.:\/-]*`|[A-Za-z0-9_.\/-]+\.[a-zA-Z]+:[0-9]+)/ { anchor=1 }
+      END { exit (found ? (anchor ? 0 : 2) : 1) }
+    ' "$ASSERT_REVIEW_FILE" || awk_exit=$?
+    case "$awk_exit" in
+      0) has_findings=1; has_anchor=1 ;;
+      2) has_findings=1 ;;
+      *) ;;
+    esac
   fi
+
   if [ "$has_findings" = "0" ]; then
-    # fallback: reasoned no-issues
+    # fallback: reasoned no-issues — same anchor rule applied to the line
     if grep -qiE 'no issues[[:space:]]*[—:-][[:space:]]*\S+[[:space:]]+\S+' "$ASSERT_REVIEW_FILE"; then
       has_findings=1
+      if grep -iE 'no issues' "$ASSERT_REVIEW_FILE" | grep -qE "$ANCHOR_RE"; then
+        has_anchor=1
+      fi
     fi
   fi
+
   [ "$has_findings" = "0" ] && missing="$missing concrete-finding-or-reasoned-no-issues"
+  [ "$has_findings" = "1" ] && [ "$has_anchor" = "0" ] && missing="$missing anchor-in-findings"
 
   if [ -n "$missing" ]; then
     echo "BLOCK: review artifact $ASSERT_REVIEW_FILE missing:$missing" >&2
-    echo "Required sections: diff summary heading, Severity: <enum>, Findings section or reasoned 'No issues — <reason>'." >&2
+    echo "Required: diff summary heading, Severity: <enum>, Findings section (or reasoned 'No issues — <reason>'), and at least one concrete anchor inside findings/no-issues — a file path with line number (e.g. \`foo.ts:42\`) or a backticked symbol or path (e.g. \`processOrder\`, \`scripts/foo.sh\`)." >&2
+    echo "Sycophancy gate: reviews that pass structurally but cite nothing concrete are blocked. See SOP §6 Step 1b for rationale." >&2
     exit 1
   fi
   exit 0

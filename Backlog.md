@@ -1059,7 +1059,7 @@ Originally shipped as `/go`; renamed to `/finish` later the same day — `/go` c
 ---
 
 ### P55 — Sycophantic reviewer detection: tighten substance assertion
-`[OPEN] [Iteration]`
+`[SHIPPED - 2026-05-04] [Iteration]`
 
 Tighten `scripts/validate-state-transitions.sh --assert-review` to flag reviews that pass the structural check but contain no substance. Current implementation accepts `No issues — looks great` (any 2 words after the dash). Sycophancy data from Anthropic's 30 April 2026 personal-guidance research quantifies the failure mode: even a frontier model trained against sycophancy validates the user 9% baseline, 25-38% in emotionally-loaded domains. Reviewer-as-peer-agent has the same emotional load — the implementer just shipped this work, the reviewer is a peer in the same session, and the path of least resistance is to nod through.
 
@@ -1123,3 +1123,4 @@ Document that the SOP body, compliance scoring, and reviewer-substance gates wer
 - P54 — Multi-agent hardening + perf gates + worktree advisory — SHIPPED 2026-05-02
 - P56 — Backend assumptions: gateway / non-Anthropic backend warning — SHIPPED 2026-05-04
 - P24 — Multi-agent optimisation guide — SHIPPED 2026-05-04
+- P55 — Sycophantic reviewer detection: tighten substance assertion — SHIPPED 2026-05-04

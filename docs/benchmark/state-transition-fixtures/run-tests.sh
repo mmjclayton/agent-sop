@@ -94,6 +94,38 @@ EOF
   rm -rf "$tmp"
 done
 
+# --------------------------------------------------------------------------
+# P55: review-substance fixtures (`*.review.md`).
+#
+# Iterates every *.review.md file in this directory and runs the validator's
+# --assert-review mode against it. Filename prefix dictates expected exit:
+#   legal-review-*   → expect exit 0  (passes substance + anchor checks)
+#   illegal-review-* → expect exit 1  (sycophantic / no concrete anchor)
+# --------------------------------------------------------------------------
+for review in "$SCRIPT_DIR"/*.review.md; do
+  [ -f "$review" ] || continue
+  name="$(basename "${review%.review.md}")"
+
+  case "$name" in
+    legal-review-*) expected=0 ;;
+    illegal-review-*) expected=1 ;;
+    *) echo "SKIP: $name has no legal-review-/illegal-review- prefix"; continue ;;
+  esac
+
+  output=$(bash "$VALIDATOR" --assert-review "$review" 2>&1)
+  actual=$?
+
+  if [ "$actual" = "$expected" ]; then
+    echo "PASS: $name (exit $actual)"
+    pass=$((pass + 1))
+  else
+    echo "FAIL: $name — expected exit $expected, got $actual"
+    echo "  output: $output"
+    fail=$((fail + 1))
+    failed_cases="$failed_cases $name"
+  fi
+done
+
 echo ""
 echo "Results: $pass passed, $fail failed"
 [ "$fail" -gt 0 ] && echo "Failed: $failed_cases" && exit 1

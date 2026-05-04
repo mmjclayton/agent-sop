@@ -41,7 +41,6 @@ This project IS the Agent SOP library. All agents working on this project still 
 ## Current Priority Items (as of 2026-05-04)
 
 **Next:**
-- P55 — Sycophantic reviewer detection (filed 2026-05-04 from research digest, ready to build)
 - P33 — Managed Agents integration guide (deferred — revive when a project uses Managed Agents API)
 - P8 — Web app domain variant `[has-open-questions]`
 - P9 — Marketing domain variant `[has-open-questions]`
@@ -134,6 +133,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-05-04.*
 
+- 2026-05-04 `solo`: P55 — Sycophantic reviewer detection (substance-assertion tightening)
 - 2026-05-04 `solo`: P24 — Multi-agent optimisation guide (entry point)
 - 2026-05-04 `solo`: P56 — Backend assumptions + non-Anthropic backend advisory
 - 2026-05-02 `solo`: P54 — Multi-agent hardening + perf gates + worktree advisory
