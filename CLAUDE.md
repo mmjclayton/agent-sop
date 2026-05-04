@@ -41,7 +41,6 @@ This project IS the Agent SOP library. All agents working on this project still 
 ## Current Priority Items (as of 2026-05-04)
 
 **Next:**
-- P33 — Managed Agents integration guide (deferred — revive when a project uses Managed Agents API)
 - P8 — Web app domain variant `[has-open-questions]`
 - P9 — Marketing domain variant `[has-open-questions]`
 - P10 — Data/analytics domain variant `[has-open-questions]`
