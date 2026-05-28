@@ -31,7 +31,8 @@ This project IS the Agent SOP library. All agents working on this project still 
 | Security | `docs/sop/security.md` | Core security rules |
 | Sandboxing | `docs/sop/sandboxing.md` | Container / network isolation for autonomous runs |
 | Harness | `docs/sop/harness-configuration.md` | Hooks + context primitives (clearing, compaction, memory) |
-| Guides | `docs/guides/` | Optional patterns, multi-agent routing, Managed Agents (deferred), SOP hill-climbing |
+| Guides | `docs/guides/` | Optional patterns, multi-agent routing, Managed Agents (deferred), SOP hill-climbing, cross-layer rules |
+| Cross-layer rules | `docs/guides/cross-layer-rules.md` | Unify-first / parity-fixture pattern when one logical rule lives in more than one runtime |
 | Templates | `docs/templates/claude-md-template.md` | Base template for new projects |
 | SOP Checker | `.claude/agents/sop-checker.md` | Compliance audit agent |
 | `/finish` command | `.claude/commands/finish.md` | End-to-end verify + `/simplify` + ship (Backlog, `/update-sop`, PR) |

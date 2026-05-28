@@ -1110,6 +1110,27 @@ Extend the "show one bad example next to one good example" pedagogy across addit
 
 ---
 
+### P59 — Step 1b reviewer-gate tightening + cross-layer rules guide
+`[IN PROGRESS] [Iteration]`
+
+Two upstream tightenings prompted by hst-tracker 2026-05-28 evidence (composer fix — 220 LOC PR, 2 HIGH bugs caught only at review; three May 2026 cross-layer divergence bugs in the same shape).
+
+1. **Step 1b reviewer-turn gate.** Add explicit skip list (docs-only, test-only, dependency bumps), document `review_loc_threshold: 0` always-on mode, add SOP-self-modification as an explicit trigger independent of LOC. Do not import hst-tracker's four-trigger framing into upstream — that policy belongs in project CLAUDE.md.
+2. **New guide `docs/guides/cross-layer-rules.md`.** Inventory-first framing of unify-vs-parity-fixture pattern. Tier 0 grep-for-siblings is the load-bearing pre-step; Tier A unify, Tier B parity fixture follow. Strip RepCanvas-specific paths in favour of generic globs.
+
+**Acceptance criteria:**
+- Step 1b in `claude-agent-sop.md` adds skip list + zero-threshold semantics + SOP-self-modification trigger; ~15 LOC net
+- New guide at `docs/guides/cross-layer-rules.md` (~150 LOC, inventory-first, project-agnostic)
+- Key Documents row in `CLAUDE.md` + one entry in `sop-common-mistakes.md` pointing to the new guide
+- Reviewer artifact at `docs/reviews/2026-05-28_solo_P59.md`
+- Ship-sop side: single paragraph in `ship-sop/README.md` or `ship-sop/CLAUDE.md` clarifying per-stop gate vs agent-sop's per-session Step 1b — no mechanics change
+
+**Source:** hst-tracker 2026-05-28 composer-fix session; `docs/process-improvements.md` §1, §4 in that repo.
+
+**Why not the literal brief:** brief assumed upstream had a four-trigger model; it doesn't. Upstream is threshold-based (50 LOC / 3 files), and the empirical bug (220 LOC) was already over threshold. The real upstream gap is skip-list + always-on mode + SOP-self-mod trigger. See `docs/reviews/2026-05-28_solo_P59.md` rationale section.
+
+---
+
 ### P56 — Backend assumptions: gateway / non-Anthropic backend warning
 `[SHIPPED - 2026-05-04] [Iteration]`
 

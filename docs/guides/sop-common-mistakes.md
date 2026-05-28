@@ -20,3 +20,4 @@
 | Storing derived facts in memory (test counts, line numbers, versions) | Goes stale immediately, misleads future agents | Store the rule, not the measurement — check at runtime |
 | Skipping tests before committing (code projects) | Broken code ships, next session starts with failures | Run the test suite as step 1 of session-end checklist |
 | Skipping session end checklist for "small changes" | Small changes compound into context debt | No exceptions |
+| Editing one site of a multi-site rule without grepping for siblings | Duplicate implementations drift silently; the bug only surfaces when the diverged input hits the diverged path | Before editing any logic, grep for the function/symbol across the repo. If a sibling exists, see `cross-layer-rules.md` for the unify-vs-parity-fixture decision. Add an inventory row if not already tracked. |
