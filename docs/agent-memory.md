@@ -24,7 +24,7 @@ See CLAUDE.md Key Documents table.
 
 ## In-Flight Work
 
-*(none — P49 and P51 closed 2026-04-24 after hst-tracker dogfood + 3-sample summary)*
+- solo (2026-05-28): P59 — Step 1b tightening + cross-layer rules guide. PR #6 open against agent-sop main; companion ship-sop PR #2. Awaiting merge.
 
 ---
 
@@ -49,6 +49,7 @@ See docs/agent-memory/gotchas/. One file per gotcha. Migrated from legacy narrat
 
 ## Completed Work
 
+- 2026-05-28: P59 — Step 1b reviewer-gate tightening + new cross-layer-rules guide. `docs/sop/claude-agent-sop.md` Step 1b gains explicit triggers (size / SOP-self-mod / project-declared paths), skip list (docs-only / test-only / dep bumps), `review_loc_threshold: 0` always-on semantics; `docs/templates/agent-sop-config-template.json` gains `review_triggers: []`. New `docs/guides/cross-layer-rules.md` (~165 LOC, inventory-first). Cross-refs in CLAUDE.md and `sop-common-mistakes.md`. ship-sop README paragraph clarifies per-stop vs per-session relationship. Reviewer artifact at `docs/reviews/2026-05-28_solo_P59.md`. PR #6 (agent-sop), PR #2 (ship-sop). Commit `dd24ca3`. Decision: `docs/agent-memory/decisions/2026-05-28_solo_p59-tighten-step1b-not-mandate-every-pr.md`.
 - 2026-05-04: P58 — Karpathy before/after pattern extended across the SOP. Core SOP gains pairs on Rule 1 (delete vs in-place) and Rule 6 (silent pick vs surface interpretations) — net +474 bytes, under the +500 byte cap. `planner.md`, `security-reviewer.md`, and `e2e-runner.md` each gain 1-2 pairs. Three reference agents mirrored to user scope; baselines refreshed.
 - 2026-05-04: P57 — Config `exclude` field. `agent-sop-config-template.json` gains `"exclude": []` field with note. `/update-agent-sop` Step 2 introduces EXCLUDED classification (skipped before fetch/SHA/baseline lookup); Steps 3/4 skip EXCLUDED files; Step 6 reports them separately. Replaces the older workaround of freezing baseline SHAs with explanatory notes (e.g. `docs/sop/security.md` collision pattern). Migration note for hst-tracker filed. User-scope mirror updated; baseline refreshed.
 - 2026-05-04: P55 — Sycophantic reviewer detection. `--assert-review` now requires findings or the reasoned-no-issues line to cite at least one concrete anchor (file path with line number, or backticked symbol/path). Sycophantic `No issues — looks great` blocked; structurally-complete-but-vacuous reviews blocked. SOP §6 Step 1b rationale paragraph cites Anthropic's 30 April 2026 baseline (9% / 25-38%). `code-reviewer.md` Finding Voice gains parallel paragraph. Four fixtures (2 legal + 2 illegal) and an extended runner. Backwards-compat — all 4 existing `docs/reviews/*.md` still pass. User-scope `code-reviewer.md` mirrored.
