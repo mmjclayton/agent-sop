@@ -1111,7 +1111,7 @@ Extend the "show one bad example next to one good example" pedagogy across addit
 ---
 
 ### P59 — Step 1b reviewer-gate tightening + cross-layer rules guide
-`[IN PROGRESS] [Iteration]`
+`[SHIPPED - 2026-05-28] [Iteration]`
 
 Two upstream tightenings prompted by hst-tracker 2026-05-28 evidence (composer fix — 220 LOC PR, 2 HIGH bugs caught only at review; three May 2026 cross-layer divergence bugs in the same shape).
 
@@ -1182,3 +1182,4 @@ Document that the SOP body, compliance scoring, and reviewer-substance gates wer
 - P55 — Sycophantic reviewer detection: tighten substance assertion — SHIPPED 2026-05-04
 - P57 — Config `exclude` field for `/update-agent-sop` — SHIPPED 2026-05-04
 - P58 — Karpathy before/after pattern (extend across SOP) — SHIPPED 2026-05-04
+- P59 — Step 1b reviewer-gate tightening + cross-layer rules guide — SHIPPED 2026-05-28

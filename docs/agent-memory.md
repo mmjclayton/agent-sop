@@ -24,7 +24,7 @@ See CLAUDE.md Key Documents table.
 
 ## In-Flight Work
 
-- solo (2026-05-28): P59 — Step 1b tightening + cross-layer rules guide. PR #6 open against agent-sop main; companion ship-sop PR #2. Awaiting merge.
+*(none — P59 shipped 2026-05-28 via PR #6 squash-merge to `b268ac6`; ship-sop PR #2 merged in parallel)*
 
 ---
 
