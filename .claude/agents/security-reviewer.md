@@ -92,6 +92,16 @@ Flag these patterns immediately:
 4. **Do not trust input** -- validate and sanitise everything
 5. **Verify context** -- do not flag test credentials or public keys as vulnerabilities
 
+## Before / after — finding voice
+
+Findings must be specific enough that a developer can act without asking follow-up questions. Hedged or generic findings are sycophancy in disguise — see `code-reviewer.md` Finding Voice for the underlying principle and the substance-assertion validator.
+
+- *Before:* `Issue: there might be an SQL injection risk somewhere in the user query path. Consider reviewing.`
+  *After:* `Issue: \`server/users.ts:78\` interpolates \`req.query.email\` directly into the SQL string. Classic injection — exploitable with \`?email='; DROP TABLE users;--\`. Fix: replace with parameterised query (\`db.query('SELECT * FROM users WHERE email = $1', [email])\`).`
+
+- *Before:* `Issue: error handling could leak sensitive information in some cases.`
+  *After:* `Issue: \`api/payments.ts:142\` returns the raw \`stripe.errors.StripeAuthenticationError\` to the client, including the API key prefix in \`error.headers['Stripe-Account']\`. Fix: catch StripeError in the handler, log full error server-side, return \`{error: 'payment_failed', code: error.code}\` to the client.`
+
 ## When to Run
 
 Always: new API endpoints, auth changes, user input handling, database query changes, file uploads, payment code, dependency updates.

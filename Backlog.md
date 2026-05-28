@@ -936,7 +936,13 @@ Fires fallback **only when agent-id is literally `solo`**. On a multi-worktree p
 ---
 
 ### P33 — Managed Agents integration guide (deferred)
-`[OPEN] [Feature] [has-open-questions]`
+`[WON'T - 2026-05-04] [Feature]`
+
+**Reason (2026-05-04):** Removed from active priorities — speculative without a project consumer. The guide at `docs/guides/managed-agents-integration.md` continues to exist as reference material (extracted from SOP Section 17 on 2026-04-17 in P40). If a future project actually uses `api.anthropic.com/v1/agents`, file a fresh P-number with the validation work scoped to the API state at that time, rather than reviving this entry — the API surface and beta status will have moved.
+
+---
+
+**Original entry below (kept per Rule 1):**
 
 Bring `docs/guides/managed-agents-integration.md` back into active use when a project transitions from Claude Code sessions to the Managed Agents API.
 
@@ -956,7 +962,7 @@ Bring `docs/guides/managed-agents-integration.md` back into active use when a pr
 ---
 
 ### P24 — Multi-agent optimisation guide
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-05-04] [Feature]`
 
 Standalone guide at `docs/sop/multi-agent.md` for multiple agents working the same repo. Consolidates and extends existing coverage (Section 0 contention, Section 16 context routing, Section 17 Managed Agents) into a single reference.
 
@@ -1058,6 +1064,89 @@ Originally shipped as `/go`; renamed to `/finish` later the same day — `/go` c
 
 ---
 
+### P55 — Sycophantic reviewer detection: tighten substance assertion
+`[SHIPPED - 2026-05-04] [Iteration]`
+
+Tighten `scripts/validate-state-transitions.sh --assert-review` to flag reviews that pass the structural check but contain no substance. Current implementation accepts `No issues — looks great` (any 2 words after the dash). Sycophancy data from Anthropic's 30 April 2026 personal-guidance research quantifies the failure mode: even a frontier model trained against sycophancy validates the user 9% baseline, 25-38% in emotionally-loaded domains. Reviewer-as-peer-agent has the same emotional load — the implementer just shipped this work, the reviewer is a peer in the same session, and the path of least resistance is to nod through.
+
+**Source:** `agent-sop-research-digest-2026-05-04.md` (Finding 1).
+
+**Acceptance criteria:**
+- `--assert-review` requires findings (or reasoned-no-issues) to cite either a file path (`*.ts:N`, `*.md:N`) or a backticked code symbol from the diff
+- `code-reviewer.md` Finding Voice section gains a short note tying the rule to the published baseline
+- `claude-agent-sop.md` Section 6 Step 1b gains a paragraph citing the 9% / 25-38% baseline as load-bearing rationale
+- New fixture under `docs/benchmark/state-transition-fixtures/` covering the slippery sycophancy-style review (passes today, must fail after the change)
+
+**Why filed not built now:** filed alongside P56 from the 2026-05-04 digest; build order is P56 then P24, P55 deferred.
+
+---
+
+### P57 — Config `exclude` field for `/update-agent-sop`
+`[SHIPPED - 2026-05-04] [Feature]`
+
+Add an `exclude: []` array field to `agent-sop.config.json`. Files listed are skipped entirely by `/update-agent-sop` — no classification, no baseline tracking, no sync attempt. Eliminates the current workaround pattern of freezing a baseline at an old SHA and adding a long explanatory note (see `~/.claude/agent-sop.config.json` notes for `docs/sop/security.md` — frozen at `33c651b1` because hst-tracker runs a project-specific Supabase/Render security doc that collides with agent-sop's pristine).
+
+**Acceptance criteria:**
+- `agent-sop-config-template.json` gains `"exclude": []` with explanatory `_exclude_note`
+- `/update-agent-sop` Step 2 (classification) introduces an EXCLUDED bucket; Step 3 / Step 4 / Step 5 skip excluded files
+- Step 6 report counts EXCLUDED separately
+- User-scope `~/.claude/commands/update-agent-sop.md` mirrored
+- Baseline SHA refreshed for `update-agent-sop.md` and the template
+- Backlog note: hst-tracker can migrate the `docs/sop/security.md` baseline-freeze note to `"exclude": ["docs/sop/security.md"]` next time its config is touched
+
+---
+
+### P58 — Karpathy before/after pattern (extend across SOP)
+`[SHIPPED - 2026-05-04] [Iteration]`
+
+Extend the "show one bad example next to one good example" pedagogy across additional SOP sections. Pattern proven in `code-reviewer.md` Finding Voice (3 pairs from P48) and `claude-agent-sop.md` §15.1 (strong-vs-weak gotcha entry — prevented a benchmark agent from removing a `Math.max` multiplier). Deferred from P34 (2026-04-17) pending evidence of broader value; the P55 sycophancy-gate work and 2026-05-04 digest reinforced the principle.
+
+**Acceptance criteria:**
+- Audit "do this not that" sections in the core SOP and reference agents; identify 4-5 candidates that materially benefit
+- Add 2-3 before/after pairs per chosen section
+- Net token cost stays under +500 bytes for the core SOP body (Rule 5 instruction budget unaffected — examples don't count as instructions but bytes still cost)
+- User-scope mirrors updated where reference agents change
+- Baselines refreshed
+
+---
+
+### P59 — Step 1b reviewer-gate tightening + cross-layer rules guide
+`[IN PROGRESS] [Iteration]`
+
+Two upstream tightenings prompted by hst-tracker 2026-05-28 evidence (composer fix — 220 LOC PR, 2 HIGH bugs caught only at review; three May 2026 cross-layer divergence bugs in the same shape).
+
+1. **Step 1b reviewer-turn gate.** Add explicit skip list (docs-only, test-only, dependency bumps), document `review_loc_threshold: 0` always-on mode, add SOP-self-modification as an explicit trigger independent of LOC. Do not import hst-tracker's four-trigger framing into upstream — that policy belongs in project CLAUDE.md.
+2. **New guide `docs/guides/cross-layer-rules.md`.** Inventory-first framing of unify-vs-parity-fixture pattern. Tier 0 grep-for-siblings is the load-bearing pre-step; Tier A unify, Tier B parity fixture follow. Strip RepCanvas-specific paths in favour of generic globs.
+
+**Acceptance criteria:**
+- Step 1b in `claude-agent-sop.md` adds skip list + zero-threshold semantics + SOP-self-modification trigger; ~15 LOC net
+- New guide at `docs/guides/cross-layer-rules.md` (~150 LOC, inventory-first, project-agnostic)
+- Key Documents row in `CLAUDE.md` + one entry in `sop-common-mistakes.md` pointing to the new guide
+- Reviewer artifact at `docs/reviews/2026-05-28_solo_P59.md`
+- Ship-sop side: single paragraph in `ship-sop/README.md` or `ship-sop/CLAUDE.md` clarifying per-stop gate vs agent-sop's per-session Step 1b — no mechanics change
+
+**Source:** hst-tracker 2026-05-28 composer-fix session; `docs/process-improvements.md` §1, §4 in that repo.
+
+**Why not the literal brief:** brief assumed upstream had a four-trigger model; it doesn't. Upstream is threshold-based (50 LOC / 3 files), and the empirical bug (220 LOC) was already over threshold. The real upstream gap is skip-list + always-on mode + SOP-self-mod trigger. See `docs/reviews/2026-05-28_solo_P59.md` rationale section.
+
+---
+
+### P56 — Backend assumptions: gateway / non-Anthropic backend warning
+`[SHIPPED - 2026-05-04] [Iteration]`
+
+Document that the SOP body, compliance scoring, and reviewer-substance gates were authored against Anthropic-hosted Claude (Opus / Sonnet). DeepClaude (3 May 2026 HN front page) routes Claude Code through cheaper backends via `ANTHROPIC_BASE_URL`; the 1 May 2026 Claude Code changelog formalised gateway support (`/model picker now lists models from gateway's /v1/models endpoint when ANTHROPIC_BASE_URL points at an Anthropic-compatible gateway`). Swapped-backend usage is now a first-class scenario. Reviewer-substance and instruction-following gates depend on instruction-following quality that smaller or cheaper backends may not match.
+
+**Source:** `agent-sop-research-digest-2026-05-04.md` (Finding 2).
+
+**Acceptance criteria:**
+- New short section in `claude-agent-sop.md` after Section 15.4 naming the models the SOP was authored against and warning that gateway-routed sessions may degrade reviewer-substance and instruction-following gates
+- `/restart-sop` gains a Step 0e advisory that prints when `ANTHROPIC_BASE_URL` is set to a non-empty value not matching `*.anthropic.com`
+- User-scope `~/.claude/commands/restart-sop.md` mirrored
+- Baseline SHA refreshed in `.claude/agent-sop.config.json` for restart-sop.md
+- No claim about specific token-budget numbers (the 5,200-5,900 number from the digest is unmeasured)
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
@@ -1087,3 +1176,9 @@ Originally shipped as `/go`; renamed to `/finish` later the same day — `/go` c
 - P27 — Managed Agents integration and outcome rubrics — SHIPPED 2026-04-09
 - P28 — Research digest implementation — SHIPPED 2026-04-09
 - P53 — `/finish` skill: end-to-end verify, simplify, ship — SHIPPED 2026-04-29 (originally shipped as `/go`, renamed same day)
+- P54 — Multi-agent hardening + perf gates + worktree advisory — SHIPPED 2026-05-02
+- P56 — Backend assumptions: gateway / non-Anthropic backend warning — SHIPPED 2026-05-04
+- P24 — Multi-agent optimisation guide — SHIPPED 2026-05-04
+- P55 — Sycophantic reviewer detection: tighten substance assertion — SHIPPED 2026-05-04
+- P57 — Config `exclude` field for `/update-agent-sop` — SHIPPED 2026-05-04
+- P58 — Karpathy before/after pattern (extend across SOP) — SHIPPED 2026-05-04

@@ -146,6 +146,23 @@ fi
 
 If no resume file exists (first session, or fresh repo), the reassertion is silently skipped.
 
+## Step 0e: Backend assumption advisory
+
+This SOP, its compliance scoring, and the reviewer-substance gates were authored against Anthropic-hosted Claude. When the session is routed through a non-Anthropic gateway (`ANTHROPIC_BASE_URL` set to a host that is not `*.anthropic.com`), reviewer-substance assertions, drift detection, and reviewer voice rules may degrade. Print a soft advisory; do not block. See `docs/sop/claude-agent-sop.md` Section 15.5 (Backend Assumptions).
+
+```bash
+if [ -n "${ANTHROPIC_BASE_URL:-}" ]; then
+  case "$ANTHROPIC_BASE_URL" in
+    *anthropic.com*) ;;
+    *)
+      echo "Non-Anthropic backend detected (ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL). Reviewer-substance and drift gates may degrade — see SOP §15.5."
+      ;;
+  esac
+fi
+```
+
+This is informational. Proceed with the checklist either way.
+
 ## Determine checklist type
 
 Check if this session's task is tagged `[ok-for-automation]` in the Backlog, or is a single-file change with fewer than 2 acceptance criteria. If so, use the **Lightweight Start** (steps 1L and 2L only). Otherwise, use the **Full Start** (steps 1-6).

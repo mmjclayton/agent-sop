@@ -18,10 +18,13 @@ If neither exists, create `~/.claude/agent-sop.config.json` with:
   "github": "mmjclayton/agent-sop",
   "update_reminder": "weekly",
   "last_update_check": null,
+  "exclude": [],
   "baseline_shas": {}
 }
 ```
 Inform the user, then proceed with first-run bootstrap behaviour (see Step 4).
+
+**`exclude`** is an array of pristine-replica paths (relative to project root) that this project deliberately overrides locally and does not want synced. Excluded files are skipped in Steps 2/3/4/5 entirely — no classification, no baseline tracking, no fetch. Replaces the older workaround of freezing a baseline SHA and adding an explanatory note. Example: `"exclude": ["docs/sop/security.md"]` for a project that ships its own security doc.
 
 ## Pristine-replica file set
 
@@ -68,12 +71,13 @@ Report which source is being used.
 ### Step 2: Build the diff report
 
 For each file in the pristine-replica set:
-1. Fetch upstream content (from local path or GitHub raw).
-2. Compute its SHA-256.
-3. Read the consumer's current copy (if it exists). Compute its SHA-256.
-4. Look up the `baseline_sha` for this file in the config.
+1. **If the file appears in `config.exclude`, classify as EXCLUDED and skip the rest of this step.** No fetch, no SHA, no baseline lookup.
+2. Fetch upstream content (from local path or GitHub raw).
+3. Compute its SHA-256.
+4. Read the consumer's current copy (if it exists). Compute its SHA-256.
+5. Look up the `baseline_sha` for this file in the config.
 
-Classify each file into one of:
+Classify each non-excluded file into one of:
 
 - **MISSING** — consumer has no copy. First-run case.
 - **IN SYNC** — consumer SHA == upstream SHA. No action.
@@ -81,6 +85,7 @@ Classify each file into one of:
 - **LOCALLY MODIFIED, UPSTREAM UNCHANGED** — upstream SHA == baseline SHA, consumer SHA != baseline SHA. No action.
 - **LOCALLY MODIFIED + UPSTREAM CHANGED** — all three SHAs differ. Needs reconciliation.
 - **NO BASELINE** — `baseline_sha` entry missing for this file. First-ever run. Treat as IN SYNC + record upstream as new baseline only if consumer matches upstream; otherwise classify as LOCALLY MODIFIED + UPSTREAM CHANGED and surface the 3-way.
+- **EXCLUDED** — present in `config.exclude`. Skipped per project policy. Reported but not synced.
 
 Print a summary table: file, classification, one-line description.
 
@@ -91,7 +96,7 @@ For every file classified `MISSING` or `UPSTREAM CHANGED, LOCAL UNCHANGED`:
 - Update `baseline_shas[file]` to the new upstream SHA.
 - Report each file as `updated` or `created`.
 
-Do not touch `LOCALLY MODIFIED, UPSTREAM UNCHANGED` or `IN SYNC` files.
+Do not touch `LOCALLY MODIFIED, UPSTREAM UNCHANGED`, `IN SYNC`, or `EXCLUDED` files.
 
 ### Step 4: Reconcile locally modified files
 
@@ -119,6 +124,7 @@ Print a final summary:
 - N files created (first-run MISSING)
 - N files reconciled (user confirmed each)
 - N files skipped (locally modified, upstream unchanged — kept as-is)
+- N files excluded (`config.exclude` — never synced; if any of these have stale baseline entries from before they were excluded, suggest the user remove them from `baseline_shas` to clean up the config)
 - Next reminder date based on `update_reminder` cadence
 
 ## First-run bootstrap

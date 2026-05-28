@@ -25,30 +25,28 @@ This project IS the Agent SOP library. All agents working on this project still 
 | Feature Map | `docs/feature-map.md` | Shipped documents + roadmap |
 | Backlog | `Backlog.md` | Single source of truth for work items |
 | Core SOP | `docs/sop/claude-agent-sop.md` | Non-negotiable rules (Section 0), file specs, session checklists |
+| Multi-Agent | `docs/sop/multi-agent.md` | Entry point, decision tree, optimisation rules, Common Mistakes (deep mechanics in `docs/guides/multi-agent-*.md`) |
 | Build Plan | `docs/build-plans/phase-0-foundation.md` | Current phase |
 | Compliance | `docs/sop/compliance-checklist.md` | Audit checks + scoring (used by sop-checker agent) |
 | Security | `docs/sop/security.md` | Core security rules |
 | Sandboxing | `docs/sop/sandboxing.md` | Container / network isolation for autonomous runs |
 | Harness | `docs/sop/harness-configuration.md` | Hooks + context primitives (clearing, compaction, memory) |
-| Guides | `docs/guides/` | Optional patterns, multi-agent routing, Managed Agents (deferred), SOP hill-climbing |
+| Guides | `docs/guides/` | Optional patterns, multi-agent routing, Managed Agents (deferred), SOP hill-climbing, cross-layer rules |
+| Cross-layer rules | `docs/guides/cross-layer-rules.md` | Unify-first / parity-fixture pattern when one logical rule lives in more than one runtime |
 | Templates | `docs/templates/claude-md-template.md` | Base template for new projects |
 | SOP Checker | `.claude/agents/sop-checker.md` | Compliance audit agent |
 | `/finish` command | `.claude/commands/finish.md` | End-to-end verify + `/simplify` + ship (Backlog, `/update-sop`, PR) |
 
 ---
 
-## Current Priority Items (as of 2026-04-19)
+## Current Priority Items (as of 2026-05-04)
 
 **Next:**
-- P24 — Multi-agent optimisation guide (informed by P23 benchmark results)
-- P33 — Managed Agents integration guide (deferred — revive when a project uses Managed Agents API)
 - P8 — Web app domain variant `[has-open-questions]`
 - P9 — Marketing domain variant `[has-open-questions]`
 - P10 — Data/analytics domain variant `[has-open-questions]`
 
 **Follow-ups still open:**
-- Config `exclude` field for per-project file skipping (gap found during hst-tracker audit — security.md filename collision). Also doubles as `exclude_from_tracker_scan` escape hatch for the P42 auto-detect heuristic if false positives emerge.
-- Karpathy-skills before/after examples pattern (Common Mistakes pedagogy — deferred from P34)
 - R6 full-framework benchmark on fresh CLI sessions, Opus 4.6, 2+ rounds (deferred from P38 — run if publicly citing a post-trim percentage)
 
 ---
@@ -131,8 +129,14 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 ## Recent Work (rollup)
 
 <!-- recent-work-rollup:start -->
-*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-05-02.*
+*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-05-28.*
 
+- 2026-05-28 `solo`: P59 — Step 1b reviewer-gate tightening + cross-layer rules guide
+- 2026-05-04 `solo`: P58 — Karpathy before/after pattern (extend across SOP)
+- 2026-05-04 `solo`: P57 — Config `exclude` field for `/update-agent-sop`
+- 2026-05-04 `solo`: P56 — Backend assumptions: gateway / non-Anthropic backend warning
+- 2026-05-04 `solo`: P55 — Sycophantic reviewer detection: substance-assertion tightening
+- 2026-05-04 `solo`: P24 — Multi-agent optimisation guide
 - 2026-05-02 `solo`: P54 — Multi-agent hardening + perf gates + worktree advisory
 - 2026-04-29 `solo`: P53 `/finish` skill — end-to-end verify, simplify, ship
 - 2026-04-26 `solo`: P52 learnings capture pattern (doc-only)

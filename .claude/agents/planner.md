@@ -118,3 +118,11 @@ Watch for and call out:
 - Plans with no testing strategy
 - Steps without clear file paths
 - Phases that cannot be delivered independently
+
+## Before / after — plan step quality
+
+- *Before:* "Refactor the auth module for clarity and add tests."
+  *After:* "Step 3: extract `validateToken` from `auth/middleware.ts:42-89` into `auth/validateToken.ts`. Update the two callers (`auth/middleware.ts:120`, `routes/login.ts:34`) to import from the new path. Add unit tests at `auth/validateToken.test.ts` covering: valid token, expired token, malformed token, missing signature."
+
+- *Before:* "Phase 2: improve performance."
+  *After:* "Phase 2: reduce `/api/dashboard` p95 latency from 800ms to under 300ms. Two batches: (2.1) add a covering index on `events(user_id, created_at)`; (2.2) replace the N+1 in `loadDashboard` (`server/dashboard.ts:55`) with a single `JOIN`. Acceptance: load test shows p95 < 300ms across 10 runs."
