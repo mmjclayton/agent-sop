@@ -39,9 +39,17 @@ This project IS the Agent SOP library. All agents working on this project still 
 
 ---
 
-## Current Priority Items (as of 2026-05-04)
+## Current Priority Items (as of 2026-07-06)
 
-**Next:**
+**Next (2026-07-06 digest review, in execution order):**
+- P60 — Facts correction: Sonnet 5 tokenizer, `/usage` measurement, citations
+- P62 — Background subagents: session-end checklist correctness fix `[Bug]`
+- P61 — Memory poisoning: SOP context files as injection surfaces
+- P63 — CI/CD hardening: Comment-and-Control mitigations
+- P65 — Corrections bundle: `/simplify` note, README counts, digest-job fixes
+
+**Decision-blocked:**
+- P64 — AGENTS.md positioning `[has-open-questions]`
 - P8 — Web app domain variant `[has-open-questions]`
 - P9 — Marketing domain variant `[has-open-questions]`
 - P10 — Data/analytics domain variant `[has-open-questions]`
