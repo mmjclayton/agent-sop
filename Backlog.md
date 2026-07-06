@@ -1148,7 +1148,7 @@ Document that the SOP body, compliance scoring, and reviewer-substance gates wer
 ---
 
 ### P60 — Facts correction: Sonnet 5 tokenizer, `/usage` measurement, external citations
-`[OPEN] [Iteration]`
+`[SHIPPED - 2026-07-06] [Iteration]`
 
 Corrections batch from the 2026-07-06 digest review (automated digest + manual re-run). All three are corrections or replacements, not additions.
 
@@ -1169,7 +1169,7 @@ Corrections batch from the 2026-07-06 digest review (automated digest + manual r
 ---
 
 ### P61 — Memory poisoning: SOP context files as injection surfaces
-`[OPEN] [Iteration]`
+`[SHIPPED - 2026-07-06] [Iteration]`
 
 Anthropic's containment post (25 May 2026) names CLAUDE.md and persistent agent state as prompt-injection persistence vectors reloaded every session. `security.md` rule 1 treats external content as untrusted but does not cover the SOP's own persistent files. Reshaped from the digest suggestion to extend existing directives rather than add a subsection.
 
@@ -1188,19 +1188,19 @@ Anthropic's containment post (25 May 2026) names CLAUDE.md and persistent agent 
 ---
 
 ### P62 — Background subagents: session-end checklist correctness fix
-`[OPEN] [Bug]`
+`[SHIPPED - 2026-07-06] [Bug]`
 
 Claude Code 2.1.198 (1 July 2026) made subagents run in the background by default — the lead keeps working and is notified on completion. The session-end checklist assumes synchronous completion: `/update-sop` can run while subagents are outstanding, producing a resume snapshot that omits in-flight work (Rule 2 integrity risk).
 
 1. **`multi-agent.md`** coordinator + specialist section: note background-by-default from 2.1.198; the lead must collect or explicitly terminate outstanding subagents before starting the session-end checklist.
-2. **`/update-sop` Step 0 pre-check**: confirm no subagents still running before Step 1. User-scope mirror in lockstep.
+2. **`/update-sop` pre-flight check**: confirm no subagents still running before Step 1. User-scope mirror in lockstep.
 3. **+1 Recommended M-series check** (multi-agent projects document background-subagent handling).
 
 Also verified: the same release removed the `/agents` wizard and made Explore inherit the session model — no SOP text depends on either (grep confirms).
 
 **Acceptance criteria:**
 - `multi-agent.md` documents background-by-default + collect-before-checklist rule
-- `/update-sop` Step 0 pre-check added; user-scope mirror updated; baseline SHA refreshed
+- `/update-sop` pre-flight check added; user-scope mirror updated; baseline SHA refreshed
 - M-series check added
 - Net instruction count: +2 (pre-check + check), justified: prevents incomplete resume snapshots
 
@@ -1209,7 +1209,7 @@ Also verified: the same release removed the `/agents` wizard and made Explore in
 ---
 
 ### P63 — CI/CD hardening: Comment-and-Control mitigations
-`[OPEN] [Iteration]`
+`[SHIPPED - 2026-07-06] [Iteration]`
 
 Comment-and-Control (CVE-class, CVSS 9.4): prompt injection via PR titles / issue bodies / review comments into CI-wired agents, leading to credential theft. `security.md` rule 1 covers the untrusted-metadata principle; the enforceable CI specifics are absent (grep: no SHA-pinning, token-scope, or workflow guidance anywhere). Surfaced independently in two digests.
 
@@ -1239,7 +1239,7 @@ AGENTS.md is stewarded by the Agentic AI Foundation (Linux Foundation) with mult
 ---
 
 ### P65 — Corrections bundle: `/simplify` note, README counts, digest-job fixes
-`[OPEN] [Iteration]`
+`[SHIPPED - 2026-07-06] [Iteration]`
 
 1. **`finish.md`**: one-line note — `/simplify` was renamed in Claude Code 2.1.147 but restored in 2.1.152 as an alias invoking `/code-review --fix`; the existing fallback paragraph stands. (Downgraded from the 2026-05-25 digest's Critical rating — the removal was reverted.)
 2. **README**: verify check-count and file-count references against `compliance-checklist.md` totals (78 non-code / 87 code); fix if stale.

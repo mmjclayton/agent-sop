@@ -1,6 +1,6 @@
 ---
 description: Run the Agent SOP session start checklist. Reads all context files, checks git history, flags inconsistencies, and reports readiness before coding begins.
-sop_version: "2026-04-19"
+sop_version: "2026-07-06"
 ---
 
 Start a new session by executing the Agent SOP session start checklist. Read every file listed below, in order. Do not skip any step.

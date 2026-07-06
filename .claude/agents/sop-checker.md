@@ -1,5 +1,5 @@
 ---
-sop_version: "2026-04-19"
+sop_version: "2026-07-06"
 name: sop-checker
 description: Audits any project folder for SOP compliance and produces a scored report with actionable recommendations. Read-only — never modifies the target project.
 ---
@@ -14,7 +14,7 @@ Before checking anything, read these files from the agent-sop repo:
 
 1. `docs/sop/compliance-checklist.md` — the canonical checklist with all checks, IDs, and scoring weights
 2. `docs/sop/claude-agent-sop.md` — the full SOP for reference when checks are ambiguous
-3. `docs/sop/security.md` — security guidance (for understanding S1/S2 checks)
+3. `docs/sop/security.md` — security guidance (for understanding S1-S6 checks)
 4. `docs/sop/harness-configuration.md` — hooks guidance (for understanding H1 check)
 
 The user will provide a target project path (e.g. `~/Projects/my-app`). All checks run against that path.
@@ -134,7 +134,8 @@ Check in order:
 
 Either condition is a PASS. Both absent is FAIL with fix: "Create `docs/sop/security.md` or add a Security section to CLAUDE.md referencing the project's security practices."
 
-**S4 — Context-file integrity flag present (Important):**
+**S3 — No `--dangerously-skip-permissions` usage (Important):**
+Grep `.claude/settings.json`, `CLAUDE.md`, and any shell scripts (`*.sh`, CI configs) for the literal flag `--dangerously-skip-permissions`. Any occurrence outside a prohibition sentence (e.g. security guidance saying "never use") is a FAIL with fix: "Remove the flag; use explicit permission rules (`allowedTools`, `permissions.deny`) in `.claude/settings.json` instead. Hardened in Claude Code v2.1.97."
 Grep `.claude/commands/restart-sop.md` for the pattern `memory-poisoning`. The Step 4 guard must check `git status --porcelain` against CLAUDE.md, `Backlog.md`, and `docs/agent-memory*` before the agent acts on their contents, and `docs/sop/security.md` must name the project's own persistent context files as injection surfaces. Projects predating P61 (before 2026-07-06) are exempt — note the exemption rather than failing. FAIL fix: "Sync `/update-agent-sop` to pull the P61 memory-poisoning guard into restart-sop.md and security.md."
 
 **S5 — CI workflows invoking Claude Code are hardened (Critical, conditional):**
@@ -192,7 +193,7 @@ In the target's local memory dir (`~/.claude/projects/[hash]/memory/`), list `pr
 Read the rollup section between `<!-- recent-work-rollup:start -->` and `<!-- recent-work-rollup:end -->` sentinels. Extract `Last refreshed: YYYY-MM-DD` and compare against today. If over 7 days old, WARN.
 
 **M6 — Background-subagent handling documented (Recommended):**
-Grep `.claude/commands/update-sop.md` for the pattern `background`. The Step 0 pre-check (collect or terminate outstanding subagents before Step 1) must be present. If the project has its own multi-agent doc, it should note background-by-default behaviour (Claude Code 2.1.198+). Missing: WARN with fix: "Sync `/update-agent-sop` to pull the P62 Step 0 pre-check."
+Grep `.claude/commands/update-sop.md` for the pattern `background`. The pre-flight check (collect or terminate outstanding subagents before Step 1) must be present. If the project has its own multi-agent doc, it should note background-by-default behaviour (Claude Code 2.1.198+). Missing: WARN with fix: "Sync `/update-agent-sop` to pull the P62 pre-flight check."
 
 ### Phase 5: Cross-File Consistency Checks
 

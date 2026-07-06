@@ -137,8 +137,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 ## Recent Work (rollup)
 
 <!-- recent-work-rollup:start -->
-*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-05-28.*
+*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-07-06.*
 
+- 2026-07-06 `solo`: P60-P63 + P65 — Digest-review corrections batch
 - 2026-05-28 `solo`: P59 — Step 1b reviewer-gate tightening + cross-layer rules guide
 - 2026-05-04 `solo`: P58 — Karpathy before/after pattern (extend across SOP)
 - 2026-05-04 `solo`: P57 — Config `exclude` field for `/update-agent-sop`

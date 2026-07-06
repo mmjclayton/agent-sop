@@ -1,4 +1,4 @@
-<!-- SOP-Version: 2026-04-19 -->
+<!-- SOP-Version: 2026-07-06 -->
 # SOP Compliance Checklist
 
 Last updated: 2026-04-19
@@ -311,7 +311,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | ID | Check | What to look for |
 |----|-------|-----------------|
 | M5 | CLAUDE.md rollup refreshed within 7 days | `CLAUDE.md` contains `<!-- recent-work-rollup:start -->` / `<!-- recent-work-rollup:end -->` sentinels. The `Last refreshed: YYYY-MM-DD` line inside is within the last 7 days (advisory; rollup is auto-refreshed by `/update-sop`, so staleness indicates `/update-sop` was skipped). |
-| M6 | Background-subagent handling documented | `.claude/commands/update-sop.md` contains the Step 0 pre-check (collect or terminate outstanding subagents before Step 1), and any project multi-agent doc notes background-by-default behaviour (Claude Code 2.1.198+). Grep-verifiable by pattern `background` in `.claude/commands/update-sop.md`. |
+| M6 | Background-subagent handling documented | `.claude/commands/update-sop.md` contains the pre-flight check (collect or terminate outstanding subagents before Step 1), and any project multi-agent doc notes background-by-default behaviour (Claude Code 2.1.198+). Grep-verifiable by pattern `background` in `.claude/commands/update-sop.md`. |
 
 ---
 
@@ -334,7 +334,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | **Total (code)** | **16** | **57** | **18** | **91** |
 
 **Maximum deductions:**
-- Non-code: 15 x 10 + 46 x 5 + 17 x 2 = 150 + 230 + 34 = 414
-- Code: 15 x 10 + 55 x 5 + 17 x 2 = 150 + 275 + 34 = 459
+- Non-code: 16 x 10 + 48 x 5 + 18 x 2 = 160 + 240 + 36 = 436
+- Code: 16 x 10 + 57 x 5 + 18 x 2 = 160 + 285 + 36 = 481
 
 **Normalisation:** Score = max(0, 100 - (total deductions / max possible deductions * 100)). Then apply critical cap (49 max) if any critical check fails.

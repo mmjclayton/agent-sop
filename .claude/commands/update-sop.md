@@ -1,11 +1,11 @@
 ---
 description: Run the Agent SOP session end checklist. Updates all tracking files, writes the resume snapshot, and commits.
-sop_version: "2026-05-02"
+sop_version: "2026-07-06"
 ---
 
 Execute the Agent SOP session end checklist. Complete every step below before the session ends. Do not skip any step. Never delete without a trace: update in place, mark superseded, or archive.
 
-## Step 0 (pre-check): No outstanding background subagents
+## Pre-flight check: No outstanding background subagents
 
 Subagents run in the background by default from Claude Code 2.1.198 (1 July 2026) — the session keeps working while they run. A checklist executed while subagents are outstanding produces a resume snapshot and Backlog state that omit their work.
 

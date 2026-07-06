@@ -26,14 +26,15 @@ Threat context: agents sit in the middle of multiple trusted paths (filesystem, 
 7. **Never use `--dangerously-skip-permissions`.** Use explicit `allowedTools` rules in `.claude/settings.json` instead. Hardened in Claude Code v2.1.97. Parameter-matched deny rules (Claude Code 2.1.178+) scope this further:
 
 ```jsonc
-// .claude/settings.json — deny sensitive reads regardless of allowlist
+// .claude/settings.json — deny sensitive reads and cap subagent spawning
 {
   "permissions": {
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",
       "Read(~/.ssh/**)",
-      "Read(./credentials.json)"
+      "Read(./credentials.json)",
+      "Agent(model:opus)"   // example: block spawning subagents on a specific model
     ]
   }
 }

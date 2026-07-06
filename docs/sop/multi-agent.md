@@ -1,4 +1,4 @@
-<!-- SOP-Version: 2026-05-04 -->
+<!-- SOP-Version: 2026-07-06 -->
 # Multi-Agent — Entry Point and Optimisation Guide
 
 Canonical reference for any project running more than one agent on the same repo. Acts as the dispatch layer for the deep-mechanics guides; covers the decisions and trade-offs they intentionally do not.
@@ -98,7 +98,7 @@ Multi-agent introduces failure modes that don't exist in solo work. Each entry b
 
 **Gateway-routed parallel sessions.** When `ANTHROPIC_BASE_URL` is set to a non-Anthropic backend, `/restart-sop` Step 0e prints a soft advisory. Reviewer-substance assertions, drift detection, and reviewer voice rules may degrade per `claude-agent-sop.md` §15.5. In parallel mode this compounds — a sycophantic reviewer agent can rubber-stamp a sibling agent's broken work without the operator catching it. **Treat compliance scores and reviewer findings as advisory in any parallel session running on a swapped backend.**
 
-**Session-end with outstanding background subagents.** Subagents run in the background by default from Claude Code 2.1.198 (1 July 2026) — the coordinator keeps working and is notified on completion. Running the session-end checklist while subagents are outstanding produces a resume snapshot and Backlog state that omit their work, and any Backlog/tracker writes they make after the checklist land untracked. **Collect results from (or explicitly terminate) every outstanding subagent before starting `/update-sop`.** `/update-sop` Step 0 asserts this. Source: Claude Code changelog 2.1.198 (runtime behaviour change, not an incident).
+**Session-end with outstanding background subagents.** Subagents run in the background by default from Claude Code 2.1.198 (1 July 2026) — the coordinator keeps working and is notified on completion. Running the session-end checklist while subagents are outstanding produces a resume snapshot and Backlog state that omit their work, and any Backlog/tracker writes they make after the checklist land untracked. **Collect results from (or explicitly terminate) every outstanding subagent before starting `/update-sop`.** `/update-sop`'s pre-flight check asserts this. Source: Claude Code changelog 2.1.198 (runtime behaviour change, not an incident).
 
 ---
 

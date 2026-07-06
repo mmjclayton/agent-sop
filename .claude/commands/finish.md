@@ -1,6 +1,6 @@
 ---
 description: End-to-end verify the work, run /simplify, then ship — update Backlog, run /update-sop, open a PR. Three phases, hard-blocking.
-sop_version: "2026-04-29"
+sop_version: "2026-07-06"
 ---
 
 `/finish` is the "I'm done" wrapper. It exists to keep Claude honest: code only ships after Claude has actually exercised it end-to-end (not just compiled it), simplified the diff, and produced a reviewable PR with the SOP trail intact.
