@@ -308,6 +308,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | ID | Check | What to look for |
 |----|-------|-----------------|
 | M5 | CLAUDE.md rollup refreshed within 7 days | `CLAUDE.md` contains `<!-- recent-work-rollup:start -->` / `<!-- recent-work-rollup:end -->` sentinels. The `Last refreshed: YYYY-MM-DD` line inside is within the last 7 days (advisory; rollup is auto-refreshed by `/update-sop`, so staleness indicates `/update-sop` was skipped). |
+| M6 | Background-subagent handling documented | `.claude/commands/update-sop.md` contains the Step 0 pre-check (collect or terminate outstanding subagents before Step 1), and any project multi-agent doc notes background-by-default behaviour (Claude Code 2.1.198+). Grep-verifiable by pattern `background` in `.claude/commands/update-sop.md`. |
 
 ---
 
@@ -325,9 +326,9 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | Cross-File Consistency | 0 | 3 | 3 | 6 |
 | Security, Hooks, Quality, Agents | 1 | 2 (+2 code) | 4 | 7 (+2) |
 | Benchmark-Proven Practices | 0 | 0 (+2 code) | 2 | 2 (+2) |
-| Multi-Agent Parallel Sessions | 1 | 3 | 1 | 5 |
-| **Total (non-code)** | **15** | **46** | **17** | **78** |
-| **Total (code)** | **15** | **55** | **17** | **87** |
+| Multi-Agent Parallel Sessions | 1 | 3 | 2 | 6 |
+| **Total (non-code)** | **15** | **46** | **18** | **79** |
+| **Total (code)** | **15** | **55** | **18** | **88** |
 
 **Maximum deductions:**
 - Non-code: 15 x 10 + 46 x 5 + 17 x 2 = 150 + 230 + 34 = 414

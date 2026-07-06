@@ -5,6 +5,12 @@ sop_version: "2026-05-02"
 
 Execute the Agent SOP session end checklist. Complete every step below before the session ends. Do not skip any step. Never delete without a trace: update in place, mark superseded, or archive.
 
+## Step 0 (pre-check): No outstanding background subagents
+
+Subagents run in the background by default from Claude Code 2.1.198 (1 July 2026) — the session keeps working while they run. A checklist executed while subagents are outstanding produces a resume snapshot and Backlog state that omit their work.
+
+Before Step 1: collect results from (or explicitly terminate) every subagent this session spawned. If the harness lists running tasks, confirm none are still pending. If a subagent's result is genuinely not needed, terminate it and record that in the resume snapshot's What was done. Do not start Step 1 with work still in flight.
+
 ## Step 0: Resolve agent identity
 
 Agent identity appears in filenames (`docs/recent-work/YYYY-MM-DD_<agent-id>_<slug>.md`), in per-agent `project_resume_<agent-id>.md`, and in commit-range partitioning routines (Step 3b, Step 11). Resolve it first so every subsequent step uses a consistent value.

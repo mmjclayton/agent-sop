@@ -98,11 +98,13 @@ Multi-agent introduces failure modes that don't exist in solo work. Each entry b
 
 **Gateway-routed parallel sessions.** When `ANTHROPIC_BASE_URL` is set to a non-Anthropic backend, `/restart-sop` Step 0e prints a soft advisory. Reviewer-substance assertions, drift detection, and reviewer voice rules may degrade per `claude-agent-sop.md` §15.5. In parallel mode this compounds — a sycophantic reviewer agent can rubber-stamp a sibling agent's broken work without the operator catching it. **Treat compliance scores and reviewer findings as advisory in any parallel session running on a swapped backend.**
 
+**Session-end with outstanding background subagents.** Subagents run in the background by default from Claude Code 2.1.198 (1 July 2026) — the coordinator keeps working and is notified on completion. Running the session-end checklist while subagents are outstanding produces a resume snapshot and Backlog state that omit their work, and any Backlog/tracker writes they make after the checklist land untracked. **Collect results from (or explicitly terminate) every outstanding subagent before starting `/update-sop`.** `/update-sop` Step 0 asserts this. Source: Claude Code changelog 2.1.198 (runtime behaviour change, not an incident).
+
 ---
 
 ## 6. Compliance checks
 
-The compliance checklist (`docs/sop/compliance-checklist.md` Section 11) covers multi-agent enforcement with five checks (M1-M5):
+The compliance checklist (`docs/sop/compliance-checklist.md` Section 11) covers multi-agent enforcement with six checks (M1-M6):
 
 | ID | Check | Tier |
 |----|-------|------|
@@ -111,6 +113,7 @@ The compliance checklist (`docs/sop/compliance-checklist.md` Section 11) covers 
 | M3 | Commit-range uses `git merge-base` | Important |
 | M4 | Per-agent resume file exists | Important |
 | M5 | CLAUDE.md rollup refreshed within 7 days | Recommended |
+| M6 | Background-subagent handling documented (collect/terminate before session-end) | Recommended |
 
 Run via the `sop-checker` agent against any project — see `.claude/agents/sop-checker.md` Phase 4.5.
 
