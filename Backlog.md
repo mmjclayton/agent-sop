@@ -1228,13 +1228,22 @@ Comment-and-Control (CVE-class, CVSS 9.4): prompt injection via PR titles / issu
 ---
 
 ### P64 — AGENTS.md positioning
-`[OPEN] [Feature] [has-open-questions]`
+`[SHIPPED - 2026-07-06] [Feature]`
 
-AGENTS.md is stewarded by the Agentic AI Foundation (Linux Foundation) with multi-vendor support (OpenAI, Cursor, Factory, Sourcegraph, Gemini tooling). agent-sop is CLAUDE.md-only (zero AGENTS.md references in the repo). Decision before any work.
+AGENTS.md is stewarded by the Agentic AI Foundation (Linux Foundation) with multi-vendor support (OpenAI, Cursor, Factory, Sourcegraph, Gemini tooling). agent-sop was CLAUDE.md-only (zero AGENTS.md references in the repo). Decision-first item; open questions resolved with Matt 2026-07-06.
 
-**Open questions:** Does any consumer project run non-Claude agents? Is the stewardship stable enough to build against? If adopted: Rule 2 shape only — AGENTS.md as the single source with CLAUDE.md importing it, never a parallel copy. Does `setup.sh` grow a `--multi-tool` flag?
+**Decisions (Matt, 2026-07-06):**
+1. Consumer projects are Claude Code-only today but multi-tool is likely soon — positioning should exist before the need does.
+2. Scope: **positioning only.** README subsection ("vs AGENTS.md") explaining the relationship and the recommended shape. No template, no `setup.sh` flag, no compliance check yet. Stewardship stance (open question 2): the Agentic AI Foundation is stable enough to reference in positioning, not yet proven enough to invest tooling against — that is what the reopen trigger below protects.
+3. Recommended shape for multi-tool adopters: **AGENTS.md canonical** — shared context lives in AGENTS.md, CLAUDE.md becomes `@AGENTS.md` import plus the Claude-specific surface (SOP wiring, dispatch, slash commands). Never parallel copies (Rule 2).
+4. **Reopen trigger for full support** (template + `setup.sh --multi-tool` + Recommended check): Claude Code reads AGENTS.md natively. Until then, deferred — do not re-litigate.
 
-**Source:** digests 2026-05-11 + 2026-06-18 (recurring finding).
+**Acceptance criteria:**
+- README gains a "vs AGENTS.md" subsection in the comparisons section with the canonical-shape recommendation and the deferred-tooling note - DONE
+- This Backlog entry records the four decisions and the reopen trigger - DONE
+- No template/setup/check work (explicitly out of scope until the trigger fires) - DONE
+
+**Source:** digests 2026-05-11 + 2026-06-18 (recurring finding); decision session 2026-07-06.
 
 ---
 
@@ -1253,6 +1262,26 @@ AGENTS.md is stewarded by the Agentic AI Foundation (Linux Foundation) with mult
 - Net instruction count: zero
 
 **Source:** Claude Code changelog 2.1.147/2.1.152 (verified); two-month digest review 2026-07-06.
+
+---
+
+### P66 — Cross-layer divergence: validator P44 gate vs Step 1b skip list
+`[OPEN] [Bug]`
+
+Found while shipping P64 (docs-only `[Feature]`, well under threshold). `docs/sop/claude-agent-sop.md` Step 1b (as tightened by P59) says docs-only ships skip the reviewer turn. `scripts/validate-state-transitions.sh`'s P44 gate BLOCKs any `[Feature]`/`[Refactor]` ship whose Batch Log line lacks a `docs/reviews/` citation — it has no knowledge of the P59 skip list or the LOC/files threshold. The same logical rule lives in two runtimes and they disagree: prose says skip, validator says block. This is precisely the pattern `docs/guides/cross-layer-rules.md` (shipped in the same P59) exists to catch — Tier 0 grep-for-siblings was not run when the skip list was added.
+
+Workaround used for P64: ran the reviewer turn anyway (cheap for a small diff) rather than evading the gate by committing first (the Batch 0.21 pattern — noted there as a process gap, not a precedent).
+
+**Fix options (decide at implementation, per cross-layer-rules Tier A/B):**
+- Tier A (unify): validator reads the skip conditions from config/prose-adjacent data — e.g. accept a `review skipped: docs-only per Step 1b skip list` citation in the Batch Log line as legal
+- Tier B (parity fixture): keep both rules but add a fixture asserting they agree on the skip cases
+
+**Acceptance criteria:**
+- Validator and Step 1b prose agree on docs-only / test-only / dep-bump ships (either shape)
+- Fixture covering the P64 scenario (docs-only [Feature] under threshold)
+- Batch 0.21's commit-first evasion noted as the failure mode the fix closes
+
+**Source:** P64 ship 2026-07-06; `docs/guides/cross-layer-rules.md` Tier 0.
 
 ---
 
