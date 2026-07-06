@@ -134,6 +134,9 @@ Check in order:
 
 Either condition is a PASS. Both absent is FAIL with fix: "Create `docs/sop/security.md` or add a Security section to CLAUDE.md referencing the project's security practices."
 
+**S4 — Context-file integrity flag present (Important):**
+Grep `.claude/commands/restart-sop.md` for the pattern `memory-poisoning`. The Step 4 guard must check `git status --porcelain` against CLAUDE.md, `Backlog.md`, and `docs/agent-memory*` before the agent acts on their contents, and `docs/sop/security.md` must name the project's own persistent context files as injection surfaces. Projects predating P61 (before 2026-07-06) are exempt — note the exemption rather than failing. FAIL fix: "Sync `/update-agent-sop` to pull the P61 memory-poisoning guard into restart-sop.md and security.md."
+
 **Q1 — File size limits specified (Important, code projects only):**
 Search `CLAUDE.md` for mentions of file line limits. Look for patterns like:
 - "800 lines" or "800 max"
@@ -165,7 +168,7 @@ If `.claude/agents/` does not exist, mark as FAIL with fix: "Create `.claude/age
 
 ### Phase 4.5: Multi-Agent Parallel Sessions
 
-Run checks M1-M5 from checklist Section 11 when the target project has multi-agent parallel sessions enabled (indicated by any of: `multi_agent: auto` / `multi_agent: on` in agent-sop.config.json with worktree count >1, OR presence of `docs/recent-work/`, `docs/agent-memory/decisions/`, `docs/agent-memory/gotchas/` directories).
+Run checks M1-M6 from checklist Section 11 when the target project has multi-agent parallel sessions enabled (indicated by any of: `multi_agent: auto` / `multi_agent: on` in agent-sop.config.json with worktree count >1, OR presence of `docs/recent-work/`, `docs/agent-memory/decisions/`, `docs/agent-memory/gotchas/` directories).
 
 **M1 — Agent-id resolvable (Critical):**
 Grep `.claude/commands/update-sop.md` and `.claude/commands/restart-sop.md` for the `resolve_agent_id` function definition. Both commands must include it. The precedence (env var > file > solo > hash) must be verifiable by reading the snippet.
@@ -181,6 +184,9 @@ In the target's local memory dir (`~/.claude/projects/[hash]/memory/`), list `pr
 
 **M5 — CLAUDE.md rollup refreshed within 7 days (Recommended):**
 Read the rollup section between `<!-- recent-work-rollup:start -->` and `<!-- recent-work-rollup:end -->` sentinels. Extract `Last refreshed: YYYY-MM-DD` and compare against today. If over 7 days old, WARN.
+
+**M6 — Background-subagent handling documented (Recommended):**
+Grep `.claude/commands/update-sop.md` for the pattern `background`. The Step 0 pre-check (collect or terminate outstanding subagents before Step 1) must be present. If the project has its own multi-agent doc, it should note background-by-default behaviour (Claude Code 2.1.198+). Missing: WARN with fix: "Sync `/update-agent-sop` to pull the P62 Step 0 pre-check."
 
 ### Phase 5: Cross-File Consistency Checks
 
