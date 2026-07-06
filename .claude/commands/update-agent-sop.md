@@ -37,7 +37,9 @@ These are the files this command keeps in sync. Everything else (CLAUDE.md, Back
 | `docs/sop/sandboxing.md` | `docs/sop/sandboxing.md` | project |
 | `docs/sop/harness-configuration.md` | `docs/sop/harness-configuration.md` | project |
 | `docs/sop/compliance-checklist.md` | `docs/sop/compliance-checklist.md` | project |
+| `docs/sop/multi-agent.md` | `docs/sop/multi-agent.md` | project |
 | `docs/guides/optional-patterns.md` | `docs/guides/optional-patterns.md` | project |
+| `docs/guides/cross-layer-rules.md` | `docs/guides/cross-layer-rules.md` | project |
 | `docs/guides/multi-agent-context-routing.md` | `docs/guides/multi-agent-context-routing.md` | project |
 | `docs/guides/multi-agent-parallel-sessions.md` | `docs/guides/multi-agent-parallel-sessions.md` | project |
 | `docs/guides/managed-agents-integration.md` | `docs/guides/managed-agents-integration.md` | project |

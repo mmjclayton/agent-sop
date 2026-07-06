@@ -36,7 +36,7 @@ Required sections:
 - **Key Commands** — the 3-5 most-used shell commands for this project
 - **Common Mistakes** — project-specific gotchas that prevent wrong turns. Name specific files, models, tokens, and conventions. This is the highest-value section for agent quality (benchmark-proven, SOP Section 15).
 - **Rules for Automated Builds** — numbered rules, must include "never delete without a trace" and "update Backlog.md and feature-map.md when work ships"
-- **Session & Memory Hygiene** — start checklist (5 steps) and end checklist (7 steps, test gate is step 1 for code projects)
+- **Session & Memory Hygiene** — start checklist (5 steps) and end checklist (9 steps, test gate is step 1 for code projects)
 - **Recent Work** — append-only, new entries at top, always include PR/commit refs
 - **Deprioritised** — items moved here from priority lists, never removed
 
@@ -291,7 +291,7 @@ These are not required for basic SOP compliance but are recommended for code pro
 
 **Every session start:** run `/restart-sop`. This slash command executes the full 5-step start checklist. No exceptions. If the command is not available, execute the steps manually.
 
-**Every session end:** run `/update-sop`. This slash command executes the full 7-step end checklist, including running tests for code projects. No exceptions. Wrap up at 60% context capacity, not 95%. If the command is not available, execute the steps manually.
+**Every session end:** run `/update-sop`. This slash command executes the full 9-step end checklist, including running tests for code projects. No exceptions. Wrap up at 60% context capacity, not 95%. If the command is not available, execute the steps manually.
 
 **When files disagree:** code/git > CLAUDE.md > Backlog.md > build-plan > feature-map > agent-memory > resume point. Trust what you observe over what memory says.
 

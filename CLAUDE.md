@@ -121,6 +121,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 ### Session end checklist
 **Never delete without a trace. Update in place, mark superseded, or archive.**
 
+0. Pre-flight: collect or terminate any outstanding background subagents (background-by-default since Claude Code 2.1.198).
 1. Run tests (code projects) — fix failures before proceeding.
 2. `Backlog.md` — update status tags in place, append new items. Step 2a hard-blocks P-number collisions with the default branch.
 3. Secondary trackers — reconcile any project-specific finding files in Key Documents (audit-backlog, security-findings, etc.) using heading-level `[OPEN]`/`[SHIPPED]` tags. Commit-range partitioned via `git merge-base`. Hard block on unreconciled finding IDs.
@@ -140,6 +141,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 - 2026-07-06 `solo`: P64 — AGENTS.md positioning
 - 2026-07-06 `solo`: P60-P63 + P65 — Digest-review corrections batch
+- 2026-07-06 `solo`: Doc-sync pass after P60-P65
 - 2026-05-28 `solo`: P59 — Step 1b reviewer-gate tightening + cross-layer rules guide
 - 2026-05-04 `solo`: P58 — Karpathy before/after pattern (extend across SOP)
 - 2026-05-04 `solo`: P57 — Config `exclude` field for `/update-agent-sop`

@@ -66,7 +66,7 @@ The canonical checklist (as of 2026-04-08) has 5 numbered steps:
 Plus an unnumbered interrupt-recovery bullet. Count only the numbered steps. Projects using the older 7-step or 8-step format should be marked WARN (not FAIL) with a note to update.
 
 **C4 — Session end checklist has 9 steps:**
-The canonical checklist has 9 numbered steps as of 2026-04-19 (Phase 1 parallel sessions):
+The canonical checklist has 9 numbered steps as of 2026-04-19 (Phase 1 parallel sessions). An optional `0. Pre-flight` line (collect/terminate background subagents, P62 2026-07-06) may precede step 1 — it does not count toward the 9:
 1. Run tests
 2. Backlog.md (Step 2a: P-number collision pre-check)
 3. Secondary trackers
