@@ -137,6 +137,12 @@ Either condition is a PASS. Both absent is FAIL with fix: "Create `docs/sop/secu
 **S4 — Context-file integrity flag present (Important):**
 Grep `.claude/commands/restart-sop.md` for the pattern `memory-poisoning`. The Step 4 guard must check `git status --porcelain` against CLAUDE.md, `Backlog.md`, and `docs/agent-memory*` before the agent acts on their contents, and `docs/sop/security.md` must name the project's own persistent context files as injection surfaces. Projects predating P61 (before 2026-07-06) are exempt — note the exemption rather than failing. FAIL fix: "Sync `/update-agent-sop` to pull the P61 memory-poisoning guard into restart-sop.md and security.md."
 
+**S5 — CI workflows invoking Claude Code are hardened (Critical, conditional):**
+List `.github/workflows/*.yml` (and equivalent CI configs). If none invoke Claude Code or a Claude action, mark N/A. For each that does: FAIL if `allowed_non_write_users` is set to `"*"`, or any third-party action is referenced by floating tag (`@v1`, `@main`, `@latest`) rather than a full commit SHA. FAIL fix: "Pin actions to commit SHAs and remove wildcard trigger permissions — Comment-and-Control class, CVE-2025-66032."
+
+**S6 — Read-only token posture for CI review workflows (Important, conditional):**
+For workflows that run Claude Code in a review-only capacity: check the workflow `permissions:` block grants only read scopes (`contents: read`), or a documented rationale exists where a write scope is genuinely required. N/A when no review workflow exists. FAIL fix: "Set `permissions: contents: read` on review-only workflows; document any write scope."
+
 **Q1 — File size limits specified (Important, code projects only):**
 Search `CLAUDE.md` for mentions of file line limits. Look for patterns like:
 - "800 lines" or "800 max"
