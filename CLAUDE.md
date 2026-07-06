@@ -41,18 +41,17 @@ This project IS the Agent SOP library. All agents working on this project still 
 
 ## Current Priority Items (as of 2026-07-06)
 
-**Next (2026-07-06 digest review, in execution order):**
-- P60 — Facts correction: Sonnet 5 tokenizer, `/usage` measurement, citations
-- P62 — Background subagents: session-end checklist correctness fix `[Bug]`
-- P61 — Memory poisoning: SOP context files as injection surfaces
-- P63 — CI/CD hardening: Comment-and-Control mitigations
-- P65 — Corrections bundle: `/simplify` note, README counts, digest-job fixes
+**Next:**
+- P66 — Cross-layer divergence: validator P44 gate vs Step 1b skip list `[Bug]` (found shipping P64)
 
 **Decision-blocked:**
-- P64 — AGENTS.md positioning `[has-open-questions]`
 - P8 — Web app domain variant `[has-open-questions]`
 - P9 — Marketing domain variant `[has-open-questions]`
 - P10 — Data/analytics domain variant `[has-open-questions]`
+
+**Deferred with reopen triggers:**
+- P64 full support (AGENTS.md template + `setup.sh --multi-tool` + check) — reopens when Claude Code reads AGENTS.md natively
+- `sandbox.credentials` recommendation — reopens when the setting is verified in the Claude Code changelog
 
 **Follow-ups still open:**
 - R6 full-framework benchmark on fresh CLI sessions, Opus 4.6, 2+ rounds (deferred from P38 — run if publicly citing a post-trim percentage)
@@ -139,6 +138,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-07-06.*
 
+- 2026-07-06 `solo`: P64 — AGENTS.md positioning
 - 2026-07-06 `solo`: P60-P63 + P65 — Digest-review corrections batch
 - 2026-05-28 `solo`: P59 — Step 1b reviewer-gate tightening + cross-layer rules guide
 - 2026-05-04 `solo`: P58 — Karpathy before/after pattern (extend across SOP)

@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-07-06 (P60-P63, P65)
+Last updated: 2026-07-06 (P60-P65)
 
 ---
 
@@ -60,6 +60,7 @@ Last updated: 2026-07-06 (P60-P63, P65)
 | P62 | Background subagents session-end fix (`[Bug]`). Claude Code 2.1.198 made subagents background-by-default; the session-end checklist assumed synchronous completion. `/update-sop` gains pre-flight check (collect or terminate outstanding subagents before Step 1); `multi-agent.md` Common Mistakes entry + M6 Recommended check. User-scope update-sop mirrored. Companion ship-sop item P12 filed (gate execution has the same assumption). | `.claude/commands/update-sop.md` (pre-flight check), `docs/sop/multi-agent.md` (Common Mistakes + §6 table), `docs/sop/compliance-checklist.md` (M6 + totals), user-scope mirror | 2026-07-06 |
 | P63 | CI/CD hardening — Comment-and-Control mitigations (CVE-2025-66032). `security.md` rule 10: read-only tokens for review workflows, SHA-pinned third-party actions, never `allowed_non_write_users: "*"`. Parameter-matched deny-rule example block under rule 7 (`Read(./.env)`, `Read(~/.ssh/**)`; CC 2.1.178+ syntax; examples exempt from Rule 5 count). S5 Critical + S6 Important conditional checks (N/A when no CI invokes Claude Code). | `docs/sop/security.md` (rules 7/10, Integration), `docs/sop/compliance-checklist.md` (S5/S6 + totals), `.claude/agents/sop-checker.md`, user-scope mirror | 2026-07-06 |
 | P65 | Corrections bundle. `finish.md` version note (`/simplify` renamed 2.1.147, restored 2.1.152 as `/code-review --fix` alias — digest's Critical rating downgraded after changelog verification). README check counts refreshed (91 code / 82 non-code, M1-M6, S4-S6). `last_update_check` bumped + 6 baseline SHAs refreshed in user config. Digest-job prompt fixes documented (GitHub MCP for repo indexing, rotted source URLs, diff-against-prior-digests). | `.claude/commands/finish.md`, `README.md`, `~/.claude/agent-sop.config.json`, user-scope finish.md mirror | 2026-07-06 |
+| P64 | AGENTS.md positioning. Decision-first item resolved with Matt: positioning only. README "vs AGENTS.md" subsection recommends the AGENTS.md-canonical shape for multi-tool adopters (shared context in AGENTS.md, CLAUDE.md as `@AGENTS.md` import + Claude-specific surface; Rule 2, never parallel copies). Full support (template + `setup.sh --multi-tool` + Recommended check) deferred until Claude Code reads AGENTS.md natively — reopen trigger recorded in the Backlog entry. | `README.md` (comparisons section), `Backlog.md` (decisions + trigger) | 2026-07-06 |
 
 ---
 

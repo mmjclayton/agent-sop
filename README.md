@@ -227,6 +227,22 @@ Both target the "Claude Code has no memory across sessions" problem. They solve 
 
 The common alternative is free-form notes in `README.md` or `docs/`, updated when someone remembers. That works for solo projects until you try to come back after a month or hand off to another agent. The benchmark gap (+33% on vague prompts) is mostly this: agents with structured context don't waste tool calls reconstructing what was already decided.
 
+### vs AGENTS.md (the cross-tool standard)
+
+[AGENTS.md](https://agents.md) — stewarded by the Agentic AI Foundation under the Linux Foundation — is a cross-vendor format for project-level agent instructions, read natively by Cursor, Codex, Gemini CLI, and others. It solves a different problem to Agent SOP: AGENTS.md standardises *where one file of context lives*; Agent SOP prescribes *a working discipline* — session checklists, enforcement gates, backlog and memory conventions — that happens to use CLAUDE.md as its entry point.
+
+They compose rather than compete. If your project runs Claude Code only, CLAUDE.md as this SOP ships it is all you need. If non-Claude agents work the same repo, keep one source of truth (Rule 2): put the shared project context — architecture, conventions, build commands, hard constraints — in AGENTS.md, and reduce CLAUDE.md to an import plus the Claude-specific surface:
+
+```markdown
+# CLAUDE.md
+@AGENTS.md
+
+<!-- Claude-specific from here: SOP wiring, Key Documents & Dispatch,
+     slash-command conventions, Current Priority Items -->
+```
+
+Do not maintain parallel copies — duplicated context drifts, and drift is exactly what Rule 2 exists to prevent. Agent SOP does not currently ship an AGENTS.md template or a `setup.sh` flag for this split; that support is deliberately deferred until Claude Code reads AGENTS.md natively, at which point the split becomes zero-cost and the tooling ships (tracked as P64 in the Backlog).
+
 ## Companion projects
 
 [**ship-sop**](https://github.com/mmjclayton/ship-sop) — pre-merge quality gates (tests, security, compliance, diagrams + API catalog) that fire automatically on session-end via a SessionStop hook, or manually via `/ship`. Independent of Agent SOP but composes with it: ship-sop auto-files findings as `[OPEN][Bug][needs-triage]` Backlog entries using the Agent SOP tag taxonomy when both are installed. Different decision point (per-ship gate, not per-session discipline), separate install, separate release cycle.
