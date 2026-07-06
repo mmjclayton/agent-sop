@@ -165,6 +165,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 
 **Every session, no exceptions.** The `/update-sop` command automates this checklist. If the command is not available, execute manually. Never delete without a trace. Update in place, mark superseded, or archive.
 
+0. Pre-flight: collect or terminate any outstanding background subagents (background-by-default since Claude Code 2.1.198).
 1. Run tests (code projects) — fix failures before proceeding.
 2. `Backlog.md` — update status tags in place, append new items. Step 2a hard-blocks P-number collisions with the default branch.
 3. Secondary trackers — reconcile any project-specific finding files (audit-backlog, security-findings, etc.) that use heading-level `[OPEN]`/`[SHIPPED]` tags. Commit-range partitioned via `git merge-base`. Hard block on unreconciled finding IDs.

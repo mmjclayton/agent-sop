@@ -83,8 +83,9 @@ Run this before closing every session. It takes no arguments.
 /update-sop
 ```
 
-Runs the 9-step session-end checklist:
+Runs the session-end checklist (9 canonical steps; the pre-flight and self-evaluation are shown separately here):
 
+0. Pre-flight: collect results from (or explicitly terminate) any outstanding background subagents — they run in the background by default since Claude Code 2.1.198, and a checklist run with work still in flight produces an incomplete snapshot
 1. Self-evaluate the work against the Definition of Done rubric for the task type (bug fix, feature, refactor, test writing)
 2. Run the full test suite (code projects only)
 3. Update `Backlog.md` status tags — Step 2a hard-blocks if a P-number collides with one already on the default branch

@@ -74,7 +74,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | C1 | Agent SOP section exists | `## Agent SOP` header referencing the SOP document |
 | C2 | Session & Memory Hygiene section exists | `## Session` header (match flexibly) |
 | C3 | Session start checklist has 5 steps | Numbered list under session start heading (5 steps per canonical SOP) |
-| C4 | Session end checklist has 9 steps | Numbered list under session end heading, step 1 is test gate for code projects. Steps 2a (P-number collision) and 3b (secondary tracker reconciliation) are documented as sub-steps, not separate top-level numbers. Projects still using 7-step (pre-P42) or 8-step (pre-P43) format should be WARN (not FAIL) with a note to update. |
+| C4 | Session end checklist has 9 steps | Numbered list under session end heading, step 1 is test gate for code projects. Steps 2a (P-number collision) and 3b (secondary tracker reconciliation) are documented as sub-steps, not separate top-level numbers. An optional `0. Pre-flight` line (background subagents, P62 2026-07-06) does not count toward the 9. Projects still using 7-step (pre-P42) or 8-step (pre-P43) format should be WARN (not FAIL) with a note to update. |
 | C5 | Dispatch reference exists with 5+ files | `## Dispatch` or `## Key Documents & Dispatch` header, table with at least 5 file path entries |
 
 ### Important
