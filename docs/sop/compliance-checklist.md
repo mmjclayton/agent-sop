@@ -1,4 +1,4 @@
-<!-- SOP-Version: 2026-04-19 -->
+<!-- SOP-Version: 2026-07-06 -->
 # SOP Compliance Checklist
 
 Last updated: 2026-04-19
@@ -244,6 +244,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | ID | Check | What to look for |
 |----|-------|-----------------|
 | S1 | No secrets in committed files | Scan for `.env` files, hardcoded API keys (`sk-...`), private keys, `password=` patterns in tracked files. Exclude `.env.example` and test fixtures. |
+| S5 | CI workflows invoking Claude Code are hardened | Applies only when `.github/workflows/*` (or equivalent CI config) invokes Claude Code or a Claude action; otherwise N/A. FAIL if any such workflow sets `allowed_non_write_users: "*"` or references a third-party action by floating tag (`@v1`, `@main`) instead of a commit SHA. Comment-and-Control class, CVE-2025-66032. |
 
 ### Important
 
@@ -251,6 +252,8 @@ If none match: non-code project. Code-only checks are marked below and scored as
 |----|-------|-----------------|
 | S2 | Security guidance referenced | `docs/sop/security.md` exists OR CLAUDE.md references security guidance |
 | S3 | No `--dangerously-skip-permissions` usage | Scan `.claude/settings.json`, CLAUDE.md, and any shell scripts for the flag. Agents should use explicit permission rules (`allowedTools`) instead. Hardened in Claude Code v2.1.97. |
+| S4 | Context-file integrity flag present | `.claude/commands/restart-sop.md` Step 4 contains the memory-poisoning guard (dirty-context-file check on CLAUDE.md, `Backlog.md`, `docs/agent-memory*` before acting on their contents), and `docs/sop/security.md` names the project's own persistent context files as injection surfaces. Grep-verifiable by pattern `memory-poisoning` in restart-sop.md. Projects predating P61 (before 2026-07-06) are exempt. |
+| S6 | Read-only token posture for CI review workflows | Applies only when CI runs Claude Code in a review-only capacity; otherwise N/A. The workflow's token grants read-only repository access (e.g. `permissions: contents: read` in the workflow, no `write` scopes beyond what the job demonstrably needs). Documented rationale in the workflow file or security guidance counts as a PASS when a write scope is genuinely required. |
 | Q1 | File size limits specified (code) | CLAUDE.md or a Code Quality section mentions maximum file line count (e.g. 800 lines) |
 | Q2 | Test coverage threshold specified (code) | CLAUDE.md or a Code Quality section mentions minimum test coverage (e.g. 80%) |
 
@@ -308,6 +311,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | ID | Check | What to look for |
 |----|-------|-----------------|
 | M5 | CLAUDE.md rollup refreshed within 7 days | `CLAUDE.md` contains `<!-- recent-work-rollup:start -->` / `<!-- recent-work-rollup:end -->` sentinels. The `Last refreshed: YYYY-MM-DD` line inside is within the last 7 days (advisory; rollup is auto-refreshed by `/update-sop`, so staleness indicates `/update-sop` was skipped). |
+| M6 | Background-subagent handling documented | `.claude/commands/update-sop.md` contains the pre-flight check (collect or terminate outstanding subagents before Step 1), and any project multi-agent doc notes background-by-default behaviour (Claude Code 2.1.198+). Grep-verifiable by pattern `background` in `.claude/commands/update-sop.md`. |
 
 ---
 
@@ -323,14 +327,14 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | Build Plans Structure | 0 | 4 | 1 | 5 |
 | project_resume.md Structure | 0 | 3 | 0 | 3 |
 | Cross-File Consistency | 0 | 3 | 3 | 6 |
-| Security, Hooks, Quality, Agents | 1 | 2 (+2 code) | 4 | 7 (+2) |
+| Security, Hooks, Quality, Agents | 2 | 4 (+2 code) | 4 | 10 (+2) |
 | Benchmark-Proven Practices | 0 | 0 (+2 code) | 2 | 2 (+2) |
-| Multi-Agent Parallel Sessions | 1 | 3 | 1 | 5 |
-| **Total (non-code)** | **15** | **46** | **17** | **78** |
-| **Total (code)** | **15** | **55** | **17** | **87** |
+| Multi-Agent Parallel Sessions | 1 | 3 | 2 | 6 |
+| **Total (non-code)** | **16** | **48** | **18** | **82** |
+| **Total (code)** | **16** | **57** | **18** | **91** |
 
 **Maximum deductions:**
-- Non-code: 15 x 10 + 46 x 5 + 17 x 2 = 150 + 230 + 34 = 414
-- Code: 15 x 10 + 55 x 5 + 17 x 2 = 150 + 275 + 34 = 459
+- Non-code: 16 x 10 + 48 x 5 + 18 x 2 = 160 + 240 + 36 = 436
+- Code: 16 x 10 + 57 x 5 + 18 x 2 = 160 + 285 + 36 = 481
 
 **Normalisation:** Score = max(0, 100 - (total deductions / max possible deductions * 100)). Then apply critical cap (49 max) if any critical check fails.

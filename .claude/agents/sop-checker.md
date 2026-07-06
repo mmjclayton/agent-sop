@@ -1,5 +1,5 @@
 ---
-sop_version: "2026-04-19"
+sop_version: "2026-07-06"
 name: sop-checker
 description: Audits any project folder for SOP compliance and produces a scored report with actionable recommendations. Read-only — never modifies the target project.
 ---
@@ -14,7 +14,7 @@ Before checking anything, read these files from the agent-sop repo:
 
 1. `docs/sop/compliance-checklist.md` — the canonical checklist with all checks, IDs, and scoring weights
 2. `docs/sop/claude-agent-sop.md` — the full SOP for reference when checks are ambiguous
-3. `docs/sop/security.md` — security guidance (for understanding S1/S2 checks)
+3. `docs/sop/security.md` — security guidance (for understanding S1-S6 checks)
 4. `docs/sop/harness-configuration.md` — hooks guidance (for understanding H1 check)
 
 The user will provide a target project path (e.g. `~/Projects/my-app`). All checks run against that path.
@@ -134,6 +134,16 @@ Check in order:
 
 Either condition is a PASS. Both absent is FAIL with fix: "Create `docs/sop/security.md` or add a Security section to CLAUDE.md referencing the project's security practices."
 
+**S3 — No `--dangerously-skip-permissions` usage (Important):**
+Grep `.claude/settings.json`, `CLAUDE.md`, and any shell scripts (`*.sh`, CI configs) for the literal flag `--dangerously-skip-permissions`. Any occurrence outside a prohibition sentence (e.g. security guidance saying "never use") is a FAIL with fix: "Remove the flag; use explicit permission rules (`allowedTools`, `permissions.deny`) in `.claude/settings.json` instead. Hardened in Claude Code v2.1.97."
+Grep `.claude/commands/restart-sop.md` for the pattern `memory-poisoning`. The Step 4 guard must check `git status --porcelain` against CLAUDE.md, `Backlog.md`, and `docs/agent-memory*` before the agent acts on their contents, and `docs/sop/security.md` must name the project's own persistent context files as injection surfaces. Projects predating P61 (before 2026-07-06) are exempt — note the exemption rather than failing. FAIL fix: "Sync `/update-agent-sop` to pull the P61 memory-poisoning guard into restart-sop.md and security.md."
+
+**S5 — CI workflows invoking Claude Code are hardened (Critical, conditional):**
+List `.github/workflows/*.yml` (and equivalent CI configs). If none invoke Claude Code or a Claude action, mark N/A. For each that does: FAIL if `allowed_non_write_users` is set to `"*"`, or any third-party action is referenced by floating tag (`@v1`, `@main`, `@latest`) rather than a full commit SHA. FAIL fix: "Pin actions to commit SHAs and remove wildcard trigger permissions — Comment-and-Control class, CVE-2025-66032."
+
+**S6 — Read-only token posture for CI review workflows (Important, conditional):**
+For workflows that run Claude Code in a review-only capacity: check the workflow `permissions:` block grants only read scopes (`contents: read`), or a documented rationale exists where a write scope is genuinely required. N/A when no review workflow exists. FAIL fix: "Set `permissions: contents: read` on review-only workflows; document any write scope."
+
 **Q1 — File size limits specified (Important, code projects only):**
 Search `CLAUDE.md` for mentions of file line limits. Look for patterns like:
 - "800 lines" or "800 max"
@@ -165,7 +175,7 @@ If `.claude/agents/` does not exist, mark as FAIL with fix: "Create `.claude/age
 
 ### Phase 4.5: Multi-Agent Parallel Sessions
 
-Run checks M1-M5 from checklist Section 11 when the target project has multi-agent parallel sessions enabled (indicated by any of: `multi_agent: auto` / `multi_agent: on` in agent-sop.config.json with worktree count >1, OR presence of `docs/recent-work/`, `docs/agent-memory/decisions/`, `docs/agent-memory/gotchas/` directories).
+Run checks M1-M6 from checklist Section 11 when the target project has multi-agent parallel sessions enabled (indicated by any of: `multi_agent: auto` / `multi_agent: on` in agent-sop.config.json with worktree count >1, OR presence of `docs/recent-work/`, `docs/agent-memory/decisions/`, `docs/agent-memory/gotchas/` directories).
 
 **M1 — Agent-id resolvable (Critical):**
 Grep `.claude/commands/update-sop.md` and `.claude/commands/restart-sop.md` for the `resolve_agent_id` function definition. Both commands must include it. The precedence (env var > file > solo > hash) must be verifiable by reading the snippet.
@@ -181,6 +191,9 @@ In the target's local memory dir (`~/.claude/projects/[hash]/memory/`), list `pr
 
 **M5 — CLAUDE.md rollup refreshed within 7 days (Recommended):**
 Read the rollup section between `<!-- recent-work-rollup:start -->` and `<!-- recent-work-rollup:end -->` sentinels. Extract `Last refreshed: YYYY-MM-DD` and compare against today. If over 7 days old, WARN.
+
+**M6 — Background-subagent handling documented (Recommended):**
+Grep `.claude/commands/update-sop.md` for the pattern `background`. The pre-flight check (collect or terminate outstanding subagents before Step 1) must be present. If the project has its own multi-agent doc, it should note background-by-default behaviour (Claude Code 2.1.198+). Missing: WARN with fix: "Sync `/update-agent-sop` to pull the P62 pre-flight check."
 
 ### Phase 5: Cross-File Consistency Checks
 

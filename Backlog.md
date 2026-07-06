@@ -1147,6 +1147,115 @@ Document that the SOP body, compliance scoring, and reviewer-substance gates wer
 
 ---
 
+### P60 — Facts correction: Sonnet 5 tokenizer, `/usage` measurement, external citations
+`[SHIPPED - 2026-07-06] [Iteration]`
+
+Corrections batch from the 2026-07-06 digest review (automated digest + manual re-run). All three are corrections or replacements, not additions.
+
+1. **Tokenizer note.** Claude Sonnet 5 (launched 30 June 2026, default for Free/Pro users from 1 July) ships a new tokenizer producing ~30% more tokens for the same text. The core SOP states "200 lines / 2,000 tokens" and §15.5 names the authoring substrate as Opus/Sonnet 4.x. Mark token equivalences as 4.x-tokenizer figures; line caps stay the enforceable unit. One sentence at the size-limit rule, one extending §15.5, one at the 60% threshold (proportional, self-adjusts, arrives sooner on Sonnet 5).
+2. **`/usage` methodology.** Claude Code 2.1.149/2.1.174 added per-category token attribution. Cite `/usage` readings as the primary measurement source in `docs/benchmark/README.md`, replacing estimate-based figures.
+3. **External citations.** `docs/benchmark/README.md` gains an External validation paragraph: arXiv:2605.20049 (minimal-pair study — clean code cuts agent token footprint 7-8% and file revisitation ~34% on Claude Code + Sonnet 4.6, solve rate unchanged; caveat: measures code cleanliness, not SOP presence) and Anthropic's expertise study (16 June 2026) supporting the vague-prompt benchmark framing.
+
+**Acceptance criteria:**
+- Token equivalences in core SOP marked tokenizer-relative; §15.5 names Sonnet 5's tokenizer change
+- Benchmark README cites `/usage` as the measurement source
+- External-validation paragraph present with both citations and the adjacency caveat
+- Net instruction count: zero new directives
+
+**Source:** platform.claude.com release notes 30 Jun / 1 Jul 2026; Claude Code changelog 2.1.149/2.1.174; agent-sop-research-digest-2026-07-06 (manual re-run); digests 2026-05-25 + 2026-06-18 (`/usage`, surfaced twice).
+
+**Skipped from the same two-month digest review** (per the 2026-04-13 decision — default to "remove or sharpen", not add): release-session subsection (no consumer evidence; `/finish` + ship-sop cover verify-and-ship), output-discipline template section (adds instructions to every consumer's session-read surface; contradicts the Round 2 sharpening finding), tool-schema advisory + MCP-vs-skill note (single-anecdote adds), subagent depth-cap guidance (no consumer spawns nested subagents), `sandbox.credentials` recommendation (setting unverified in changelog — revisit), "Dreaming" memory curation (not in the changelog, likely spurious), cache-aware read ordering (misconceived — within-turn read order does not bust the prefix cache).
+
+---
+
+### P61 — Memory poisoning: SOP context files as injection surfaces
+`[SHIPPED - 2026-07-06] [Iteration]`
+
+Anthropic's containment post (25 May 2026) names CLAUDE.md and persistent agent state as prompt-injection persistence vectors reloaded every session. `security.md` rule 1 treats external content as untrusted but does not cover the SOP's own persistent files. Reshaped from the digest suggestion to extend existing directives rather than add a subsection.
+
+1. **`security.md` rule 1** — extend the untrusted-content list: the project's own persistent context files (CLAUDE.md, `docs/agent-memory*`, `Backlog.md`) are injection surfaces when modified outside a session's own commits.
+2. **`/restart-sop` Step 4** — extend the existing git cross-check: flag uncommitted or non-session modifications to context files before acting on their contents. Advisory, not blocking — auto-filers are a legitimate source (ship-sop `compliance-reviewer` writes `[needs-triage]` Backlog entries via `auto_file_backlog: true`). One line covers out-of-repo resume files (machine-local, no git trace available).
+3. **+1 Important check** in `compliance-checklist.md` + sop-checker guidance.
+
+**Acceptance criteria:**
+- `security.md` rule 1 list extended (no new numbered rule)
+- restart-sop Step 4 flags dirty context files, names auto-filers as legitimate, advisory wording; user-scope mirror updated; baseline SHA refreshed
+- Important check added; category totals updated
+- Net instruction count: +1 (the check)
+
+**Source:** anthropic.com/engineering/how-we-contain-claude; agent-sop-research-digest-2026-07-06 Finding 5; ship-sop composition review 2026-07-06.
+
+---
+
+### P62 — Background subagents: session-end checklist correctness fix
+`[SHIPPED - 2026-07-06] [Bug]`
+
+Claude Code 2.1.198 (1 July 2026) made subagents run in the background by default — the lead keeps working and is notified on completion. The session-end checklist assumes synchronous completion: `/update-sop` can run while subagents are outstanding, producing a resume snapshot that omits in-flight work (Rule 2 integrity risk).
+
+1. **`multi-agent.md`** coordinator + specialist section: note background-by-default from 2.1.198; the lead must collect or explicitly terminate outstanding subagents before starting the session-end checklist.
+2. **`/update-sop` pre-flight check**: confirm no subagents still running before Step 1. User-scope mirror in lockstep.
+3. **+1 Recommended M-series check** (multi-agent projects document background-subagent handling).
+
+Also verified: the same release removed the `/agents` wizard and made Explore inherit the session model — no SOP text depends on either (grep confirms).
+
+**Acceptance criteria:**
+- `multi-agent.md` documents background-by-default + collect-before-checklist rule
+- `/update-sop` pre-flight check added; user-scope mirror updated; baseline SHA refreshed
+- M-series check added
+- Net instruction count: +2 (pre-check + check), justified: prevents incomplete resume snapshots
+
+**Source:** Claude Code changelog 2.1.198 (verified); agent-sop-research-digest-2026-07-06 Finding 1.
+
+---
+
+### P63 — CI/CD hardening: Comment-and-Control mitigations
+`[SHIPPED - 2026-07-06] [Iteration]`
+
+Comment-and-Control (CVE-class, CVSS 9.4): prompt injection via PR titles / issue bodies / review comments into CI-wired agents, leading to credential theft. `security.md` rule 1 covers the untrusted-metadata principle; the enforceable CI specifics are absent (grep: no SHA-pinning, token-scope, or workflow guidance anywhere). Surfaced independently in two digests.
+
+1. **`security.md`**: for projects wiring Claude Code into CI — read-only tokens for review workflows, third-party actions pinned to commit SHAs, never `allowed_non_write_users: "*"`.
+2. **Deny-rule syntax as example blocks** inside existing rules (`Read(./.env)`, `Read(~/.ssh/**)`, `Agent(model:...)` — parameter-matched rules from Claude Code 2.1.178). Examples are exempt from the Rule 5 instruction count.
+3. **+2 checks**: Critical (no wildcard non-write users; SHA-pinned actions) and Important (read-only token posture documented).
+
+**Acceptance criteria:**
+- `security.md` CI guidance present, kept to the existing numbered-rule format (+1 rule max)
+- Deny-rule examples present as code blocks, not directives
+- 2 checks added; category totals updated
+- Net instruction count: +3 (1 rule + 2 checks), justified: in-the-wild CVE class
+
+**Source:** SecurityWeek Comment-and-Control coverage; CSA research note (CVE-2025-66032); digests 2026-05-11 + 2026-06-29; Claude Code changelog 2.1.178.
+
+---
+
+### P64 — AGENTS.md positioning
+`[OPEN] [Feature] [has-open-questions]`
+
+AGENTS.md is stewarded by the Agentic AI Foundation (Linux Foundation) with multi-vendor support (OpenAI, Cursor, Factory, Sourcegraph, Gemini tooling). agent-sop is CLAUDE.md-only (zero AGENTS.md references in the repo). Decision before any work.
+
+**Open questions:** Does any consumer project run non-Claude agents? Is the stewardship stable enough to build against? If adopted: Rule 2 shape only — AGENTS.md as the single source with CLAUDE.md importing it, never a parallel copy. Does `setup.sh` grow a `--multi-tool` flag?
+
+**Source:** digests 2026-05-11 + 2026-06-18 (recurring finding).
+
+---
+
+### P65 — Corrections bundle: `/simplify` note, README counts, digest-job fixes
+`[SHIPPED - 2026-07-06] [Iteration]`
+
+1. **`finish.md`**: one-line note — `/simplify` was renamed in Claude Code 2.1.147 but restored in 2.1.152 as an alias invoking `/code-review --fix`; the existing fallback paragraph stands. (Downgraded from the 2026-05-25 digest's Critical rating — the removal was reverted.)
+2. **README**: verify check-count and file-count references against `compliance-checklist.md` totals (78 non-code / 87 code); fix if stale.
+3. **Config**: bump `last_update_check` in `~/.claude/agent-sop.config.json`.
+4. **Scheduled-job prompt fixes** (documented for the owner to apply in Claude Cowork — the job definition lives outside this repo): index the repo via GitHub MCP instead of WebFetch on JS-rendered pages (4 of 6 runs failed repo indexing); update source URLs (docs.anthropic.com → platform.claude.com/docs/en/release-notes/overview; blog.langchain.dev → langchain.com/blog); diff findings against prior digests in the Claude Config folder before reporting (3 findings were rediscovered from scratch across runs).
+
+**Acceptance criteria:**
+- `finish.md` note added (project + user-scope mirror)
+- README counts verified current
+- Cron fix list delivered in the recent-work entry
+- Net instruction count: zero
+
+**Source:** Claude Code changelog 2.1.147/2.1.152 (verified); two-month digest review 2026-07-06.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*

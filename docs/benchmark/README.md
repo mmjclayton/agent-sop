@@ -56,7 +56,7 @@ Each task is scored across 7 dimensions (0-3 scale each, max 21):
 1. Both outputs are reviewed **blind** (reviewer does not know which is SOP vs baseline)
 2. A code-reviewer agent scores each dimension with justification
 3. The reviewer also notes any **qualitative differences** (naming choices, error handling approach, test structure)
-4. Token usage and tool call counts are recorded from session metadata
+4. Token usage and tool call counts are recorded via `/usage` per-category attribution (Claude Code 2.1.174+) — the first-party measurement source. Session-metadata estimates (words x 1.3, chars / 4, the 1.7x read multiplier) remain acceptable as a cross-check only. Note that token counts are tokenizer-relative: Sonnet 5's tokenizer yields ~30% more tokens for the same text than 4.x-family figures (core SOP Section 15.5)
 
 ## Session-Hygiene Rubric (supplementary — measures cross-session value)
 
@@ -229,6 +229,13 @@ For each task pair:
 No `git push` possible when the GitHub token is read-only. No deploy possible when there's no CI integration.
 
 **Prerequisites:** Claude Managed Agents API access (beta, enabled for all API accounts). Multi-agent features require research preview access.
+
+## External validation
+
+Independent evidence adjacent to this benchmark's claims (adjacent, not identical — neither study measures SOP presence directly):
+
+- **Code cleanliness and agent cost** ([arXiv:2605.20049](https://arxiv.org/abs/2605.20049), controlled minimal-pair study, May 2026): on Claude Code with Sonnet 4.6, behaviourally-equivalent repo pairs differing only in cleanliness showed no change in solve rate, but the clean variant cut token-equivalent footprint by 7-8% and file revisitation by ~34%. Supports the thesis that structural hygiene lowers agent cost even when task success is unchanged.
+- **Operator expertise and agentic coding** ([Anthropic Economic Research, 16 June 2026](https://www.anthropic.com/research/claude-code-expertise)): outcomes vary with operator expertise — consistent with this benchmark's Round 2 finding that vague prompts amplify the SOP-vs-baseline gap; structure raises the floor most where prompt precision is lowest.
 
 ## Limitations
 

@@ -1,6 +1,6 @@
 ---
 description: End-to-end verify the work, run /simplify, then ship — update Backlog, run /update-sop, open a PR. Three phases, hard-blocking.
-sop_version: "2026-04-29"
+sop_version: "2026-07-06"
 ---
 
 `/finish` is the "I'm done" wrapper. It exists to keep Claude honest: code only ships after Claude has actually exercised it end-to-end (not just compiled it), simplified the diff, and produced a reviewable PR with the SOP trail intact.
@@ -114,6 +114,8 @@ Run the `/simplify` skill against the diff.
 - After applying suggested simplifications, **re-run Phase 1** if any production code changed. Tooling-only or comment-only edits don't require a re-run; behaviour-affecting edits do.
 
 If `/simplify` is unavailable (older harness), substitute: read the diff, look for repeated logic, premature abstractions, dead branches, leftover scaffolding, and unused exports. Apply minimal cleanups.
+
+Version note: `/simplify` was renamed to `/code-review` in Claude Code 2.1.147, then restored in 2.1.152 as an alias that invokes `/code-review --fix`. Behaviour is equivalent for this phase's purpose; the fallback above covers harnesses in the 2.1.147-2.1.151 window.
 
 **Hard block:** Phase 1 must still pass after simplification.
 
