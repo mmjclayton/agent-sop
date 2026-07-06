@@ -115,6 +115,8 @@ Run the `/simplify` skill against the diff.
 
 If `/simplify` is unavailable (older harness), substitute: read the diff, look for repeated logic, premature abstractions, dead branches, leftover scaffolding, and unused exports. Apply minimal cleanups.
 
+Version note: `/simplify` was renamed to `/code-review` in Claude Code 2.1.147, then restored in 2.1.152 as an alias that invokes `/code-review --fix`. Behaviour is equivalent for this phase's purpose; the fallback above covers harnesses in the 2.1.147-2.1.151 window.
+
 **Hard block:** Phase 1 must still pass after simplification.
 
 ## Phase 3 — Ship
