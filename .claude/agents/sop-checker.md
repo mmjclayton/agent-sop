@@ -152,7 +152,7 @@ git diff --name-only <ship-commit>^..<ship-commit> -- 'scripts/validate-*.sh' '.
 **The range must be `<ship-commit>^..<ship-commit>`.** A shipped commit is an ancestor of the default branch, so `git merge-base <default> <ship-commit>` returns the ship commit itself and `<merge-base>..<ship-commit>` is always empty — that form passes unconditionally and detects nothing. Substitute `^1` for `^` where the project uses true merge commits instead of squashes.
 
 No output → PASS. Output → read the corresponding Backlog entry:
-- **PASS** if the entry is a declared item that carries a `docs/reviews/` artifact, or whose Batch Log line explicitly records the Step 1b exemption for it. Either way the change was declared and accounted for.
+- **PASS** if the entry is a declared item that carries a `docs/reviews/` artifact, or whose Batch Log line declares the Step 1b skip with the token `review skipped (P<n>): <docs-only|test-only|dep-bump|below-threshold>`, naming its own P-number. Either way the change was declared and accounted for. The token is the same one `scripts/validate-state-transitions.sh` matches (P66) — if you find yourself accepting a free-text skip reason, that is a FAIL, not a judgement call.
 - **FAIL** if a watched file changed and nothing declares it — no matching Backlog entry, no artifact, no Batch Log note.
 
 Do not condition PASS on the tag alone. Step 1b exempts `[Bug]` and `[Iteration]` from the reviewer turn, so requiring an artifact from a tag that cannot produce one leaves the common case in an undefined state.

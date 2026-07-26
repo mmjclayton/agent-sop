@@ -161,7 +161,16 @@ if [ "$MODE" = "check-drift" ]; then
       if [ -n "$root" ] && [ -f "$root/.sop-agent-id" ]; then
         agent_id=$(head -1 "$root/.sop-agent-id" | tr -d '[:space:]')
       else
-        worktree_count=$(git worktree list 2>/dev/null | wc -l | tr -d '[:space:]')
+        # `|| true`: outside a git repo `git worktree list` exits 128. 2>/dev/null
+        # hides the message but not the status, pipefail carries it past wc/tr,
+        # and errexit then killed the whole script — `--check-drift` in a non-git
+        # directory exited 128 with empty stdout AND empty stderr, which D1
+        # asserts must not happen ("--check-drift works when invoked"). The rest
+        # of this script is built to degrade gracefully off-git; this line was
+        # the one place that did not. Found by the P66-P73 review, after an
+        # earlier audit that checked only sites matching `grep|find|diff` and
+        # therefore missed every failing `git` subcommand.
+        worktree_count=$( { git worktree list 2>/dev/null || true; } | wc -l | tr -d '[:space:]')
         if [ "$worktree_count" = "1" ]; then
           agent_id="solo"
         elif [ -n "$root" ]; then
@@ -215,7 +224,10 @@ if [ "$MODE" = "check-drift" ]; then
   #      can exercise the threshold-skip branch without a real git history.
   commit_pnums=""
   if [ -n "$DRIFT_COMMITS_FILE" ]; then
-    commit_pnums=$(grep -oE '\bP[0-9]+\b' "$DRIFT_COMMITS_FILE" | sort -u)
+    # `|| true`: grep exits 1 when the fixture names no P-number, which is a
+    # legal input (it is what the no-declared-work case looks like). Under
+    # pipefail that 1 propagates past `sort` and errexit kills the script.
+    commit_pnums=$( { grep -oE '\bP[0-9]+\b' "$DRIFT_COMMITS_FILE" || true; } | sort -u)
     loc="${DRIFT_SESSION_LOC:-0}"
     files="${DRIFT_SESSION_FILES:-0}"
   else
@@ -256,9 +268,14 @@ if [ "$MODE" = "check-drift" ]; then
     commit_pnums=$( { git log "${base}..HEAD" --format='%s%n%b' 2>/dev/null | grep -oE '\bP[0-9]+\b' || true; } | sort -u)
     # Measure diff over the committed range only — stays consistent with
     # commit_pnums so uncommitted work doesn't trigger a false-positive.
-    loc=$(git diff --numstat "${base}..HEAD" -- 2>/dev/null | awk '{a+=$1; d+=$2} END{print a+d+0}')
-    files=$(git diff --numstat "${base}..HEAD" -- 2>/dev/null | wc -l | tr -d ' ')
+    # `|| true` on both: git diff exits non-zero on an unresolvable range, and
+    # pipefail carries that past awk/wc into an errexit kill. The fallbacks
+    # below turn an unmeasurable range into 0, which skips the gate rather than
+    # crashing it — the same outcome as a below-threshold session.
+    loc=$( { git diff --numstat "${base}..HEAD" -- 2>/dev/null || true; } | awk '{a+=$1; d+=$2} END{print a+d+0}')
+    files=$( { git diff --numstat "${base}..HEAD" -- 2>/dev/null || true; } | wc -l | tr -d ' ')
     [ -z "$loc" ] && loc=0
+    [ -z "$files" ] && files=0
   fi
 
   # Thresholds: override flags win; otherwise read from config; otherwise defaults.
@@ -491,7 +508,14 @@ while IFS=$'\t' read -r p after_status; do
     # reviewer-turn gate at the state-transition layer, not just by prose.
     if [ "$after_status" = "[SHIPPED]" ] && [ "$before_status" != "[SHIPPED]" ]; then
       batch_match=""
-      batch_match=$(grep -lE "\b${p}\b" docs/build-plans/phase-*.md 2>/dev/null | head -1)
+      # `|| true` is load-bearing, not defensive. `grep -l` exits 1 when the
+      # P-number appears in no phase file, pipefail carries that past `head`,
+      # and errexit then kills the script BEFORE the BLOCK message below can
+      # print — so the operator saw a bare `exit 1` with no output at all.
+      # Fixed 2026-07-26 (P73). The identical shape was fixed once in the
+      # drift check at 66ee6a4 and this second site was missed; see
+      # docs/agent-memory/gotchas/2026-07-26_solo_pipefail-kills-the-error-message-before-it-prints.md
+      batch_match=$( { grep -lE "\b${p}\b" docs/build-plans/phase-*.md 2>/dev/null || true; } | head -1)
       if [ -z "$batch_match" ]; then
         echo "BLOCK: $p shipped but no Batch Log reference found in docs/build-plans/phase-*.md"
         violations=$((violations + 1))
@@ -516,11 +540,43 @@ while IFS=$'\t' read -r p after_status; do
         ' "$AFTER_FILE")
         case "$item_type" in
           "Feature"|"Refactor")
-            # Find the batch-log line that names this P-number and check for a review path on it.
-            batch_line=$(grep -E "\b${p}\b" "$batch_match" | head -1)
-            if ! printf '%s' "$batch_line" | grep -qE 'docs/reviews/'; then
-              echo "BLOCK: $p ([${item_type}]) shipped but Batch Log entry in ${batch_match} does not reference a docs/reviews/ artifact. P44 gate requires review path citation."
-              echo "  Add the review artifact path to the Batch Log line that names ${p}."
+            # Find the batch-log line that names this P-number and check for a
+            # review path on it — OR an enumerated skip declaration.
+            #
+            # P66 (fixed 2026-07-26): this gate used to require `docs/reviews/`
+            # unconditionally, with no knowledge of the Step 1b skip list that
+            # P59 introduced. Prose said a docs-only ship skips the reviewer
+            # turn; this validator blocked that same ship for having no review.
+            # One logical rule, two runtimes, opposite answers. The workaround
+            # people reached for was committing before running /update-sop,
+            # which evades the gate entirely — a worse outcome than either rule.
+            #
+            # Tier A resolution per docs/guides/cross-layer-rules.md: the
+            # validator now understands the skip list rather than being blind
+            # to it. The reason must come from the enumerated set — a bare
+            # "review skipped:" with free text is still a BLOCK, so the escape
+            # is bounded rather than self-judged. Same token as compliance
+            # check S7, deliberately, so the two agree on what counts as a
+            # declared exemption.
+            batch_line=$( { grep -E "\b${p}\b" "$batch_match" || true; } | head -1)
+            # The skip declaration must name its own P-number and end on a word
+            # boundary. Both constraints came out of the P66-P73 review:
+            #   - Without the P-number, `head -1` picks ANY line mentioning the
+            #     number, so "P299 review skipped: docs-only (prep for P300)"
+            #     silently exempted a P300 code ship. Batch lines routinely name
+            #     several P-numbers, and a phrase is far easier to place
+            #     incidentally than a review path.
+            #   - Without the trailing \b, "review skipped: dep-bumpkin" passed,
+            #     which made "free text is not accepted" untrue.
+            skip_re="review skipped \(${p}\): *(docs-only|test-only|dep-bump|below-threshold)\b"
+            if printf '%s' "$batch_line" | grep -qE 'docs/reviews/'; then
+              : # review artifact cited — gate satisfied
+            elif printf '%s' "$batch_line" | grep -qEi "$skip_re"; then
+              : # enumerated Step 1b skip, bound to this P-number — gate satisfied
+            else
+              echo "BLOCK: $p ([${item_type}]) shipped but Batch Log entry in ${batch_match} neither cites a docs/reviews/ artifact nor declares an enumerated Step 1b skip."
+              echo "  Either add the review artifact path to the Batch Log line that names ${p},"
+              echo "  or declare the skip on that line as: review skipped (${p}): <docs-only|test-only|dep-bump|below-threshold>"
               violations=$((violations + 1))
             fi
             ;;

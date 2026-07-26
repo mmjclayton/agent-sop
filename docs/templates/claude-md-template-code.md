@@ -65,7 +65,7 @@ After shipping: update Backlog.md + docs/feature-map.md
 - Status (first): `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[DEFERRED]`, `[SHIPPED - YYYY-MM-DD]`, `[VERIFIED - YYYY-MM-DD]`, `[WON'T]`
 - Type (second): `[Feature]`, `[Iteration]`, `[Bug]`, `[Refactor]`
 - Optional: `[has-open-questions]`, `[ok-for-automation]`
-- `[BLOCKED]` = waiting on external action. `[DEFERRED]` = intentionally postponed, no external blocker. Use `[DEFERRED]` instead of leaving stale `[OPEN]` items that were consciously pushed back.
+- `[BLOCKED]` = waiting on external action. `[DEFERRED]` = intentionally postponed, no external blocker, and must state a reopen trigger (`**Reopens when:** <condition>`; "no trigger identified" is legal and flags it for `[WON'T]` review). Use `[DEFERRED]` instead of leaving stale `[OPEN]` items that were consciously pushed back.
 - `[WON'T]` format: `[WON'T] [Type] — Reason: [explanation or superseding P-number]`
 - `[VERIFIED]` means: tested in production on the live URL
 

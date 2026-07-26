@@ -42,11 +42,8 @@ This project IS the Agent SOP library. All agents working on this project still 
 ## Current Priority Items (as of 2026-07-26)
 
 **Next:**
-- P66 — Cross-layer divergence: validator P44 gate vs Step 1b skip list `[Bug]` (found shipping P64). **Second confirmed instance found 2026-07-26** during the P69 review — S7's PASS condition was unreachable because rule 11 prescribed a tag Step 1b exempts. Worth more now than when filed.
-- P73 — Validator's Batch Log `BLOCK:` message is unreachable; exits 1 in silence `[Bug]` (hit live during 2026-07-26 Step 3c; same bug class as `66ee6a4`, which fixed one of two sites)
-- P70 — Test gate's unbounded "cannot be fixed quickly" escape contradicts the canonical SOP `[Bug]`
-- P72 — Benchmark runner cannot express the lite subset or repeat runs `[Feature]` (blocks P68's rule from being MANDATORY)
-- P71 — `[DEFERRED]` items should require a reopen trigger `[Iteration]`
+- *(none — P66 and P70-P73 shipped 2026-07-26, Batch 0.27. Only decision-blocked items remain.)*
+- **Owed:** first lite benchmark run. The rule is MANDATORY as of Batch 0.27 and both 2026-07-26 sessions took a recorded exemption. Next session editing agent-facing instruction text runs `bash docs/benchmark/run-multi-round.sh setup <r> --lite -k 3`.
 
 **Decision-blocked:**
 - P8 — Web app domain variant `[has-open-questions]`
@@ -70,6 +67,7 @@ This project IS the Agent SOP library. All agents working on this project still 
 - Status (first): `[OPEN]` `[IN PROGRESS]` `[BLOCKED]` `[DEFERRED]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T]`
 - Type (second): `[Feature]` `[Iteration]` `[Bug]` `[Refactor]`
 - Optional: `[has-open-questions]` `[ok-for-automation]`
+- `[DEFERRED]` must carry a reopen trigger: `**Reopens when:** <observable condition>`. "No trigger identified" is legal and marks it a `[WON'T]` candidate at next review.
 
 ### Rules
 - Never mark `[SHIPPED]` without the document existing and being complete.
@@ -144,6 +142,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-07-26.*
 
 - 2026-07-26 `solo`: P67-P69 — digest review, three-paper review, and a reviewer turn that caught the session's own gate
+- 2026-07-26 `solo`: P66, P70-P73 — validator correctness and gate coherence
 - 2026-07-06 `solo`: P64 — AGENTS.md positioning
 - 2026-07-06 `solo`: P60-P63 + P65 — Digest-review corrections batch
 - 2026-07-06 `solo`: Doc-sync pass after P60-P65

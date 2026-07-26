@@ -46,10 +46,23 @@ Full rounds are expensive, which is why they run rarely, which is why SOP edits 
 **Lite subset: tasks 05 (tonnage bug), 07 (skip exercise), 08 (keyboard buttons).** Chosen because each has produced a discriminating result before — task 05 is the spot check where the baseline actively regressed a prior fix, and 07/08 are where R5's model-capability shift showed up. Weighted toward the hard-but-solvable frontier, per LangChain's [Deep Agents benchmarking practice](https://www.langchain.com/blog/how-we-benchmark-deep-agents) (23 July 2026), which reports its own lite subset running "roughly 8x faster and 6x cheaper" than the full benchmark.
 
 - **Lite subset is frozen.** Changing its membership invalidates comparison across SOP versions. Adding a task means starting a new series, recorded as such.
-- **Run lite after any SOP edit that changes agent-facing instruction text. SHOULD, pending runner support.** Not yet enforceable: `run-multi-round.sh:15` hardcodes `TASKS=(5 6 7 8)`, which cannot express the {05, 07, 08} subset, and the script has no repetition parameter, so k>1 has no mechanism. Filed as P72. Until that ships, this is an intention, and sessions that skip it should say so rather than leave it implied.
+- **Run lite after any SOP edit that changes agent-facing instruction text.** k>=3.
 - **Reserve full 8-task rounds for releases** and for any figure that will be published.
 
-**Known exemption, recorded rather than implied:** the 2026-07-26 session that wrote this section changed agent-facing instruction text in `.claude/commands/update-sop.md`, `docs/sop/claude-agent-sop.md`, and `.claude/agents/sop-checker.md`, and did not run the lite subset. No runner existed to run it with. The first session to satisfy this rule will be the first one after P72 ships.
+```bash
+bash run-multi-round.sh setup 6 --lite -k 3     # 3 tasks x 3 runs x 2 arms = 18 worktrees
+# ...run the agents, score each run...
+bash run-multi-round.sh aggregate scores.tsv    # median, range, and the delta
+bash run-multi-round.sh cleanup 6
+```
+
+Scores go in a TSV, one row per run: `round<TAB>task<TAB>cond<TAB>run<TAB>score`. `aggregate` reports median, min and max per task per arm, then the SOP-vs-baseline delta on medians, and **says so explicitly when the two arms' ranges overlap** — that is the result the old single-run method could not express and the reason R2 and R5 disagreed by 17 points with no way to tell how much was noise.
+
+Median rather than mean: at k=3 one crashed run drags a mean somewhere no individual run ever was. The runner warns when invoked with k<3.
+
+*Runner support shipped in P72 (2026-07-26). Before that this rule was SHOULD rather than MANDATORY, because `run-multi-round.sh` hardcoded four tasks and had no repetition parameter — the rule existed with nothing able to execute it.*
+
+**Recorded exemptions.** Both 2026-07-26 sessions changed agent-facing instruction text and neither ran the lite subset. The first had no runner to run it with. The second shipped the runner itself, and running the subset against a benchmark target mid-change would have measured a moving target — the runner was being fixed twice during that session, once for round-pooling and once for duplicate runs. **The first session to owe a lite run under this rule is the next one that edits agent-facing instruction text.** Recorded here rather than left implied, because a MANDATORY rule with a silent first exception is not mandatory. Prior exemption text is preserved in git history at `e0f9e54`.
 
 ### Capability suite (deterministic, already present)
 
