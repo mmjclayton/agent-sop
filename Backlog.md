@@ -1286,7 +1286,7 @@ Workaround used for P64: ran the reviewer turn anyway (cheap for a small diff) r
 ---
 
 ### P67 — Step 1b: reviewer artifact asserted before the background reviewer returns
-`[IN PROGRESS] [Bug]`
+`[SHIPPED - 2026-07-26] [Bug]`
 
 `/update-sop` Step 1b invokes the reviewer at item 3, then asserts the artifact at what was then item 5 and is now item 6 after this fix inserted the wait (`validate-state-transitions.sh --assert-review`), with no instruction to wait in between. Since Claude Code 2.1.198 made subagents background-by-default, the Agent-tool call returns control to the lead before the reviewer has written `docs/reviews/...`. The assertion then fails on a file that is merely *not yet written* — indistinguishable, at the gate, from a review that was never run. P62 fixed this for subagents outstanding *at* session end (pre-flight, before Step 1); it did not cover the subagent Step 1b spawns *during* the checklist.
 
@@ -1314,7 +1314,7 @@ Claude Code 2.1.218 reinforces the same shape from the other direction: `/code-r
 ---
 
 ### P68 — Benchmark methodology: repeat runs, frozen lite subset, capability suite
-`[IN PROGRESS] [Iteration]`
+`[SHIPPED - 2026-07-26] [Iteration]`
 
 Every benchmark round to date scores a **single run** per task per arm. Agent output is nondeterministic, so a single run conflates run-to-run variance with the effect being measured — which is already visible in the record: R2 reported +33%, R5 reported +16%, and the Backlog's own interpretation lists "single round is not averaged" among the drivers of that gap. The README's Limitations section admits the small sample but not the unreplicated-run problem.
 
@@ -1341,7 +1341,7 @@ Worth noting for the SOP's own hill-climbing: LangChain is using the benchmark t
 ---
 
 ### P69 — Gate integrity: the enforcement surfaces are themselves a tamper surface
-`[IN PROGRESS] [Iteration]`
+`[SHIPPED - 2026-07-26] [Iteration]`
 
 `security.md` rule 1 treats external content as untrusted, and P61 extended it to the project's own context files. Neither covers the **enforcement layer**: `scripts/validate-state-transitions.sh`, the sop-checker check definitions, and `docs/reviews/` artifacts are what the gates read to decide pass or fail. A diff that edits the validator in the same commit range the validator is checking has marked its own homework, and nothing in the SOP notices.
 
@@ -1458,10 +1458,45 @@ Surfaced by the P67-P69 reviewer turn, which correctly noted that the session in
 
 ---
 
+### P73 — Validator's Batch Log BLOCK message is unreachable; it exits 1 in silence
+`[OPEN] [Bug]`
+
+`scripts/validate-state-transitions.sh:494`:
+
+```bash
+batch_match=$(grep -lE "\b${p}\b" docs/build-plans/phase-*.md 2>/dev/null | head -1)
+if [ -z "$batch_match" ]; then
+  echo "BLOCK: $p shipped but no Batch Log reference found in docs/build-plans/phase-*.md"
+```
+
+Under the file's `set -euo pipefail`, `grep -l` exits 1 when it matches nothing. `pipefail` propagates that through the pipe to `head`, the assignment inherits it, and `set -e` terminates the script **before line 496 runs**. The `BLOCK:` message is dead code. The operator sees `exit=1` and no output at all.
+
+Hit live during the 2026-07-26 session: flipping P67-P69 to `[SHIPPED]` before writing the Batch Log entry produced a silent exit 1 that took a `bash -x` trace to diagnose. The block was correct; only the reporting was missing.
+
+**This is the same bug class as `66ee6a4`** ("fix(validator): `|| true` pipefail guard around drift-check grep"), which fixed exactly this pattern in the drift check and left the Batch Log check untouched. A single-site fix on a repeated pattern — the `cross-layer-rules.md` Tier 0 grep-for-siblings step was not run when `66ee6a4` shipped.
+
+**Fix:**
+1. Guard the assignment: `batch_match=$(grep -lE ... | head -1 || true)`.
+2. Sweep the whole script for the same shape. `grep -n '=\$(' scripts/validate-state-transitions.sh` and check each for a command that legitimately returns non-zero.
+3. Add a fixture asserting the BLOCK message is actually emitted, not merely that the exit code is 1 — the existing fixtures pass on exit code alone, which is why this survived.
+
+**Acceptance criteria:**
+- Shipping an item with no Batch Log entry prints the BLOCK line and exits 1
+- Every `$(...)` assignment in the script audited, not just this one
+- Fixture asserts on stdout content, not only exit status
+- Ships as its own item with a review artifact — it is a validator change, so `docs/sop/security.md` rule 11 and S7 apply to it
+
+**Source:** hit during `/update-sop` Step 3c on 2026-07-26. Filed rather than fixed in-session precisely because rule 11 (shipped the same day) says a validator change belongs in its own declared, reviewed item rather than folded into an unrelated diff.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
 
+- P67 — Step 1b wait-for-reviewer before substance assertion — SHIPPED 2026-07-26
+- P68 — Benchmark repetition, frozen lite subset, capability suite — SHIPPED 2026-07-26
+- P69 — Gate integrity rule 11 + S7 check — SHIPPED 2026-07-26
 - P1 — Core SOP document — SHIPPED 2026-04-07
 - P2 — CLAUDE.md base template — SHIPPED 2026-04-07 (updated same day to base-only version)
 - P11 — CLAUDE.md code project template — SHIPPED 2026-04-07
