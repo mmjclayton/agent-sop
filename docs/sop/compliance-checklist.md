@@ -254,6 +254,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | S3 | No `--dangerously-skip-permissions` usage | Scan `.claude/settings.json`, CLAUDE.md, and any shell scripts for the flag. Agents should use explicit permission rules (`allowedTools`) instead. Hardened in Claude Code v2.1.97. |
 | S4 | Context-file integrity flag present | `.claude/commands/restart-sop.md` Step 4 contains the memory-poisoning guard (dirty-context-file check on CLAUDE.md, `Backlog.md`, `docs/agent-memory*` before acting on their contents), and `docs/sop/security.md` names the project's own persistent context files as injection surfaces. Grep-verifiable by pattern `memory-poisoning` in restart-sop.md. Projects predating P61 (before 2026-07-06) are exempt. |
 | S6 | Read-only token posture for CI review workflows | Applies only when CI runs Claude Code in a review-only capacity; otherwise N/A. The workflow's token grants read-only repository access (e.g. `permissions: contents: read` in the workflow, no `write` scopes beyond what the job demonstrably needs). Documented rationale in the workflow file or security guidance counts as a PASS when a write scope is genuinely required. |
+| S7 | Gate integrity — validators unchanged in the range they gate | Applies only when the project has a validation script that `/update-sop` invokes (`scripts/validate-*.sh` or equivalent); otherwise N/A. For each `[SHIPPED]` item in the last 30 days, check whether a validation script was modified inside the same commit range that script gated: `git diff --name-only <merge-base>..<ship-commit> -- 'scripts/validate-*.sh' '.claude/agents/sop-checker.md'`. A hit is a **PASS** when the change is itself a declared `[Iteration]` or `[Refactor]` Backlog item carrying its own review artifact, and a **FAIL** when a validator changed inside a `[Feature]` or `[Bug]` ship that the same validator was gating. Rationale in `docs/sop/security.md` rule 11. Projects predating P69 (before 2026-07-26) are exempt. |
 | Q1 | File size limits specified (code) | CLAUDE.md or a Code Quality section mentions maximum file line count (e.g. 800 lines) |
 | Q2 | Test coverage threshold specified (code) | CLAUDE.md or a Code Quality section mentions minimum test coverage (e.g. 80%) |
 
@@ -327,14 +328,14 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | Build Plans Structure | 0 | 4 | 1 | 5 |
 | project_resume.md Structure | 0 | 3 | 0 | 3 |
 | Cross-File Consistency | 0 | 3 | 3 | 6 |
-| Security, Hooks, Quality, Agents | 2 | 4 (+2 code) | 4 | 10 (+2) |
+| Security, Hooks, Quality, Agents | 2 | 5 (+2 code) | 4 | 11 (+2) |
 | Benchmark-Proven Practices | 0 | 0 (+2 code) | 2 | 2 (+2) |
 | Multi-Agent Parallel Sessions | 1 | 3 | 2 | 6 |
-| **Total (non-code)** | **16** | **48** | **18** | **82** |
-| **Total (code)** | **16** | **57** | **18** | **91** |
+| **Total (non-code)** | **16** | **49** | **18** | **83** |
+| **Total (code)** | **16** | **58** | **18** | **92** |
 
 **Maximum deductions:**
-- Non-code: 16 x 10 + 48 x 5 + 18 x 2 = 160 + 240 + 36 = 436
-- Code: 16 x 10 + 57 x 5 + 18 x 2 = 160 + 285 + 36 = 481
+- Non-code: 16 x 10 + 49 x 5 + 18 x 2 = 160 + 245 + 36 = 441
+- Code: 16 x 10 + 58 x 5 + 18 x 2 = 160 + 290 + 36 = 486
 
 **Normalisation:** Score = max(0, 100 - (total deductions / max possible deductions * 100)). Then apply critical cap (49 max) if any critical check fails.

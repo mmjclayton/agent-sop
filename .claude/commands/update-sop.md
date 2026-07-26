@@ -141,11 +141,16 @@ Resolve the range once: prefer `SESSION_RANGE` from Step 0a; fall back to `HEAD`
     Bare tokens like `sign`, `verify`, or `sql` are deliberately excluded — they match too broadly (prose, commit messages, unrelated utilities). Add project-specific trigger paths in `agent-sop.config.json` under a future `security_trigger_paths` field (not yet schemed; extend when a downstream project needs it).
 
 4. Prompt the reviewer: "Review diff in SESSION_RANGE for `P<n>: <title>`. Use the review template at `docs/templates/review-template.md`. Write the result to `docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md`. Include: Summary, Severity (enum), Findings (concrete file:line bullets) OR a reasoned 'No issues — <reason>' statement."
-5. Assert substance:
+5. **Wait for the reviewer to return before asserting.** Subagents run in the background by default from Claude Code 2.1.198, so the invocation in item 3 hands control back before the artifact is written — and `/code-review` behaves the same way from 2.1.218 for projects that wire the slash command into this gate. Collect the reviewer's result, then confirm the file exists on disk:
+   ```bash
+   test -f "docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md" || echo "Reviewer has not written the artifact yet — wait, do not treat as a missing review."
+   ```
+   A not-yet-written artifact and a never-run review look identical to the assertion in item 6. Asserting early turns a working gate into a spurious hard block, and the obvious way out of a spurious block is to write the artifact by hand — which defeats the gate. Wait.
+6. Assert substance:
    ```bash
    bash scripts/validate-state-transitions.sh --assert-review "docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md" || exit 1
    ```
-6. The Batch Log entry (Step 6) for this P-number must reference the review path — the state-transition validator's Batch Log check (Step 3c) keeps this honest.
+7. The Batch Log entry (Step 6) for this P-number must reference the review path — the state-transition validator's Batch Log check (Step 3c) keeps this honest.
 
 **Hard-block conditions:**
 - Shipping a `[Feature]`/`[Refactor]` over threshold with no review artifact → fail.

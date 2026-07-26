@@ -14,7 +14,7 @@ Before checking anything, read these files from the agent-sop repo:
 
 1. `docs/sop/compliance-checklist.md` — the canonical checklist with all checks, IDs, and scoring weights
 2. `docs/sop/claude-agent-sop.md` — the full SOP for reference when checks are ambiguous
-3. `docs/sop/security.md` — security guidance (for understanding S1-S6 checks)
+3. `docs/sop/security.md` — security guidance (for understanding S1-S7 checks)
 4. `docs/sop/harness-configuration.md` — hooks guidance (for understanding H1 check)
 
 The user will provide a target project path (e.g. `~/Projects/my-app`). All checks run against that path.
@@ -143,6 +143,13 @@ List `.github/workflows/*.yml` (and equivalent CI configs). If none invoke Claud
 
 **S6 — Read-only token posture for CI review workflows (Important, conditional):**
 For workflows that run Claude Code in a review-only capacity: check the workflow `permissions:` block grants only read scopes (`contents: read`), or a documented rationale exists where a write scope is genuinely required. N/A when no review workflow exists. FAIL fix: "Set `permissions: contents: read` on review-only workflows; document any write scope."
+
+**S7 — Gate integrity: validators unchanged in the range they gate (Important, conditional):**
+N/A when the project has no validation script that `/update-sop` invokes. Otherwise, for each `[SHIPPED]` item in the last 30 days, resolve the ship commit and run:
+```bash
+git diff --name-only <merge-base>..<ship-commit> -- 'scripts/validate-*.sh' '.claude/agents/sop-checker.md'
+```
+No output → PASS. Output → read the corresponding Backlog entry: **PASS** if that entry is tagged `[Iteration]` or `[Refactor]` and carries its own `docs/reviews/` artifact (the validator change was the declared work, reviewed on its own merits); **FAIL** if a validator changed inside a `[Feature]` or `[Bug]` ship that the same validator was gating. FAIL fix: "Split the validator change into its own `[Iteration]` item with a review artifact — a gate that moves inside the range it is gating cannot be trusted to have gated it. See `docs/sop/security.md` rule 11." Projects predating P69 (before 2026-07-26) are exempt — note the exemption rather than failing.
 
 **Q1 — File size limits specified (Important, code projects only):**
 Search `CLAUDE.md` for mentions of file line limits. Look for patterns like:

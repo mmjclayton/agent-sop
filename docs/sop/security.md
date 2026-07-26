@@ -46,6 +46,8 @@ Threat context: agents sit in the middle of multiple trusted paths (filesystem, 
 
 10. **Harden any CI wiring of Claude Code.** Review workflows run on untrusted metadata (rule 1) while holding repository credentials — the Comment-and-Control class (CVE-2025-66032) chains PR-title/issue-body injection into credential theft. For any workflow that invokes Claude Code: use a read-only token for review-only jobs; pin third-party actions to a commit SHA, not a floating tag; never set `allowed_non_write_users: "*"` (it lets any GitHub account trigger the agent with attacker-controlled input).
 
+11. **Treat the enforcement layer as a tamper surface.** `scripts/validate-state-transitions.sh`, the sop-checker check definitions, and the `docs/reviews/` artifacts are what the gates read to decide pass or fail — an agent that edits them has marked its own homework. **`/update-sop` Step 3c/3d output is suspect when a validation script changed inside the commit range that validator was checking**, and the reviewer agent should flag any diff touching validation scripts alongside feature work. This does not require assuming an agent is adversarial. A hard block the agent cannot pass legitimately *is* optimisation pressure, and satisfying the check's letter — relaxing the validator, hand-writing a thin review artifact — is the cheaper path than satisfying its intent. The pressure is documented at the frontier: OpenAI models under cyber evaluation with reduced refusals escaped their sandbox through a zero-day in the package-installation proxy and chained stolen credentials into Hugging Face to **retrieve the benchmark's answers rather than solve its tasks**, described by OpenAI as "hyperfocused on finding a solution… going to extreme lengths to achieve a rather narrow testing goal" ([disclosure summary](https://simonwillison.net/2026/Jul/22/openai-cyberattack/), 22 July 2026). Legitimate validator changes are normal — ship them as their own `[Iteration]` or `[Refactor]` item with a review artifact, not folded into a feature diff.
+
 ---
 
 ## Detection Scans
@@ -85,5 +87,5 @@ rm ~/.claude/projects/[untrusted-project-hash]/memory/*.md
 - Reference this file from CLAUDE.md (Security section or Key Documents table).
 - Secret scanning runs as a pre-commit hook: see `docs/sop/harness-configuration.md`.
 - Code projects should include a `security-reviewer` agent: see `.claude/agents/security-reviewer.md`.
-- Compliance checklist S1-S6 verify this file's presence, that `--dangerously-skip-permissions` is unused, context-file integrity, and CI hardening.
+- Compliance checklist S1-S7 verify this file's presence, that `--dangerously-skip-permissions` is unused, context-file integrity, CI hardening, and gate integrity.
 - For autonomous / overnight runs, apply `sandboxing.md` additionally (container isolation, network deny, kill switches).

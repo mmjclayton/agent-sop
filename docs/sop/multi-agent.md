@@ -73,6 +73,11 @@ These are heuristics derived from the P54 hardening dogfood (sibling-worktree wi
 - 4+ agents: prefer the path-hash default. Naming becomes overhead, hash collision is statistically negligible (6-char hex on per-worktree paths).
 - Past 5 concurrent agents on one repo, expect the merge-serialisation step to dominate wall-clock. Re-evaluate whether the work could be batched.
 
+**Fan-out ceilings (coordinator + specialist pattern).**
+- Claude Code caps concurrently-running subagents at **20** (`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`), subagent spawns at **200 per session** (`CLAUDE_CODE_MAX_SUBAGENTS_PER_SESSION`, reset by `/clear`), and WebSearch calls at **200 per session** — all from Claude Code 2.1.212.
+- Design coordinator fan-outs under the concurrency cap rather than discovering it mid-run. A 40-way fan-out does not fail; it queues, and the wall-clock estimate that justified the fan-out silently stops holding.
+- **Do not encode the nesting-depth default in project docs.** It has moved three times in three releases (1 → off in 2.1.217 → depth 3 in 2.1.219) and is env-overridable via `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`. Check the changelog for the live value if a design depends on nesting; better, design so it doesn't.
+
 **Parallel-batch instruction in `/update-sop` (perf gate from P54).**
 - Steps 4 (feature-map), 7 (resume snapshot), and 8 (recent-work + rollup refresh) are independent reads/writes — issue all of their tool calls in a single round, not sequentially. Measured ~30-40% wall-clock saving on docs-only sessions.
 

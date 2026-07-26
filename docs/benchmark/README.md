@@ -15,6 +15,49 @@ Each benchmark task runs twice against the same codebase commit:
 
 Both agents receive the **identical task prompt**. The only variable is project context.
 
+### Run repetition and variance (MANDATORY from 2026-07-26)
+
+**Every task runs at least 3 times per arm, 5 preferred. Report median and range, never a single score.**
+
+Rounds R1-R5 scored one run per task per arm. That is not enough to separate the effect being measured from ordinary run-to-run variance, and the record shows the cost: R2 reported +33%, R5 reported +16%, and "single round is not averaged" sits in the Backlog's own list of reasons for the gap. Some unknown share of that 17-point swing is noise that the methodology had no way to expose.
+
+The size of the problem is measured. Mehta, [*When Agents Disagree With Themselves*](https://arxiv.org/abs/2602.11619) (July 2026), ran 8,000 repeated executions on HotpotQA and 1,000 on SWE-bench Verified across four frontier models at fixed temperature:
+
+- **29.3% of single-run evaluations produce an incorrect model ranking.** Roughly one in three single-run A/B comparisons puts the wrong arm on top.
+- Agents produce **2.3-4.2 unique action sequences per 10 runs** on identical inputs.
+- Tasks the agent approaches consistently (≤2 distinct paths) score **82-87%**; tasks it approaches inconsistently (≥4 paths) score **41-65%**. Behavioural spread predicts failure at AUROC 0.62-0.78.
+- The paper recommends **k≥5 runs per task** for published agent benchmarks, reporting mean, variance, and confidence intervals.
+
+Rules for every round from R6 onward:
+
+1. **k≥3 runs per task per arm; k=5 for any result that will be cited publicly.** The README's headline figure is a public claim — it needs k=5.
+2. **Report median and range.** A `+16%` with no spread is not a finding. `median +16% (range +4% to +27%, k=5)` is.
+3. **Report the per-arm spread separately from the SOP-vs-baseline delta.** If the two arms' ranges overlap, say so — that is the honest result, and it is more useful than a point estimate that survives to a badge.
+4. **Do not use majority voting to pick a winner.** In multi-step agentic tasks the same paper measured majority voting at 0-2pp gain, because an early wrong turn propagates through the whole trajectory rather than being outvoted. Aggregate the *scores*, not the *trajectories*.
+
+Retrospective honesty: R1-R5 results in `results/` stand as recorded and are labelled single-run. They are not restated, re-weighted, or deleted. Their limitation is now named here rather than left implicit.
+
+### Frozen lite subset
+
+Full rounds are expensive, which is why they run rarely, which is why SOP edits ship without measurement. A frozen subset fixes the incentive.
+
+**Lite subset: tasks 05 (tonnage bug), 07 (skip exercise), 08 (keyboard buttons).** Chosen because each has produced a discriminating result before — task 05 is the spot check where the baseline actively regressed a prior fix, and 07/08 are where R5's model-capability shift showed up. Weighted toward the hard-but-solvable frontier, per LangChain's [Deep Agents benchmarking practice](https://www.langchain.com/blog/how-we-benchmark-deep-agents) (23 July 2026), which reports its own lite subset running "roughly 8x faster and 6x cheaper" than the full benchmark.
+
+- **Lite subset is frozen.** Changing its membership invalidates comparison across SOP versions. Adding a task means starting a new series, recorded as such.
+- **Run lite after any SOP edit that changes agent-facing instruction text.** k≥3.
+- **Reserve full 8-task rounds for releases** and for any figure that will be published.
+
+### Capability suite (deterministic, already present)
+
+Alongside the end-to-end benchmarks, agent-sop has a capability suite — fast deterministic tests targeting one harness behaviour each, the analogue of LangChain's "capability suite… unit tests that each target a specific harness behavior like tool selection, memory, or file operations". It exists but was never named as such:
+
+| Directory | Behaviour under test |
+|-----------|---------------------|
+| `state-transition-fixtures/` | Backlog tag transitions — illegal flips blocked, legal ones allowed |
+| `drift-fixtures/` | Drift detection — commits not referencing a declared P-number |
+
+These run in seconds and answer a different question from the benchmark: *did this SOP edit break an enforcement mechanism?* Run them on every SOP change. The benchmark answers *did this SOP edit change output quality?* and cannot be run that often. Do not conflate the two, and do not let a green capability suite stand in for a benchmark round.
+
 ### Isolation and Safety (MANDATORY)
 
 **Benchmark agents must NEVER modify the real codebase.** These rules are non-negotiable:
@@ -133,12 +176,18 @@ After all tasks complete:
 
 ## Task Inventory
 
-| # | Task | Type | Complexity | Files |
-|---|------|------|-----------|-------|
-| 1 | Migrate TimeFilter to Pill component | Refactor | Low | 3 |
-| 2 | Write import preset unit tests | Test | Medium | 1 new |
-| 3 | Add dynamic page titles | Feature | Low | 2 |
-| 4 | Write WorkoutLogger utility tests | Test | Medium | 1 new |
+| # | Task | Type | Lite subset |
+|---|------|------|-------------|
+| 01 | Migrate TimeFilter to Pill component | Refactor | |
+| 02 | Write import preset unit tests | Test writing | |
+| 03 | Add dynamic page titles | Feature | |
+| 04 | Write utility function tests for `server/src/utils.js` | Test writing | |
+| 05 | Fix the tonnage calculation bug | Bug fix (vague prompt, needs data-model knowledge) | ✅ |
+| 06 | Fix the Add Exercise button being hidden | Bug fix (CSS/layout, needs UI architecture) | |
+| 07 | Add skip-exercise functionality | Feature (multi-file, data model, ceremony) | ✅ |
+| 08 | Add Copy Last / Next buttons to the keyboard row | Feature (UI, design system) | ✅ |
+
+Tasks 01-04 were the original round-1 set; 05-08 were added for round 2 and are the harder, more discriminating specs — `run-multi-round.sh` pins `TASKS=(5 6 7 8)` for that reason. Four lettered variants (`task-A-tonnage.md` through `task-D-scroll.md`) exist as vague-prompt rewrites used in the R2 prompt-precision comparison.
 
 See `tasks/` for full specs.
 
@@ -236,6 +285,7 @@ Independent evidence adjacent to this benchmark's claims (adjacent, not identica
 
 - **Code cleanliness and agent cost** ([arXiv:2605.20049](https://arxiv.org/abs/2605.20049), controlled minimal-pair study, May 2026): on Claude Code with Sonnet 4.6, behaviourally-equivalent repo pairs differing only in cleanliness showed no change in solve rate, but the clean variant cut token-equivalent footprint by 7-8% and file revisitation by ~34%. Supports the thesis that structural hygiene lowers agent cost even when task success is unchanged.
 - **Operator expertise and agentic coding** ([Anthropic Economic Research, 16 June 2026](https://www.anthropic.com/research/claude-code-expertise)): outcomes vary with operator expertise — consistent with this benchmark's Round 2 finding that vague prompts amplify the SOP-vs-baseline gap; structure raises the floor most where prompt precision is lowest.
+- **Behavioural consistency and early-step divergence** ([arXiv:2602.11619](https://arxiv.org/abs/2602.11619), Mehta, July 2026): trajectory divergence concentrates at **step 2** — the initial repository exploration and query formulation — and the paper's recommendation is to improve first-step determinism through "standardized file discovery patterns, structured initial context gathering". That is a description of what `/restart-sop` does. The evidence is adjacent, not identical: the paper does not test SOP presence, and this benchmark has not yet measured trajectory variance with and without a standardised session-start read order. **That experiment is now cheap to run** — the lite subset with k≥5, scoring action-sequence diversity alongside the existing rubric — and would convert an argued mechanism into a measured one. Filed as a follow-up, not claimed as a result.
 
 ## Limitations
 
@@ -243,4 +293,5 @@ Independent evidence adjacent to this benchmark's claims (adjacent, not identica
 - Same model for both conditions. SOP effectiveness may vary across model versions.
 - No DB access means some task types (migration, API endpoints) cannot be benchmarked.
 - Token counting is approximate (session metadata, not exact API counts) for local runs. Managed Agents API provides exact counts.
-- Small sample size (4 tasks). Statistical significance is limited. This is directional, not definitive.
+- Small sample size (8 tasks). Statistical significance is limited. This is directional, not definitive.
+- **Rounds R1-R5 are single-run per arm.** Measured externally at a 29.3% rate of incorrect model ranking from single-run evaluation (arXiv:2602.11619). Treat every pre-R6 figure — including the +16% and +33% headline numbers — as a point estimate of unknown spread. The k≥3/k≥5 requirement above exists to retire this limitation from R6 onward; until an R6 runs, it is the most serious caveat on this page.
