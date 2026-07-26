@@ -13,7 +13,10 @@ set -u
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-VALIDATOR="$REPO_ROOT/scripts/validate-state-transitions.sh"
+# Overridable so a fixture can be run against an older copy of the validator to
+# prove it actually catches the regression it was written for. A fixture that
+# passes against both the broken and fixed validator is not covering anything.
+VALIDATOR="${VALIDATOR:-$REPO_ROOT/scripts/validate-state-transitions.sh}"
 
 if [ ! -x "$VALIDATOR" ]; then
   echo "Validator not executable: $VALIDATOR" >&2
@@ -82,9 +85,35 @@ EOF
   output=$(cd "$tmp" && bash "$VALIDATOR" --before-file before.md --after-file after.md 2>&1)
   actual=$?
 
-  if [ "$actual" = "$expected" ]; then
+  # Optional stdout assertion. When `<base>.expect-stdout` exists, every line in
+  # it must appear somewhere in the validator's output.
+  #
+  # Exit-code-only assertions cannot distinguish a reported failure from a
+  # silent one. P73 was exactly that: a `grep`/`pipefail`/`errexit` interaction
+  # killed the script before its BLOCK message printed, so operators saw a bare
+  # non-zero exit with no explanation — and every fixture still passed, because
+  # the exit code was non-zero either way. When a check's product is a
+  # diagnostic message, assert on the message.
+  stdout_ok=1
+  missing_line=""
+  if [ -f "${base}.expect-stdout" ]; then
+    while IFS= read -r expect_line; do
+      [ -z "$expect_line" ] && continue
+      case "$output" in
+        *"$expect_line"*) ;;
+        *) stdout_ok=0; missing_line="$expect_line"; break ;;
+      esac
+    done < "${base}.expect-stdout"
+  fi
+
+  if [ "$actual" = "$expected" ] && [ "$stdout_ok" = "1" ]; then
     echo "PASS: $name (exit $actual)"
     pass=$((pass + 1))
+  elif [ "$actual" = "$expected" ]; then
+    echo "FAIL: $name — exit $actual correct, but expected output missing: \"$missing_line\""
+    echo "  output: $output"
+    fail=$((fail + 1))
+    failed_cases="$failed_cases $name"
   else
     echo "FAIL: $name — expected exit $expected, got $actual"
     echo "  output: $output"

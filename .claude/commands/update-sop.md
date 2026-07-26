@@ -161,9 +161,31 @@ Resolve the range once: prefer `SESSION_RANGE` from Step 0a; fall back to `HEAD`
 
 Bug fixes, Iterations, and items under threshold are exempt — the self-eval rubric in Step 1 stands alone for them.
 
+**Declaring a skip (required for `[Feature]`/`[Refactor]`).** When the gate does not fire for a `[Feature]` or `[Refactor]` because the diff matched the skip list or fell under threshold, say so on that item's Batch Log line (Step 6) using the exact token:
+
+```
+review skipped (P<n>): <docs-only|test-only|dep-bump|below-threshold>
+```
+
+The reason must come from that enumerated set, and the declaration must name its own P-number. Both constraints are load-bearing: without the P-number, a skip declared for one item silently exempts another named on the same Batch Log line (batch lines routinely name several); without the trailing enumeration boundary, `dep-bumpkin` passes. Free text is not accepted.
+
+This is what keeps the prose and the validator agreeing. Before P66 was fixed, Step 1b's skip list said a docs-only `[Feature]` needs no reviewer turn while `scripts/validate-state-transitions.sh` blocked that same ship for citing no review, and the workaround people reached for was committing before running `/update-sop`, which evades the gate entirely. The validator now reads this token, so a declared skip passes and an undeclared one still blocks. Compliance check S7 reads the same token for the same reason.
+
 ## Step 2: Run tests (code projects only)
 
-If this is a code project with a test suite, run the full test suite now. Fix any failures before proceeding. If tests fail and cannot be fixed quickly, note the failures in agent-memory.md Gotchas and continue with the remaining steps.
+If this is a code project with a test suite, run the full test suite now. **Fix any failures before proceeding.**
+
+A red suite at session end is a real situation, so there is an exit — but it is a declared one, not a judgement call. You may continue with the remaining steps **only when all three of these hold**:
+
+1. The failure is filed as a `[Bug]` Backlog item this session, naming the failing test.
+2. It is named in the resume snapshot's `## Blockers` (Step 7), so the next session sees it before it starts work.
+3. This session ships nothing tagged `[Feature]` or `[Refactor]`. A red suite and a shipped feature do not go together.
+
+If any of the three is false, the suite is the gate. Fix it or stop.
+
+This step previously let the agent continue whenever it judged the failures too slow to fix. That was an unbounded self-judged exit: the threshold was undefined, it left no artifact, and the gate therefore held exactly as long as the agent felt like holding it — while `docs/sop/claude-agent-sop.md` Section 6 step 1 stated the same gate unconditionally. Fixed under P70, prompted by [arXiv:2607.01456](https://arxiv.org/abs/2607.01456), which found this authoring pattern (the Rationalization Loophole) in 94% of 238 surveyed agent instruction files. An escape an agent can grant itself is not a gate.
+
+The prior wording is quoted verbatim in P70's `Backlog.md` entry and in git history, not here — check T1 greps this file for that phrase, so reproducing it in the explanation would fail the check on the reference implementation itself. That is not hypothetical: it did fail, and the P66-P73 review caught it.
 
 Skip this step for documentation-only or markdown-only projects.
 

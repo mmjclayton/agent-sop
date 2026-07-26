@@ -7,7 +7,7 @@ Single source of truth for all work items. Never delete without a trace — upda
 - Status (first): `[OPEN]` `[IN PROGRESS]` `[BLOCKED]` `[DEFERRED]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T]`
 - Type (second): `[Feature]` `[Iteration]` `[Bug]` `[Refactor]`
 - Optional: `[has-open-questions]` `[ok-for-automation]`
-- `[BLOCKED]` = waiting on external action. `[DEFERRED]` = intentionally postponed with no external blocker.
+- `[BLOCKED]` = waiting on external action. `[DEFERRED]` = intentionally postponed with no external blocker, and must state a reopen trigger (`**Reopens when:** <condition>`; "no trigger identified" is legal and flags it for `[WON'T]` review).
 
 ---
 
@@ -1266,7 +1266,7 @@ AGENTS.md is stewarded by the Agentic AI Foundation (Linux Foundation) with mult
 ---
 
 ### P66 — Cross-layer divergence: validator P44 gate vs Step 1b skip list
-`[OPEN] [Bug]`
+`[SHIPPED - 2026-07-26] [Bug]`
 
 Found while shipping P64 (docs-only `[Feature]`, well under threshold). `docs/sop/claude-agent-sop.md` Step 1b (as tightened by P59) says docs-only ships skip the reviewer turn. `scripts/validate-state-transitions.sh`'s P44 gate BLOCKs any `[Feature]`/`[Refactor]` ship whose Batch Log line lacks a `docs/reviews/` citation — it has no knowledge of the P59 skip list or the LOC/files threshold. The same logical rule lives in two runtimes and they disagree: prose says skip, validator says block. This is precisely the pattern `docs/guides/cross-layer-rules.md` (shipped in the same P59) exists to catch — Tier 0 grep-for-siblings was not run when the skip list was added.
 
@@ -1372,7 +1372,7 @@ A third finding: rule 11 assigned flagging duty to `code-reviewer`, whose defini
 ---
 
 ### P70 — Rationalization loopholes: the test gate lets the agent decide it doesn't apply
-`[OPEN] [Bug]`
+`[SHIPPED - 2026-07-26] [Bug]`
 
 Hong, Imani & Ahmed, [*From Anatomy to Smells: An Empirical Study of SKILL.md in Agent Skills*](https://arxiv.org/abs/2607.01456) (July 2026) content-analysed 238 SKILL.md files from high-adoption repositories against 26 authoring smells drawn from a 29-source literature review. Findings: **99.6% of skills contain at least one smell, averaging 10.5 per file**, and the single most prevalent is the **Rationalization Loophole at 94%** — instruction text that hands the agent a self-judged escape from a requirement. Longitudinally, across 1,295 commit records on 142 skills, **smells are seldom corrected once introduced**; prevalence rises or plateaus but rarely falls.
 
@@ -1407,7 +1407,7 @@ The canonical SOP states an unconditional gate. The command the agent actually e
 ---
 
 ### P71 — `[DEFERRED]` without a reopen trigger is debt with no payback date
-`[OPEN] [Iteration]`
+`[SHIPPED - 2026-07-26] [Iteration]`
 
 Aljohani & Do, [*PromptDebt: A Comprehensive Study of Technical Debt Across LLM Projects*](https://arxiv.org/abs/2509.20497), manually analysed self-admitted technical debt across **93,142 Python files from 37,944 repositories** using LLM APIs (dual-rater categorisation, Cohen's κ = 0.74). Headline distribution: 54.49% of SATD instances come from OpenAI integrations, 12.35% from LangChain; prompt debt is 6.61% of the sample and hyperparameter debt 4.51%.
 
@@ -1433,7 +1433,7 @@ The repo does this inconsistently. `CLAUDE.md` "Deferred with reopen triggers" l
 ---
 
 ### P72 — Benchmark runner cannot express the lite subset or repeat runs
-`[OPEN] [Feature]`
+`[SHIPPED - 2026-07-26] [Feature]`
 
 P68 introduced a repetition rule (k≥3, k≥5 for published figures) and a frozen lite subset ({05, 07, 08}). Neither is executable with the current tooling, which makes the rule an intention rather than a gate.
 
@@ -1459,7 +1459,7 @@ Surfaced by the P67-P69 reviewer turn, which correctly noted that the session in
 ---
 
 ### P73 — Validator's Batch Log BLOCK message is unreachable; it exits 1 in silence
-`[OPEN] [Bug]`
+`[SHIPPED - 2026-07-26] [Bug]`
 
 `scripts/validate-state-transitions.sh:494`:
 
@@ -1493,6 +1493,12 @@ Hit live during the 2026-07-26 session: flipping P67-P69 to `[SHIPPED]` before w
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
+
+- P66 — Validator/Step 1b skip-list unification (Tier A) — SHIPPED 2026-07-26
+- P70 — Test-gate escape hatch bounded + T1 check — SHIPPED 2026-07-26
+- P71 — `[DEFERRED]` reopen triggers + B12 check — SHIPPED 2026-07-26
+- P72 — Benchmark runner: lite subset, -k repetition, aggregate — SHIPPED 2026-07-26
+- P73 — Validator silent-exit fix + stdout-asserting fixtures — SHIPPED 2026-07-26
 
 - P67 — Step 1b wait-for-reviewer before substance assertion — SHIPPED 2026-07-26
 - P68 — Benchmark repetition, frozen lite subset, capability suite — SHIPPED 2026-07-26

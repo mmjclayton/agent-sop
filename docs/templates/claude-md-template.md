@@ -70,7 +70,7 @@ After shipping: update Backlog.md + docs/feature-map.md
 - Never mark `[SHIPPED]` without merge to main.
 - Never mark `[VERIFIED]` without testing in a running app.
 - Status first, type second. Never reverse.
-- `[BLOCKED]` = waiting on external action. `[DEFERRED]` = intentionally postponed. Use `[DEFERRED]` instead of leaving stale `[OPEN]` items sitting around.
+- `[BLOCKED]` = waiting on external action. `[DEFERRED]` = intentionally postponed, and must state a reopen trigger (`**Reopens when:** <condition>`; "no trigger identified" is legal and flags it for `[WON'T]` review). Use `[DEFERRED]` instead of leaving stale `[OPEN]` items sitting around.
 
 ---
 
