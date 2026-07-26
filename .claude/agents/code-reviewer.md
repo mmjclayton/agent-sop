@@ -35,6 +35,7 @@ You are a senior code reviewer. You review changes for quality, security, and ma
 - Path traversal (user-controlled file paths without sanitisation)
 - Authentication bypasses (missing auth checks on protected routes)
 - Exposed secrets in logs
+- Gate integrity: validator or gate-definition files (`scripts/validate-*.sh`, `.claude/agents/sop-checker.md`, CI gate configs) changed in the same range they are gating. Flag it whenever such a file moves alongside unrelated feature work, even when the change looks benign — a gate that shifts inside the range it polices cannot vouch for that range. Not a finding when the validator change is the declared work of the item under review. See `docs/sop/security.md` rule 11.
 
 ### Code Quality (HIGH)
 

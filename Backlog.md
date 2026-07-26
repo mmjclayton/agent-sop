@@ -1288,7 +1288,7 @@ Workaround used for P64: ran the reviewer turn anyway (cheap for a small diff) r
 ### P67 — Step 1b: reviewer artifact asserted before the background reviewer returns
 `[IN PROGRESS] [Bug]`
 
-`/update-sop` Step 1b invokes the reviewer at item 3, then asserts the artifact at item 5 (`validate-state-transitions.sh --assert-review`) with no instruction to wait in between. Since Claude Code 2.1.198 made subagents background-by-default, the Agent-tool call returns control to the lead before the reviewer has written `docs/reviews/...`. The assertion then fails on a file that is merely *not yet written* — indistinguishable, at the gate, from a review that was never run. P62 fixed this for subagents outstanding *at* session end (pre-flight, before Step 1); it did not cover the subagent Step 1b spawns *during* the checklist.
+`/update-sop` Step 1b invokes the reviewer at item 3, then asserts the artifact at what was then item 5 and is now item 6 after this fix inserted the wait (`validate-state-transitions.sh --assert-review`), with no instruction to wait in between. Since Claude Code 2.1.198 made subagents background-by-default, the Agent-tool call returns control to the lead before the reviewer has written `docs/reviews/...`. The assertion then fails on a file that is merely *not yet written* — indistinguishable, at the gate, from a review that was never run. P62 fixed this for subagents outstanding *at* session end (pre-flight, before Step 1); it did not cover the subagent Step 1b spawns *during* the checklist.
 
 Claude Code 2.1.218 reinforces the same shape from the other direction: `/code-review` now runs as a background subagent too, so a project wiring the slash command into its gate inherits the identical race.
 
@@ -1360,6 +1360,15 @@ Most projects pass S7 by default — validators rarely change. That is the point
 
 **Source:** [OpenAI's cyberattack disclosure](https://simonwillison.net/2026/Jul/22/openai-cyberattack/), Simon Willison, 22 July 2026 (fetched and verified 2026-07-26); agent-sop-research-digest-2026-07-24 Finding 5. **Digest attribution corrected:** the digest credits a Thomas Ptacek remark about 2025-era open-weights models in a pentest harness to this post; that remark is not in the post and is not cited here.
 
+**Reviewer turn found the first cut of S7 was inert — corrected before ship.** `docs/reviews/2026-07-26_solo_P67-P69.md` returned 2 HIGH, both on this item:
+
+1. **S7's range could never produce a hit.** It specified `<merge-base>..<ship-commit>`. A shipped commit is an ancestor of the default branch, so `git merge-base <default> <ship-commit>` returns the ship commit itself and the range is empty. Verified against `4ad01f8`, `2aad84c`, and `116be62` — all three returned zero output, i.e. unconditional PASS. Corrected to `<ship-commit>^..<ship-commit>` (`^1` for merge-commit projects), which does detect the real validator change at `66ee6a4`.
+2. **S7's PASS condition was unreachable through the SOP's own workflow.** It required an `[Iteration]`/`[Refactor]` item "carrying its own review artifact" while rule 11 prescribed `[Iteration]`, which Step 1b exempts from the reviewer turn. Following the rule produced no artifact and landed in a state that was neither PASS nor FAIL. Corrected on both sides: rule 11 now prescribes `[Refactor]` where substantive and requires an explicit Batch Log exemption note otherwise; S7's PASS is now tag-agnostic (declared item + artifact **or** Batch Log exemption note).
+
+A third finding: rule 11 assigned flagging duty to `code-reviewer`, whose definition contained no such instruction. Taken together the three meant **P69 shipped a gate whose only two enforcement arms were a check that always passed and a reviewer instruction that did not exist.** All three fixed. `code-reviewer.md` Security (CRITICAL) checklist gains a gate-integrity bullet.
+
+**In-scope correction found by the same review:** R1 (`compliance-checklist.md`) carried the identical `<merge-base>..` defect, so every shipped item retrospectively measured as a 0-LOC diff and was silently exempted from the reviewer threshold. Fixed in the same pass rather than left as a known-broken check, and declared here rather than slipped in silently.
+
 ---
 
 ### P70 — Rationalization loopholes: the test gate lets the agent decide it doesn't apply
@@ -1420,6 +1429,32 @@ The repo does this inconsistently. `CLAUDE.md` "Deferred with reopen triggers" l
 - Net instruction count: +2
 
 **Source:** [arXiv:2509.20497](https://arxiv.org/abs/2509.20497) (fetched and verified 2026-07-26). Applicability deliberately narrow — see assessment above.
+
+---
+
+### P72 — Benchmark runner cannot express the lite subset or repeat runs
+`[OPEN] [Feature]`
+
+P68 introduced a repetition rule (k≥3, k≥5 for published figures) and a frozen lite subset ({05, 07, 08}). Neither is executable with the current tooling, which makes the rule an intention rather than a gate.
+
+- `docs/benchmark/run-multi-round.sh:15` hardcodes `TASKS=(5 6 7 8)`. It cannot express {05, 07, 08}.
+- No script takes a repetition count. Grepping the runners for `ROUND|RUNS|k=|median|repeat|LITE` returns nothing.
+- Nothing aggregates across runs, so median and range have to be computed by hand.
+
+Surfaced by the P67-P69 reviewer turn, which correctly noted that the session introducing a MANDATORY rule was itself the first to violate it. That exemption is now recorded in the benchmark README rather than left implied, and the rule is marked SHOULD until this ships.
+
+**Fix:**
+1. `run-multi-round.sh` accepts a task list (`TASKS` overridable by env or flag) and a `--lite` shorthand for the frozen subset.
+2. A `-k <n>` repetition flag that runs each task n times per arm into per-run result directories.
+3. An aggregation step emitting median and range per task per arm, in the shape the README now requires.
+
+**Acceptance criteria:**
+- `bash run-multi-round.sh setup --lite -k 3` produces 3 runs per arm for tasks 05/07/08
+- Aggregate output reports median and range, not a single score
+- Benchmark README's SHOULD is upgraded back to MANDATORY in the same PR
+- First real lite round recorded in `results/`
+
+**Source:** `docs/reviews/2026-07-26_solo_P67-P69.md` MEDIUM finding on `docs/benchmark/README.md:18/:33/:47` vs `run-multi-round.sh:15`.
 
 ---
 

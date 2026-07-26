@@ -21,12 +21,14 @@ Both agents receive the **identical task prompt**. The only variable is project 
 
 Rounds R1-R5 scored one run per task per arm. That is not enough to separate the effect being measured from ordinary run-to-run variance, and the record shows the cost: R2 reported +33%, R5 reported +16%, and "single round is not averaged" sits in the Backlog's own list of reasons for the gap. Some unknown share of that 17-point swing is noise that the methodology had no way to expose.
 
-The size of the problem is measured. Mehta, [*When Agents Disagree With Themselves*](https://arxiv.org/abs/2602.11619) (July 2026), ran 8,000 repeated executions on HotpotQA and 1,000 on SWE-bench Verified across four frontier models at fixed temperature:
+The size of the problem has been measured once, externally. As reported by Mehta, [*When Agents Disagree With Themselves*](https://arxiv.org/abs/2602.11619) (July 2026), from 8,000 repeated executions on HotpotQA and 1,000 on SWE-bench Verified across four frontier models at fixed temperature:
 
 - **29.3% of single-run evaluations produce an incorrect model ranking.** Roughly one in three single-run A/B comparisons puts the wrong arm on top.
 - Agents produce **2.3-4.2 unique action sequences per 10 runs** on identical inputs.
 - Tasks the agent approaches consistently (≤2 distinct paths) score **82-87%**; tasks it approaches inconsistently (≥4 paths) score **41-65%**. Behavioural spread predicts failure at AUROC 0.62-0.78.
 - The paper recommends **k≥5 runs per task** for published agent benchmarks, reporting mean, variance, and confidence intervals.
+
+That is a single unreplicated study and this repo cannot verify it. It is cited as the reason the rule below exists, not as settled fact. The rule stands on its own regardless: repeated runs cost little and a point estimate of unknown spread is not a measurement.
 
 Rules for every round from R6 onward:
 
@@ -44,8 +46,10 @@ Full rounds are expensive, which is why they run rarely, which is why SOP edits 
 **Lite subset: tasks 05 (tonnage bug), 07 (skip exercise), 08 (keyboard buttons).** Chosen because each has produced a discriminating result before — task 05 is the spot check where the baseline actively regressed a prior fix, and 07/08 are where R5's model-capability shift showed up. Weighted toward the hard-but-solvable frontier, per LangChain's [Deep Agents benchmarking practice](https://www.langchain.com/blog/how-we-benchmark-deep-agents) (23 July 2026), which reports its own lite subset running "roughly 8x faster and 6x cheaper" than the full benchmark.
 
 - **Lite subset is frozen.** Changing its membership invalidates comparison across SOP versions. Adding a task means starting a new series, recorded as such.
-- **Run lite after any SOP edit that changes agent-facing instruction text.** k≥3.
+- **Run lite after any SOP edit that changes agent-facing instruction text. SHOULD, pending runner support.** Not yet enforceable: `run-multi-round.sh:15` hardcodes `TASKS=(5 6 7 8)`, which cannot express the {05, 07, 08} subset, and the script has no repetition parameter, so k>1 has no mechanism. Filed as P72. Until that ships, this is an intention, and sessions that skip it should say so rather than leave it implied.
 - **Reserve full 8-task rounds for releases** and for any figure that will be published.
+
+**Known exemption, recorded rather than implied:** the 2026-07-26 session that wrote this section changed agent-facing instruction text in `.claude/commands/update-sop.md`, `docs/sop/claude-agent-sop.md`, and `.claude/agents/sop-checker.md`, and did not run the lite subset. No runner existed to run it with. The first session to satisfy this rule will be the first one after P72 ships.
 
 ### Capability suite (deterministic, already present)
 
@@ -176,16 +180,18 @@ After all tasks complete:
 
 ## Task Inventory
 
-| # | Task | Type | Lite subset |
-|---|------|------|-------------|
-| 01 | Migrate TimeFilter to Pill component | Refactor | |
-| 02 | Write import preset unit tests | Test writing | |
-| 03 | Add dynamic page titles | Feature | |
-| 04 | Write utility function tests for `server/src/utils.js` | Test writing | |
-| 05 | Fix the tonnage calculation bug | Bug fix (vague prompt, needs data-model knowledge) | ✅ |
-| 06 | Fix the Add Exercise button being hidden | Bug fix (CSS/layout, needs UI architecture) | |
-| 07 | Add skip-exercise functionality | Feature (multi-file, data model, ceremony) | ✅ |
-| 08 | Add Copy Last / Next buttons to the keyboard row | Feature (UI, design system) | ✅ |
+| # | Task | Type | Complexity | Files | Lite subset |
+|---|------|------|-----------|-------|-------------|
+| 01 | Migrate TimeFilter to Pill component | Refactor | Low | 3 | |
+| 02 | Write import preset unit tests | Test writing | Medium | 1 new | |
+| 03 | Add dynamic page titles | Feature | Low | 2 | |
+| 04 | Write utility function tests for `server/src/utils.js` | Test writing | Medium | 1 new | |
+| 05 | Fix the tonnage calculation bug | Bug fix (vague prompt, needs data-model knowledge) | not recorded | not recorded | ✅ |
+| 06 | Fix the Add Exercise button being hidden | Bug fix (CSS/layout, needs UI architecture) | not recorded | not recorded | |
+| 07 | Add skip-exercise functionality | Feature (multi-file, data model, ceremony) | not recorded | not recorded | ✅ |
+| 08 | Add Copy Last / Next buttons to the keyboard row | Feature (UI, design system) | not recorded | not recorded | ✅ |
+
+Complexity and Files for 01-04 are the original round-1 estimates, preserved from `116be62`. The round-2 specs (05-08) never recorded either value, and the task files carry no file manifest, so those cells are marked unrecorded rather than backfilled with guesses. Fill them from a real round when one runs.
 
 Tasks 01-04 were the original round-1 set; 05-08 were added for round 2 and are the harder, more discriminating specs — `run-multi-round.sh` pins `TASKS=(5 6 7 8)` for that reason. Four lettered variants (`task-A-tonnage.md` through `task-D-scroll.md`) exist as vague-prompt rewrites used in the R2 prompt-precision comparison.
 

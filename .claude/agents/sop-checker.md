@@ -145,11 +145,19 @@ List `.github/workflows/*.yml` (and equivalent CI configs). If none invoke Claud
 For workflows that run Claude Code in a review-only capacity: check the workflow `permissions:` block grants only read scopes (`contents: read`), or a documented rationale exists where a write scope is genuinely required. N/A when no review workflow exists. FAIL fix: "Set `permissions: contents: read` on review-only workflows; document any write scope."
 
 **S7 — Gate integrity: validators unchanged in the range they gate (Important, conditional):**
-N/A when the project has no validation script that `/update-sop` invokes. Otherwise, for each `[SHIPPED]` item in the last 30 days, resolve the ship commit and run:
+N/A when the project has neither a validation script that `/update-sop` invokes nor a checked-in check definition (`.claude/agents/sop-checker.md`). Otherwise, for each `[SHIPPED]` item whose ship commit is on or after 2026-07-26, resolve the ship commit and run:
 ```bash
-git diff --name-only <merge-base>..<ship-commit> -- 'scripts/validate-*.sh' '.claude/agents/sop-checker.md'
+git diff --name-only <ship-commit>^..<ship-commit> -- 'scripts/validate-*.sh' '.claude/agents/sop-checker.md'
 ```
-No output → PASS. Output → read the corresponding Backlog entry: **PASS** if that entry is tagged `[Iteration]` or `[Refactor]` and carries its own `docs/reviews/` artifact (the validator change was the declared work, reviewed on its own merits); **FAIL** if a validator changed inside a `[Feature]` or `[Bug]` ship that the same validator was gating. FAIL fix: "Split the validator change into its own `[Iteration]` item with a review artifact — a gate that moves inside the range it is gating cannot be trusted to have gated it. See `docs/sop/security.md` rule 11." Projects predating P69 (before 2026-07-26) are exempt — note the exemption rather than failing.
+**The range must be `<ship-commit>^..<ship-commit>`.** A shipped commit is an ancestor of the default branch, so `git merge-base <default> <ship-commit>` returns the ship commit itself and `<merge-base>..<ship-commit>` is always empty — that form passes unconditionally and detects nothing. Substitute `^1` for `^` where the project uses true merge commits instead of squashes.
+
+No output → PASS. Output → read the corresponding Backlog entry:
+- **PASS** if the entry is a declared item that carries a `docs/reviews/` artifact, or whose Batch Log line explicitly records the Step 1b exemption for it. Either way the change was declared and accounted for.
+- **FAIL** if a watched file changed and nothing declares it — no matching Backlog entry, no artifact, no Batch Log note.
+
+Do not condition PASS on the tag alone. Step 1b exempts `[Bug]` and `[Iteration]` from the reviewer turn, so requiring an artifact from a tag that cannot produce one leaves the common case in an undefined state.
+
+FAIL fix: "Declare the validator change as its own Backlog item and either run the reviewer turn on it or record the Step 1b exemption in its Batch Log line — a gate that moves inside the range it is gating cannot be trusted to have gated it. See `docs/sop/security.md` rule 11." Ship commits before 2026-07-26 are exempt — note the exemption rather than failing. The exemption is commit-scoped, not project-scoped: every project alive today predates P69, so a project-scoped exemption would make this check inert everywhere and permanently.
 
 **Q1 — File size limits specified (Important, code projects only):**
 Search `CLAUDE.md` for mentions of file line limits. Look for patterns like:
