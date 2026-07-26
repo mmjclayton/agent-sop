@@ -14,7 +14,7 @@ Before checking anything, read these files from the agent-sop repo:
 
 1. `docs/sop/compliance-checklist.md` — the canonical checklist with all checks, IDs, and scoring weights
 2. `docs/sop/claude-agent-sop.md` — the full SOP for reference when checks are ambiguous
-3. `docs/sop/security.md` — security guidance (for understanding S1-S6 checks)
+3. `docs/sop/security.md` — security guidance (for understanding S1-S7 checks)
 4. `docs/sop/harness-configuration.md` — hooks guidance (for understanding H1 check)
 
 The user will provide a target project path (e.g. `~/Projects/my-app`). All checks run against that path.
@@ -143,6 +143,21 @@ List `.github/workflows/*.yml` (and equivalent CI configs). If none invoke Claud
 
 **S6 — Read-only token posture for CI review workflows (Important, conditional):**
 For workflows that run Claude Code in a review-only capacity: check the workflow `permissions:` block grants only read scopes (`contents: read`), or a documented rationale exists where a write scope is genuinely required. N/A when no review workflow exists. FAIL fix: "Set `permissions: contents: read` on review-only workflows; document any write scope."
+
+**S7 — Gate integrity: validators unchanged in the range they gate (Important, conditional):**
+N/A when the project has neither a validation script that `/update-sop` invokes nor a checked-in check definition (`.claude/agents/sop-checker.md`). Otherwise, for each `[SHIPPED]` item whose ship commit is on or after 2026-07-26, resolve the ship commit and run:
+```bash
+git diff --name-only <ship-commit>^..<ship-commit> -- 'scripts/validate-*.sh' '.claude/agents/sop-checker.md'
+```
+**The range must be `<ship-commit>^..<ship-commit>`.** A shipped commit is an ancestor of the default branch, so `git merge-base <default> <ship-commit>` returns the ship commit itself and `<merge-base>..<ship-commit>` is always empty — that form passes unconditionally and detects nothing. Substitute `^1` for `^` where the project uses true merge commits instead of squashes.
+
+No output → PASS. Output → read the corresponding Backlog entry:
+- **PASS** if the entry is a declared item that carries a `docs/reviews/` artifact, or whose Batch Log line explicitly records the Step 1b exemption for it. Either way the change was declared and accounted for.
+- **FAIL** if a watched file changed and nothing declares it — no matching Backlog entry, no artifact, no Batch Log note.
+
+Do not condition PASS on the tag alone. Step 1b exempts `[Bug]` and `[Iteration]` from the reviewer turn, so requiring an artifact from a tag that cannot produce one leaves the common case in an undefined state.
+
+FAIL fix: "Declare the validator change as its own Backlog item and either run the reviewer turn on it or record the Step 1b exemption in its Batch Log line — a gate that moves inside the range it is gating cannot be trusted to have gated it. See `docs/sop/security.md` rule 11." Ship commits before 2026-07-26 are exempt — note the exemption rather than failing. The exemption is commit-scoped, not project-scoped: every project alive today predates P69, so a project-scoped exemption would make this check inert everywhere and permanently.
 
 **Q1 — File size limits specified (Important, code projects only):**
 Search `CLAUDE.md` for mentions of file line limits. Look for patterns like:

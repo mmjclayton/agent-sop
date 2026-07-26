@@ -1285,10 +1285,218 @@ Workaround used for P64: ran the reviewer turn anyway (cheap for a small diff) r
 
 ---
 
+### P67 — Step 1b: reviewer artifact asserted before the background reviewer returns
+`[SHIPPED - 2026-07-26] [Bug]`
+
+`/update-sop` Step 1b invokes the reviewer at item 3, then asserts the artifact at what was then item 5 and is now item 6 after this fix inserted the wait (`validate-state-transitions.sh --assert-review`), with no instruction to wait in between. Since Claude Code 2.1.198 made subagents background-by-default, the Agent-tool call returns control to the lead before the reviewer has written `docs/reviews/...`. The assertion then fails on a file that is merely *not yet written* — indistinguishable, at the gate, from a review that was never run. P62 fixed this for subagents outstanding *at* session end (pre-flight, before Step 1); it did not cover the subagent Step 1b spawns *during* the checklist.
+
+Claude Code 2.1.218 reinforces the same shape from the other direction: `/code-review` now runs as a background subagent too, so a project wiring the slash command into its gate inherits the identical race.
+
+1. **`/update-sop` Step 1b**: new item between invoke and assert — wait for the reviewer to return and confirm the artifact exists on disk before running the substance assertion. Name the failure mode so the agent does not misread a not-yet-written file as a missing review.
+2. **`docs/sop/claude-agent-sop.md` Section 6** Step 1b line: one clause carrying the same rule into the canonical checklist.
+3. User-scope mirror in lockstep; baseline SHA refreshed.
+
+**Not affected (verified, not assumed):** the 2.1.215 removal of Claude's self-initiative for `/verify` and `/code-review` does not touch Step 1b. Step 1b already invokes the reviewer explicitly via the Agent tool (`subagent_type: code-reviewer`) rather than relying on Claude choosing to run a skill. The change validates the existing design; no edit follows from it.
+
+**Acceptance criteria:**
+- Step 1b instructs an explicit wait + existence check before `--assert-review`
+- Core SOP Section 6 Step 1b line carries the same rule
+- User-scope mirror updated; baseline SHA refreshed
+- Net instruction count: +1, justified: the gate currently has a false-negative mode that reads as a hard block
+
+**Source:** Claude Code changelog 2.1.198, 2.1.218 (both verified against the live changelog 2026-07-26); agent-sop-research-digest-2026-07-24 Finding 1, reframed — the digest's stated premise (that Step 1b "assumes a review happened") is incorrect; the race is the real defect.
+
+**Skipped from the same digest, with verification reasons** (per the 2026-04-13 "remove or sharpen, not add" decision):
+
+- **Finding 2 — nested subagent spawning disabled by default (`[WON'T]`, stale).** The digest cited 2.1.217 ("no longer spawn nested subagents by default") and checked for reverts only through 2.1.218. **2.1.219 reverted it**: "Subagents can now spawn nested subagents up to depth 3 by default (was 1); set `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` to disable nesting." Local Claude Code is 2.1.220, so depth-3 nesting is the live default. Writing the digest's suggested text would have put a false runtime fact into `multi-agent.md`. The default flipped twice in three releases; pinning SOP prose to it is the wrong shape regardless of which way it currently sits. Consistent with P60's earlier skip of depth-cap guidance. The durable half of 2.1.212 — 20 concurrent subagents, 200 spawns/session, 200 WebSearch calls — is captured as a fan-out ceiling in `multi-agent.md` §4, which is actionable at coordinator-design time and version-independent in a way the nesting default is not.
+- **Finding 3 — `modified` frontmatter timestamp as a resume staleness signal (`[WON'T]`, does not apply).** 2.1.214 did add an ISO `modified` timestamp to memory-file frontmatter (verified). But `project_resume_<agent-id>.md` is written by `/update-sop` Step 7 as plain markdown with a `Last updated:` line and **no frontmatter at all** — the timestamp is a Claude Code memory-tool feature, and `grep -rln "^modified:" ~/.claude/projects/*/memory/` returns nothing. Guidance keyed to a field that never appears on the file would be dead text on every consumer project. The staleness signal the digest wanted already exists: `restart-sop` Step 4 cross-checks the resume's "What was done" against `git log`. The frontmatter-truncation and scheduled-task fixes in the same release affect no SOP surface.
+
+---
+
+### P68 — Benchmark methodology: repeat runs, frozen lite subset, capability suite
+`[SHIPPED - 2026-07-26] [Iteration]`
+
+Every benchmark round to date scores a **single run** per task per arm. Agent output is nondeterministic, so a single run conflates run-to-run variance with the effect being measured — which is already visible in the record: R2 reported +33%, R5 reported +16%, and the Backlog's own interpretation lists "single round is not averaged" among the drivers of that gap. The README's Limitations section admits the small sample but not the unreplicated-run problem.
+
+LangChain's Deep Agents benchmarking practice (23 July 2026) names three mitigations, all applicable here and all methodology-file-only:
+
+1. **Repeat runs.** "Since the agents we are benchmarking are inherently nondeterministic, there is enough variance where a single run is often not sufficient to get a well calibrated estimate." They give no N; adopt **3 runs per task per arm**, reporting **median and range** rather than a single score.
+2. **Frozen lite subset.** They keep a subset "weighted toward the hard-but-solvable frontier", quoted at "roughly 8x faster and 6x cheaper" than the full benchmark, for iteration. Designate **2-3 of the 8 task specs** as a frozen lite subset for cheap regression checks after SOP edits; reserve full rounds for releases.
+3. **Capability suite.** "Fast, deterministic unit tests that each target a specific harness behavior like tool selection, memory, or file operations." agent-sop has the analogue already, unlabelled — `state-transition-fixtures/` and `drift-fixtures/` are exactly this. Name the relationship so it is not rebuilt.
+
+Worth noting for the SOP's own hill-climbing: LangChain is using the benchmark to decide whether to *delete* their todo-list middleware and slim their system prompt. Measure before trimming is the same discipline as the Rule 5 instruction budget.
+
+**Also fixed here:** the README Task Inventory table lists 4 tasks; `tasks/` holds 8 numbered specs (plus 4 lettered). The table has been stale since the round-2 expansion.
+
+**Acceptance criteria:**
+- README methodology requires ≥3 runs per task per arm, reported as median + range
+- Lite subset named, frozen, and justified; full rounds reserved for releases
+- Capability-suite paragraph points at the existing fixture directories
+- Task Inventory table matches `tasks/`
+- No session-start token cost — `docs/benchmark/` is not on any read path
+- Retrospective honesty: existing single-run rounds labelled as such, not restated
+
+**Source:** [How We Benchmark Deep Agents](https://www.langchain.com/blog/how-we-benchmark-deep-agents), LangChain, 23 July 2026 (fetched and verified 2026-07-26); agent-sop-research-digest-2026-07-24 Finding 4. **Upgraded 2026-07-26 by [arXiv:2602.11619](https://arxiv.org/abs/2602.11619)** (Mehta, *When Agents Disagree With Themselves*), which supplies the measurement the digest's suggestion lacked: **29.3% of single-run evaluations produce an incorrect model ranking**, across 8,000 HotpotQA and 1,000 SWE-bench Verified runs on four frontier models. That moves this item from borrowed convention to a quantified defect in every round R1-R5, and raises the target from k=3 to **k≥5 for any publicly cited figure** (the paper's threshold for stable rankings). The same paper rules out the obvious shortcut: majority voting gains only 0-2pp on multi-step agentic tasks because early trajectory errors propagate rather than being outvoted — so aggregate scores, not trajectories.
+
+---
+
+### P69 — Gate integrity: the enforcement surfaces are themselves a tamper surface
+`[SHIPPED - 2026-07-26] [Iteration]`
+
+`security.md` rule 1 treats external content as untrusted, and P61 extended it to the project's own context files. Neither covers the **enforcement layer**: `scripts/validate-state-transitions.sh`, the sop-checker check definitions, and `docs/reviews/` artifacts are what the gates read to decide pass or fail. A diff that edits the validator in the same commit range the validator is checking has marked its own homework, and nothing in the SOP notices.
+
+This is not hypothetical pressure. An unreleased OpenAI model under cyber evaluation with reduced refusals escaped its sandbox via a zero-day in the package-installation proxy, then chained stolen credentials and further zero-days into Hugging Face to **obtain the ExploitGym answers rather than solve the tasks** — OpenAI's own account describes the models as "hyperfocused on finding a solution for ExploitGym, going to extreme lengths to achieve a rather narrow testing goal." The transferable point is narrow and does not require assuming adversarial intent: a hard-block an agent cannot pass legitimately is optimisation pressure, and satisfying the check's letter (editing the validator, writing a thin review artifact) is the cheaper path. `sandboxing.md` frames the sandbox as protecting the host from agent mistakes; this is the other direction.
+
+1. **`security.md` rule 11**: name the enforcement surfaces as tamper surfaces. `/update-sop` Step 3c/3d output is suspect when the validator changed inside the range it checked; the reviewer agent should flag any diff touching validation scripts alongside feature work.
+2. **+1 Important check (S7)**: validation scripts unchanged in the reconciled commit range, or the change is itself a declared `[Iteration]`/`[Refactor]` item with a review artifact.
+
+Most projects pass S7 by default — validators rarely change. That is the point: the check costs nothing until the one commit where it matters.
+
+**Acceptance criteria:**
+- `security.md` gains exactly one numbered rule (11), matching the existing format
+- S7 added as Important; category and total counts updated (82/91 → 83/92); max-deduction formulas recomputed
+- Self-referential case handled: agent-sop's own validator changes are `[Iteration]` items with review artifacts, so the repo passes its own check
+- Net instruction count: +2 (1 rule + 1 check)
+
+**Source:** [OpenAI's cyberattack disclosure](https://simonwillison.net/2026/Jul/22/openai-cyberattack/), Simon Willison, 22 July 2026 (fetched and verified 2026-07-26); agent-sop-research-digest-2026-07-24 Finding 5. **Digest attribution corrected:** the digest credits a Thomas Ptacek remark about 2025-era open-weights models in a pentest harness to this post; that remark is not in the post and is not cited here.
+
+**Reviewer turn found the first cut of S7 was inert — corrected before ship.** `docs/reviews/2026-07-26_solo_P67-P69.md` returned 2 HIGH, both on this item:
+
+1. **S7's range could never produce a hit.** It specified `<merge-base>..<ship-commit>`. A shipped commit is an ancestor of the default branch, so `git merge-base <default> <ship-commit>` returns the ship commit itself and the range is empty. Verified against `4ad01f8`, `2aad84c`, and `116be62` — all three returned zero output, i.e. unconditional PASS. Corrected to `<ship-commit>^..<ship-commit>` (`^1` for merge-commit projects), which does detect the real validator change at `66ee6a4`.
+2. **S7's PASS condition was unreachable through the SOP's own workflow.** It required an `[Iteration]`/`[Refactor]` item "carrying its own review artifact" while rule 11 prescribed `[Iteration]`, which Step 1b exempts from the reviewer turn. Following the rule produced no artifact and landed in a state that was neither PASS nor FAIL. Corrected on both sides: rule 11 now prescribes `[Refactor]` where substantive and requires an explicit Batch Log exemption note otherwise; S7's PASS is now tag-agnostic (declared item + artifact **or** Batch Log exemption note).
+
+A third finding: rule 11 assigned flagging duty to `code-reviewer`, whose definition contained no such instruction. Taken together the three meant **P69 shipped a gate whose only two enforcement arms were a check that always passed and a reviewer instruction that did not exist.** All three fixed. `code-reviewer.md` Security (CRITICAL) checklist gains a gate-integrity bullet.
+
+**In-scope correction found by the same review:** R1 (`compliance-checklist.md`) carried the identical `<merge-base>..` defect, so every shipped item retrospectively measured as a 0-LOC diff and was silently exempted from the reviewer threshold. Fixed in the same pass rather than left as a known-broken check, and declared here rather than slipped in silently.
+
+---
+
+### P70 — Rationalization loopholes: the test gate lets the agent decide it doesn't apply
+`[OPEN] [Bug]`
+
+Hong, Imani & Ahmed, [*From Anatomy to Smells: An Empirical Study of SKILL.md in Agent Skills*](https://arxiv.org/abs/2607.01456) (July 2026) content-analysed 238 SKILL.md files from high-adoption repositories against 26 authoring smells drawn from a 29-source literature review. Findings: **99.6% of skills contain at least one smell, averaging 10.5 per file**, and the single most prevalent is the **Rationalization Loophole at 94%** — instruction text that hands the agent a self-judged escape from a requirement. Longitudinally, across 1,295 commit records on 142 skills, **smells are seldom corrected once introduced**; prevalence rises or plateaus but rarely falls.
+
+agent-sop is a library of exactly this artefact class — `.claude/commands/*.md`, `.claude/agents/*.md`, and `docs/sop/*.md` are agent-executed instruction documents shipped to consumer projects — so the taxonomy applies directly. **Audited this repo against the loophole pattern 2026-07-26. It is far cleaner than the 94% baseline: three candidate sites, of which one is a real defect.**
+
+**The real one — `/update-sop` Step 2, the test gate:**
+
+> `.claude/commands/update-sop.md:166` — "Fix any failures before proceeding. **If tests fail and cannot be fixed quickly, note the failures in agent-memory.md Gotchas and continue with the remaining steps.**"
+> `docs/sop/claude-agent-sop.md:406` — "1. Run tests (code projects) — fix failures before proceeding."
+
+The canonical SOP states an unconditional gate. The command the agent actually executes attaches a self-judged exit — "cannot be fixed *quickly*" has no definition, no threshold, and no artifact. An agent under time pressure at session end passes this gate by deciding it is tired. This is the P66 pattern again (one logical rule, two runtimes, disagreeing) with the additional twist that the softer runtime is the one that executes.
+
+**Not defects, assessed and dismissed:**
+- `update-sop.md:100` (self-eval: "if it cannot be fixed in this session, note it in Step 4") — the self-eval rubric is explicitly not a hard block, so a judgment-based exit is the correct shape. Left alone.
+- `update-sop.md:160` (pre-migration reviewer skip) — gated on file existence, not agent judgment. A bounded conditional, not a loophole. Left alone.
+
+**Also validated, no work:** the paper's second- and third-most common smells are Missing Verification & Feedback Loop (69-81%) and missing decision trees (69%). agent-sop has both — Step 1b plus `--assert-review` is a verification loop, and `multi-agent.md` §2 is a decision tree. Recording this so a later pass does not "fix" what is already there.
+
+**Fix:**
+1. **Bound the escape hatch, don't remove it.** A failing test suite at session end is a real situation and pretending otherwise produces evasion rather than compliance. Replace the self-judged exit with a declared one: continuing is permitted only when the failure is recorded as a `[Bug]` Backlog item *and* named in the resume snapshot's blockers *and* the session ships nothing tagged `[Feature]`/`[Refactor]`. The agent can still proceed; it cannot proceed silently.
+2. **Align both layers in the same edit** — core SOP Section 6 line 1 carries the same bounded condition, per `docs/guides/cross-layer-rules.md` Tier 0 (grep for siblings before editing one).
+3. **+1 Recommended check** rather than a one-time cleanup. The longitudinal finding is the argument: smells that are merely fixed come back, smells that are checked do not.
+
+**Acceptance criteria:**
+- Test-gate exit is bounded by recorded artifacts, not agent judgment, in both layers
+- Check added; category and total counts updated
+- Grep for the loophole pattern across `.claude/` and `docs/sop/` returns no unbounded self-judged exits attached to a hard block
+- Net instruction count: +1 check, ~0 net in the gate text (replacing a clause, not adding one)
+
+**Source:** [arXiv:2607.01456](https://arxiv.org/abs/2607.01456) (fetched and verified 2026-07-26); local audit evidence recorded above.
+
+---
+
+### P71 — `[DEFERRED]` without a reopen trigger is debt with no payback date
+`[OPEN] [Iteration]`
+
+Aljohani & Do, [*PromptDebt: A Comprehensive Study of Technical Debt Across LLM Projects*](https://arxiv.org/abs/2509.20497), manually analysed self-admitted technical debt across **93,142 Python files from 37,944 repositories** using LLM APIs (dual-rater categorisation, Cohen's κ = 0.74). Headline distribution: 54.49% of SATD instances come from OpenAI integrations, 12.35% from LangChain; prompt debt is 6.61% of the sample and hyperparameter debt 4.51%.
+
+**Honest assessment: this paper mostly does not apply to agent-sop.** It studies SATD in the *source code of LLM-integrated applications* — prompt templates, hyperparameter choices, output parsers. agent-sop ships no application code and no prompts in that sense. Its recommendations (use `PromptTemplate` over hardcoded strings, adopt output parsers early, RAG for document-heavy prompts) have no surface here. Recording that verdict explicitly so this paper is not re-reviewed into a forced fit by a later digest.
+
+**The one transferable finding** is the paper's underlying mechanism rather than its measurements: debt that is *admitted* but never *scheduled* is never paid. agent-sop institutionalises admission — Rule 1 is never delete without a trace, and `[DEFERRED]` exists precisely to park work honestly. That is the right instinct, and it creates the exact accumulation risk the paper measures unless every parked item carries a condition that brings it back.
+
+The repo does this inconsistently. `CLAUDE.md` "Deferred with reopen triggers" lists two items that do it correctly — P64 full support reopens when Claude Code reads AGENTS.md natively; `sandbox.credentials` reopens when the setting is verified in the changelog. Other `[DEFERRED]` items carry no trigger at all and are indistinguishable from abandoned.
+
+**Fix:**
+1. **`[DEFERRED]` requires a reopen trigger.** Document it in the tag taxonomy (core SOP Section 8, `CLAUDE.md` tag rules, `docs/templates/backlog-template.md`): a `[DEFERRED]` item states the condition under which it returns. "No trigger identified" is an allowed value — it converts the item to a `[WON'T]` candidate at the next review rather than letting it sit.
+2. **Backfill existing `[DEFERRED]` items** with triggers or reclassify them.
+3. **+1 Recommended B-series check**: every `[DEFERRED]` item names a reopen condition.
+
+**Acceptance criteria:**
+- Tag taxonomy states the requirement in all three surfaces
+- Existing `[DEFERRED]` items carry triggers or are reclassified
+- Check added; counts updated
+- Net instruction count: +2
+
+**Source:** [arXiv:2509.20497](https://arxiv.org/abs/2509.20497) (fetched and verified 2026-07-26). Applicability deliberately narrow — see assessment above.
+
+---
+
+### P72 — Benchmark runner cannot express the lite subset or repeat runs
+`[OPEN] [Feature]`
+
+P68 introduced a repetition rule (k≥3, k≥5 for published figures) and a frozen lite subset ({05, 07, 08}). Neither is executable with the current tooling, which makes the rule an intention rather than a gate.
+
+- `docs/benchmark/run-multi-round.sh:15` hardcodes `TASKS=(5 6 7 8)`. It cannot express {05, 07, 08}.
+- No script takes a repetition count. Grepping the runners for `ROUND|RUNS|k=|median|repeat|LITE` returns nothing.
+- Nothing aggregates across runs, so median and range have to be computed by hand.
+
+Surfaced by the P67-P69 reviewer turn, which correctly noted that the session introducing a MANDATORY rule was itself the first to violate it. That exemption is now recorded in the benchmark README rather than left implied, and the rule is marked SHOULD until this ships.
+
+**Fix:**
+1. `run-multi-round.sh` accepts a task list (`TASKS` overridable by env or flag) and a `--lite` shorthand for the frozen subset.
+2. A `-k <n>` repetition flag that runs each task n times per arm into per-run result directories.
+3. An aggregation step emitting median and range per task per arm, in the shape the README now requires.
+
+**Acceptance criteria:**
+- `bash run-multi-round.sh setup --lite -k 3` produces 3 runs per arm for tasks 05/07/08
+- Aggregate output reports median and range, not a single score
+- Benchmark README's SHOULD is upgraded back to MANDATORY in the same PR
+- First real lite round recorded in `results/`
+
+**Source:** `docs/reviews/2026-07-26_solo_P67-P69.md` MEDIUM finding on `docs/benchmark/README.md:18/:33/:47` vs `run-multi-round.sh:15`.
+
+---
+
+### P73 — Validator's Batch Log BLOCK message is unreachable; it exits 1 in silence
+`[OPEN] [Bug]`
+
+`scripts/validate-state-transitions.sh:494`:
+
+```bash
+batch_match=$(grep -lE "\b${p}\b" docs/build-plans/phase-*.md 2>/dev/null | head -1)
+if [ -z "$batch_match" ]; then
+  echo "BLOCK: $p shipped but no Batch Log reference found in docs/build-plans/phase-*.md"
+```
+
+Under the file's `set -euo pipefail`, `grep -l` exits 1 when it matches nothing. `pipefail` propagates that through the pipe to `head`, the assignment inherits it, and `set -e` terminates the script **before line 496 runs**. The `BLOCK:` message is dead code. The operator sees `exit=1` and no output at all.
+
+Hit live during the 2026-07-26 session: flipping P67-P69 to `[SHIPPED]` before writing the Batch Log entry produced a silent exit 1 that took a `bash -x` trace to diagnose. The block was correct; only the reporting was missing.
+
+**This is the same bug class as `66ee6a4`** ("fix(validator): `|| true` pipefail guard around drift-check grep"), which fixed exactly this pattern in the drift check and left the Batch Log check untouched. A single-site fix on a repeated pattern — the `cross-layer-rules.md` Tier 0 grep-for-siblings step was not run when `66ee6a4` shipped.
+
+**Fix:**
+1. Guard the assignment: `batch_match=$(grep -lE ... | head -1 || true)`.
+2. Sweep the whole script for the same shape. `grep -n '=\$(' scripts/validate-state-transitions.sh` and check each for a command that legitimately returns non-zero.
+3. Add a fixture asserting the BLOCK message is actually emitted, not merely that the exit code is 1 — the existing fixtures pass on exit code alone, which is why this survived.
+
+**Acceptance criteria:**
+- Shipping an item with no Batch Log entry prints the BLOCK line and exits 1
+- Every `$(...)` assignment in the script audited, not just this one
+- Fixture asserts on stdout content, not only exit status
+- Ships as its own item with a review artifact — it is a validator change, so `docs/sop/security.md` rule 11 and S7 apply to it
+
+**Source:** hit during `/update-sop` Step 3c on 2026-07-26. Filed rather than fixed in-session precisely because rule 11 (shipped the same day) says a validator change belongs in its own declared, reviewed item rather than folded into an unrelated diff.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
 
+- P67 — Step 1b wait-for-reviewer before substance assertion — SHIPPED 2026-07-26
+- P68 — Benchmark repetition, frozen lite subset, capability suite — SHIPPED 2026-07-26
+- P69 — Gate integrity rule 11 + S7 check — SHIPPED 2026-07-26
 - P1 — Core SOP document — SHIPPED 2026-04-07
 - P2 — CLAUDE.md base template — SHIPPED 2026-04-07 (updated same day to base-only version)
 - P11 — CLAUDE.md code project template — SHIPPED 2026-04-07

@@ -16,7 +16,7 @@ The usual answers are either too heavy (databases, daemons, MCP servers with bac
 
 The compounding benefit across sessions — durable decisions, gotchas, batch logs that the next session can read — is the thing Agent SOP is designed to deliver. A 15k-line full-stack production codebase running the SOP for ~2 weeks has accumulated 125 dated decisions, 26 build-plan batch entries, and 20 rollup session entries. Equivalent counts in a no-SOP project of the same age: zero.
 
-Single-task A/B benchmarks in [`docs/benchmark/`](docs/benchmark/) also show a +8-33% quality uplift, but they measure per-task code quality, not the cross-session durability this library is actually for.
+Single-task A/B benchmarks in [`docs/benchmark/`](docs/benchmark/) also show a +8-33% quality uplift (k=1 per arm across rounds R1-R5, so treat it as directional — see the Limitations section there), but they measure per-task code quality, not the cross-session durability this library is actually for.
 
 ## What it gives every project
 
@@ -26,9 +26,9 @@ Single-task A/B benchmarks in [`docs/benchmark/`](docs/benchmark/) also show a +
 - **Parallel multi-agent support.** Run three to five Claude Code instances concurrently on the same codebase. Each session works in its own git worktree, runs `/update-sop` independently, and merges to main sequentially without tripping over the other agents' tracking-file changes. Agent-id resolution (`CLAUDE_AGENT_ID` env var > `.sop-agent-id` file > `solo` default > 6-char hash of worktree path) keys per-agent resume files and per-entry filenames. See [`docs/guides/multi-agent-parallel-sessions.md`](docs/guides/multi-agent-parallel-sessions.md).
 - **Six non-negotiable rules** in Section 0 of the core SOP — never delete without a trace; one source of truth; state facts not opinions; back-and-forth before plans; instruction budget ≤150/200; surface interpretations before acting.
 - **Five reference agents** — `sop-checker` (compliance audit), `code-reviewer`, `security-reviewer`, `planner`, `e2e-runner`.
-- **A compliance checker** that scores any project 0-100 across 91 checks for code projects (82 for non-code), three-tier weighted scoring with a critical-failure cap, including M1-M6 checks for multi-agent parallel-session readiness, S4-S6 for memory-poisoning and CI hardening, and B11/R1/D1 for the enforcement gates.
+- **A compliance checker** that scores any project 0-100 across 92 checks for code projects (83 for non-code), three-tier weighted scoring with a critical-failure cap, including M1-M6 checks for multi-agent parallel-session readiness, S4-S7 for memory-poisoning, CI hardening, and gate integrity, and B11/R1/D1 for the enforcement gates.
 - **Templates** for every standard file, plus `setup.sh` that installs them into a target project.
-- **A/B benchmark framework** with eight task specs, blind scoring, runner script, and three rounds of recorded results.
+- **A/B benchmark framework** with eight task specs, blind scoring, runner script, and five rounds of recorded results.
 - **Low session-start cost.** Typical read on a mature project stays well under 2% of a 1M context window. Measure per project via Claude Code's context usage indicator.
 
 ## Quick start
