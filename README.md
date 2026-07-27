@@ -226,7 +226,7 @@ Both target the "Claude Code has no memory across sessions" problem. They solve 
 
 ### vs no tooling
 
-The common alternative is free-form notes in `README.md` or `docs/`, updated when someone remembers. That works for solo projects until you try to come back after a month or hand off to another agent. The benchmark gap (+33% on vague prompts) is mostly this: agents with structured context don't waste tool calls reconstructing what was already decided.
+The common alternative is free-form notes in `README.md` or `docs/`, updated when someone remembers. That works for solo projects until you try to come back after a month or hand off to another agent. The Round 2 benchmark gap (+33% on vague prompts, single-run — see the Limitations in `docs/benchmark/`) is mostly this: agents with structured context don't waste tool calls reconstructing what was already decided.
 
 ### vs AGENTS.md (the cross-tool standard)
 
