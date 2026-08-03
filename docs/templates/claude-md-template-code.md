@@ -43,13 +43,13 @@ Current phase files:
 Test: `[test command]`
 After shipping: update Backlog.md + docs/feature-map.md
 
-### Current Priority Items (as of YYYY-MM-DD)
+### Current priority items
 
-**Very High:**
-- [P-number] — [item description]
+<!-- Derived from Backlog.md by scripts/refresh-priorities.sh (/update-sop Step 3). Do not edit by hand — Backlog.md is the single source of truth for status, and a hand-maintained copy here drifts. -->
 
-**High:**
-- [P-number] — [item description]
+<!-- priority-items:start -->
+*Not yet generated. The first `/update-sop` run will populate this from `Backlog.md`.*
+<!-- priority-items:end -->
 
 **Medium:**
 - [P-number] — [item description]

@@ -182,8 +182,13 @@ Claude Code has two memory systems. They serve different purposes and must not o
 [Point large files at a stable anchor, never a line range, e.g. "CSS tokens — `client/src/index.css`, in the `:root` block"]
 [Test command + after-shipping reminder]
 
-## Current Priority Items
-[OPEN/IN PROGRESS items only — shipped items tracked in Backlog.md]
+## Current priority items
+[Derived from `Backlog.md`, never hand-maintained. Rendered between sentinel
+markers `<!-- priority-items:start -->` and `<!-- priority-items:end -->` by
+`scripts/refresh-priorities.sh` at `/update-sop` Step 3. CLAUDE.md declares
+Backlog.md the single source of truth for status; a hand-written copy of the
+open items beside that declaration is a second source, and it drifts — observed
+at up to 117 days stale. Derive it or omit it, but do not maintain it by hand.]
 
 ## Backlog Management
 [Tag taxonomy + rules. Process details in the SOP, not here.]

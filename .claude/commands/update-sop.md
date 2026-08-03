@@ -259,6 +259,17 @@ When no collisions are found, this step is silent. When a collision is found, st
 - Add to the Shipped Archive if items were shipped
 - Never delete items. Never remove items. Update in place.
 
+Then regenerate the derived priority block in CLAUDE.md, so the open-items view
+cannot drift from the Backlog it is derived from:
+
+```bash
+bash scripts/refresh-priorities.sh
+```
+
+Opt-in and idempotent: a CLAUDE.md with no `<!-- priority-items:start -->` block
+is left untouched and the script exits 0. Never hand-edit between the sentinels
+— `Backlog.md` is the single source of truth for status (P92).
+
 ## Step 3b: Reconcile project-specific secondary trackers
 
 Many projects maintain tracker files separate from `Backlog.md` — audit findings, security scans, compliance checklists, migration punch-lists — using the same `[OPEN]` / `[SHIPPED]` status tags. `/update-sop` must reconcile those files too, or shipped work silently leaves stale `[OPEN]` entries behind.
