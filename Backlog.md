@@ -1771,13 +1771,17 @@ Commit `55b3cea`.
 ---
 
 ### P87 — Step 1b trigger (b) has no execution arm
-`[OPEN] [Bug] [has-open-questions]`
+`[SHIPPED - 2026-08-03] [Bug]`
 
 `claude-agent-sop.md:410` states the SOP's only unconditional gate: SOP self-modification fires the reviewer turn "regardless of LOC". Verified at HEAD: `grep -c 'self-modification' .claude/commands/update-sop.md` → 0, `grep -c 'review_triggers'` → 0, and the validator performs zero path inspection. `update-sop.md` implements trigger (a) only.
 
 A 10-LOC edit to `docs/sop/claude-agent-sop.md` therefore skips the reviewer. Worse, the `docs-only` skip token clears every downstream check — the validator matches the token by regex and never inspects paths — so the strongest-sounding gate in the SOP is satisfiable by a self-declared four-word string that no code verifies.
 
-**Open question:** enforce with a validator pathspec check, or downgrade `:410` to advisory prose? Enforcing means every `[Feature]`/`[Refactor]` touching `docs/sop/**` in this repo *and in every consumer project* needs a real reviewer artefact, unconditionally. Downgrading is one line and honest but abandons the only unconditional gate.
+**Decided 2026-08-03: enforce, and make it tag-independent.**
+
+Original question was enforce vs downgrade. The evidence settled it: the sessions that most needed review on these paths shipped as `[Bug]`/`[Refactor]` and were exempt by tag, and the reviews that did run anyway found a HIGH (P84) and two CRITICALs (P92). Tag is a poor proxy for risk on the surface the agent itself executes, so the gate now fires on the pathspec regardless of tag or LOC, and `docs-only`/`below-threshold` skips are rejected on those paths — accepting either would reinstate the loophole trigger (b) exists to close.
+
+~~Open question: enforce with a validator pathspec check, or downgrade `:410` to advisory prose?~~ Enforcing means every `[Feature]`/`[Refactor]` touching `docs/sop/**` in this repo *and in every consumer project* needs a real reviewer artefact, unconditionally. Downgrading is one line and honest but abandons the only unconditional gate.
 
 **Note:** this decision gates roughly 25 of the audit's remaining items. It also determines whether P84/P85 are retroactively non-compliant — compliance check S7 is retrospective and commit-scoped.
 

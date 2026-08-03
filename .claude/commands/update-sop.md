@@ -124,6 +124,12 @@ Resolve the range once: prefer `SESSION_RANGE` from Step 0a; fall back to `HEAD`
 
 **For each P-number that shipped in this session as `[Feature]` or `[Refactor]`** (detected by diff of `Backlog.md` between `HEAD` and working tree — any tag flip to `[SHIPPED - YYYY-MM-DD]`):
 
+0. **Trigger (b) first — SOP self-modification.** If this session changed any file the SOP itself executes or instructs — `docs/sop/**`, `docs/guides/sop-*.md`, `.claude/agents/**`, `.claude/commands/**`, `scripts/validate-*.sh` — then every item shipping this session takes the reviewer turn, **regardless of its tag and regardless of diff size**. Steps 1-3 below do not apply; go straight to invoking the reviewer.
+
+   Enforced, not advisory: `scripts/validate-state-transitions.sh` inspects the session's changed paths at Step 3c and blocks a ship that neither cites a resolving review artifact nor declares `test-only` / `dep-bump`. `docs-only` and `below-threshold` are **rejected** on these paths — trigger (b) exists precisely to override them, so accepting either would reinstate the loophole.
+
+   Tag-independent by design (P87). The tag exemption was the larger hole: the sessions that most needed review on these paths shipped as `[Bug]` or `[Refactor]` and were exempt, and the reviews that did run found a HIGH and two CRITICALs. Tag is a poor proxy for risk on the surface the agent itself executes.
+
 1. If session diff is below threshold, skip — the item is small enough that self-eval suffices.
 2. If `docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md` already exists AND passes substance assertion, skip (already reviewed).
 3. Otherwise, invoke a reviewer subagent:

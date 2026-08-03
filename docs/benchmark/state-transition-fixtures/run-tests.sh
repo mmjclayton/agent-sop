@@ -96,7 +96,16 @@ REVIEW
   cp "$before" "$tmp/before.md"
   cp "$after" "$tmp/after.md"
 
-  output=$(cd "$tmp" && bash "$VALIDATOR" --before-file before.md --after-file after.md 2>&1)
+  # Optional sidecar: <base>.self-mod-changed.txt supplies the changed-file list
+  # for the Step 1b trigger (b) check (P87). Fixtures run in a temp dir with no
+  # git history, so the real path detection cannot fire there.
+  selfmod_args=""
+  if [ -f "${base}.self-mod-changed.txt" ]; then
+    cp "${base}.self-mod-changed.txt" "$tmp/self-mod-changed.txt"
+    selfmod_args="--self-mod-changed-file self-mod-changed.txt"
+  fi
+
+  output=$(cd "$tmp" && bash "$VALIDATOR" --before-file before.md --after-file after.md $selfmod_args 2>&1)
   actual=$?
 
   # Optional stdout assertion. When `<base>.expect-stdout` exists, every line in
@@ -154,8 +163,15 @@ for review in "$SCRIPT_DIR"/*.review.md; do
     illegal-review-*) expected=1 ;;
     *) echo "SKIP: $name has no legal-review-/illegal-review- prefix"; continue ;;
   esac
+  # Optional sidecar: <base>.self-mod-changed.txt supplies the changed-file
+  # list for the Step 1b trigger (b) check (P87). Fixtures run in a temp dir
+  # with no git history, so the real path-detection cannot fire there.
+  selfmod_args=""
+  if [ -f "${base}.self-mod-changed.txt" ]; then
+    selfmod_args="--self-mod-changed-file ${base}.self-mod-changed.txt"
+  fi
 
-  output=$(bash "$VALIDATOR" --assert-review "$review" 2>&1)
+  output=$(bash "$VALIDATOR" --assert-review "$review" $selfmod_args 2>&1)
   actual=$?
 
   if [ "$actual" = "$expected" ]; then

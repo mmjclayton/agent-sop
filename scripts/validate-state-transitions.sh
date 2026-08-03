@@ -50,6 +50,7 @@ DRIFT_THRESHOLD_FILES=""    # override the files threshold (skip config lookup)
 REPL_CONFIG_FILE=""         # override for --check-replication fixture mode
 REPL_CHANGED_FILE=""        # fixture: file listing this session's changed paths
 REPL_HOME=""                # fixture: stand-in for $HOME when resolving mirrors
+SELF_MOD_CHANGED_FILE=""    # fixture: file listing changed paths for the Step 1b trigger (b) check
 
 print_help() {
   # Print the leading comment block, stopping at the first non-comment line.
@@ -75,6 +76,7 @@ while [ $# -gt 0 ]; do
     --repl-config-file) REPL_CONFIG_FILE="$2"; shift 2 ;;
     --repl-changed-file) REPL_CHANGED_FILE="$2"; shift 2 ;;
     --repl-home) REPL_HOME="$2"; shift 2 ;;
+    --self-mod-changed-file) SELF_MOD_CHANGED_FILE="$2"; shift 2 ;;
     -h|--help) print_help; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
@@ -610,6 +612,42 @@ legal_paths_from() {
 # revalidated with `--before <merge-base>` explicitly.
 #
 # Override precedence: --before-file > --before <ref> > HEAD (default).
+# ── Step 1b trigger (b): SOP self-modification ────────────────────────────────
+#
+# claude-agent-sop.md states this as the SOP's one unconditional gate: edits to
+# files the SOP itself executes or instructs are load-bearing "regardless of
+# LOC". Until P87 that sentence had no execution arm anywhere — update-sop.md
+# implemented the diff-size trigger only, and this validator did no path
+# inspection at all, so the strongest-sounding gate in the SOP was satisfiable
+# by a self-declared `docs-only` token that no code verified.
+#
+# Tag-independent, deliberately. The tag exemption is the larger hole: the two
+# sessions that most needed review on these paths (P75, and this session's own
+# P84/P92 work) were tagged [Bug]/[Refactor] and exempt, and the reviews that
+# did run found a HIGH and two CRITICALs. Tag is a poor proxy for risk here.
+sop_self_mod_paths() {
+  printf '%s\n' "$1" | grep -E '^(docs/sop/|docs/guides/sop-|\.claude/agents/|\.claude/commands/|scripts/validate-)' || true
+}
+
+session_changed_files() {
+  local default_branch="" base head_sha range="" committed worktree
+  default_branch=$( { git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null || true; } | sed 's@^refs/remotes/@@')
+  if [ -z "$default_branch" ]; then
+    for candidate in origin/main origin/master origin/develop; do
+      if git rev-parse --verify "$candidate" >/dev/null 2>&1; then default_branch="$candidate"; break; fi
+    done
+  fi
+  if [ -n "$default_branch" ]; then
+    base=$( { git merge-base "$default_branch" HEAD 2>/dev/null || true; } )
+    head_sha=$( { git rev-parse HEAD 2>/dev/null || true; } )
+    if [ -n "$base" ] && [ "$base" != "$head_sha" ]; then range="$base..HEAD"; fi
+  fi
+  committed=""
+  [ -n "$range" ] && committed=$( { git diff --name-only "$range" 2>/dev/null || true; } )
+  worktree=$( { git diff --name-only HEAD 2>/dev/null || true; } )
+  printf '%s\n%s\n' "$committed" "$worktree" | grep -v '^$' | sort -u || true
+}
+
 resolve_before() {
   if [ -n "$BEFORE_FILE" ]; then
     # Explicit `return 0`, not a bare `return`. A bare return inherits the
@@ -719,7 +757,23 @@ while IFS=$'\t' read -r p after_status; do
             exit
           }
         ' "$AFTER_FILE")
-        case "$item_type" in
+        # Trigger (b), P87. Resolve once per run, not per item.
+        if [ -z "${SELF_MOD_CHECKED:-}" ]; then
+          SELF_MOD_CHECKED=1
+          if [ -n "$SELF_MOD_CHANGED_FILE" ] && [ -f "$SELF_MOD_CHANGED_FILE" ]; then
+            SELF_MOD_FILES=$(sop_self_mod_paths "$(cat "$SELF_MOD_CHANGED_FILE")")
+          else
+            SELF_MOD_FILES=$(sop_self_mod_paths "$(session_changed_files)")
+          fi
+        fi
+        gate_type="$item_type"
+        if [ -n "${SELF_MOD_FILES:-}" ]; then
+          # The session edited files the SOP itself executes. Every shipped item
+          # takes the gate, whatever its tag — see the sop_self_mod_paths note.
+          gate_type="Feature"
+        fi
+
+        case "$gate_type" in
           "Feature"|"Refactor")
             # Find the batch-log line that names this P-number and check for a
             # review path on it — OR an enumerated skip declaration.
@@ -750,6 +804,15 @@ while IFS=$'\t' read -r p after_status; do
             #   - Without the trailing \b, "review skipped: dep-bumpkin" passed,
             #     which made "free text is not accepted" untrue.
             skip_re="review skipped \(${p}\): *(docs-only|test-only|dep-bump|below-threshold)\b"
+            # Trigger (b) overrides exactly two of those reasons, so accepting
+            # them on a self-modifying diff would reinstate the loophole P87
+            # closed: the SOP calls SOP edits load-bearing "regardless of LOC"
+            # (killing below-threshold) and the skip list's own note says
+            # trigger (b) overrides the docs-only entry. test-only and dep-bump
+            # cannot arise on these paths. So no skip is valid here.
+            if [ -n "${SELF_MOD_FILES:-}" ]; then
+              skip_re="review skipped \(${p}\): *(test-only|dep-bump)\b"
+            fi
             if printf '%s' "$batch_line" | grep -qE 'docs/reviews/'; then
               # A citation is not evidence until the path resolves. Until P95
               # this branch accepted the mere presence of the string
@@ -771,6 +834,14 @@ while IFS=$'\t' read -r p after_status; do
             elif printf '%s' "$batch_line" | grep -qEi "$skip_re"; then
               : # enumerated Step 1b skip, bound to this P-number — gate satisfied
             else
+              if [ -n "${SELF_MOD_FILES:-}" ]; then
+                echo "BLOCK: $p ([${item_type}]) shipped in a session that modified the SOP's own executable surface — Step 1b trigger (b) fires regardless of tag or diff size."
+                echo "  Self-modifying paths changed this session:"
+                printf '%s\n' "$SELF_MOD_FILES" | sed 's/^/    /'
+                echo "  Requires a real reviewer artifact. docs-only and below-threshold are not accepted here — trigger (b) exists to override them."
+                violations=$((violations + 1))
+                continue
+              fi
               echo "BLOCK: $p ([${item_type}]) shipped but Batch Log entry in ${batch_match} neither cites a docs/reviews/ artifact nor declares an enumerated Step 1b skip."
               echo "  Either add the review artifact path to the Batch Log line that names ${p},"
               echo "  or declare the skip on that line as: review skipped (${p}): <docs-only|test-only|dep-bump|below-threshold>"
