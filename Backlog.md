@@ -1491,9 +1491,9 @@ Hit live during the 2026-07-26 session: flipping P67-P69 to `[SHIPPED]` before w
 ---
 
 ### P74 — `npx block-no-verify` hook: network fetch per Bash call, substring matching, trivially evaded
-`[OPEN] [Bug]`
+`[SHIPPED - 2026-07-27] [Bug]`
 
-Raised by Matt's audit on 2026-07-26 and recorded in the resume snapshot as optional and not actioned. Filed here on 2026-08-03; the filing is retroactive because the session that carried the finding never wrote it to the Backlog.
+Raised by Matt's audit on 2026-07-26 and recorded in the resume snapshot as optional and not actioned. Fixed on 2026-07-27 in the same session as the README caveat (Batch 0.28), which ended without `/update-sop` and so recorded neither. Filed and transitioned on 2026-08-03; both states are historically accurate, which is why they ship as two commits rather than one.
 
 **Three defects in `npx block-no-verify@1.1.2`, wired as a `PreToolUse`/`Bash` hook:**
 
@@ -1501,17 +1501,19 @@ Raised by Matt's audit on 2026-07-26 and recorded in the resume snapshot as opti
 2. **Substring matching over the whole command string.** It fired whenever `git`, `commit`, and a `-n`-ish token appeared anywhere in a multi-line command, in unrelated statements. A command containing no bypass at all was blocked, and a `-m "…--no-verify…"` message body tripped it.
 3. **Trivially evaded.** Building the flag in a variable defeated it, as did `git -c core.hooksPath=/dev/null`, which disables hooks without naming the flag.
 
-**Fix:** replace with a local, argv-matching hook script. No network. Tokenize with quote awareness, split on shell operators, inspect each simple command's argv, so a flag inside a quoted message is one token that never equals `--no-verify` and the false positive is structurally impossible rather than patched around. Catch `core.hooksPath` neutering and short/bundled forms (`-n`, `-nm`), while leaving `git push -n` alone because there `-n` is `--dry-run`.
+**Fix:** replaced with a local `~/.claude/scripts/hooks/block-hook-bypass.js` — no network, argv-based. It tokenizes with quote awareness, splits on shell operators, and inspects each simple command's argv, so a flag inside a quoted message is one token that never equals `--no-verify` and the false positive is structurally impossible rather than patched around. Also catches `core.hooksPath` neutering and short/bundled forms (`-n`, `-nm`), while leaving `git push -n` alone because there `-n` is `--dry-run`. Gated on `"if": "Bash(git *)"` so it does not run on non-git commands.
 
 **Acceptance criteria:**
-- No network access from the hook
-- Commit-message bodies containing `--no-verify` are allowed
-- Multi-statement commands with no bypass are allowed
-- `git push -n` allowed; `git commit -n`, `-nm`, `--no-verify` on commit/push/merge/rebase/cherry-pick/revert/am denied
-- `git -c core.hooksPath=/dev/null` denied
-- Bypass in a later statement of a chain denied
+- No network access from the hook - DONE
+- Commit-message bodies containing `--no-verify` are allowed - DONE (verified)
+- Multi-statement commands with no bypass are allowed - DONE (verified)
+- `git push -n` allowed; `git commit -n`, `-nm`, `--no-verify` on commit/push/merge/rebase/cherry-pick/revert/am denied - DONE (verified)
+- `git -c core.hooksPath=/dev/null` denied - DONE (verified)
+- Bypass in a later statement of a chain denied - DONE (verified)
 
-**Scope note:** this is a user-scope harness change (`~/.claude/`), not a repo file. Tracked here because the finding was carried in this project's resume snapshot.
+**Verification:** 8 cases exercised against the live script on 2026-08-03 — 3 must-allow (the documented multi-statement false positive, a `-m` body containing `--no-verify`, `git push -n`) and 5 must-deny (`--no-verify`, `-n`, bundled `-nm`, `core.hooksPath=/dev/null`, bypass in a later statement of a chain). All 8 behaved correctly.
+
+**Scope note:** this is a user-scope harness change (`~/.claude/`), not a repo file. Tracked here because the finding was carried in this project's resume snapshot. The stale duplicate entry in `~/.claude/hooks/hooks.json` — an ECC-bundle artefact that Claude Code does not load — was pointed at the same local script so a future merge of that file cannot reintroduce the `npx` form.
 
 ---
 
@@ -1524,6 +1526,7 @@ Raised by Matt's audit on 2026-07-26 and recorded in the resume snapshot as opti
 - P71 — `[DEFERRED]` reopen triggers + B12 check — SHIPPED 2026-07-26
 - P72 — Benchmark runner: lite subset, -k repetition, aggregate — SHIPPED 2026-07-26
 - P73 — Validator silent-exit fix + stdout-asserting fixtures — SHIPPED 2026-07-26
+- P74 — Replace `npx block-no-verify` with local argv-matching hook — SHIPPED 2026-07-27 (filed retroactively 2026-08-03)
 
 - P67 — Step 1b wait-for-reviewer before substance assertion — SHIPPED 2026-07-26
 - P68 — Benchmark repetition, frozen lite subset, capability suite — SHIPPED 2026-07-26

@@ -39,11 +39,11 @@ This project IS the Agent SOP library. All agents working on this project still 
 
 ---
 
-## Current Priority Items (as of 2026-07-26)
+## Current Priority Items (as of 2026-08-03)
 
 **Next:**
-- *(none — P66 and P70-P73 shipped 2026-07-26, Batch 0.27. Only decision-blocked items remain.)*
-- **Owed:** first lite benchmark run. The rule is MANDATORY as of Batch 0.27 and both 2026-07-26 sessions took a recorded exemption. Next session editing agent-facing instruction text runs `bash docs/benchmark/run-multi-round.sh setup <r> --lite -k 3`.
+- *(none — P74 shipped 2026-07-27; Batch 0.29 reconciled tracker drift 2026-08-03. Only decision-blocked items remain.)*
+- **Owed:** first lite benchmark run. The rule is MANDATORY as of Batch 0.27; both 2026-07-26 sessions took a recorded exemption, and Batches 0.28-0.29 did not trigger it (no agent-facing instruction text changed). Next session editing agent-facing instruction text runs `bash docs/benchmark/run-multi-round.sh setup <r> --lite -k 3`.
 
 **Decision-blocked:**
 - P8 — Web app domain variant `[has-open-questions]`
@@ -139,8 +139,9 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 ## Recent Work (rollup)
 
 <!-- recent-work-rollup:start -->
-*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-07-26.*
+*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-08-03.*
 
+- 2026-07-27 `solo`: Benchmark figure caveat + `block-no-verify` hook replacement
 - 2026-07-26 `solo`: P67-P69 — digest review, three-paper review, and a reviewer turn that caught the session's own gate
 - 2026-07-26 `solo`: P66, P70-P73 — validator correctness and gate coherence
 - 2026-07-06 `solo`: P64 — AGENTS.md positioning
