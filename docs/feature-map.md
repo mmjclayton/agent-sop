@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-08-03 (P86-P94 audit remediation + template rot root-cause)
+Last updated: 2026-08-03 (P87 trigger (b) enforcement; P95 citation check)
 
 ---
 
@@ -111,3 +111,4 @@ Last updated: 2026-08-03 (P86-P94 audit remediation + template rot root-cause)
 | P93 | Templates ship the split rollup layout | `setup.sh`, `docs/templates/` | 2026-08-03 |
 | P94 | User-scope guidance + `paths:` load gate | `docs/sop/claude-agent-sop.md` | 2026-08-03 |
 | P95 | Sentinel-splice data-loss guard + priorities fixtures | `scripts/refresh-rollup.sh`, `docs/benchmark/priorities-fixtures/` | 2026-08-03 |
+| P87 | Step 1b trigger (b) execution arm, tag-independent | `scripts/validate-state-transitions.sh` | 2026-08-03 |
