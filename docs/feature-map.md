@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-08-03 (P74 + tracker drift reconciliation)
+Last updated: 2026-08-03 (P75 replication gate + correctness sweep)
 
 ---
 
@@ -72,6 +72,7 @@ Last updated: 2026-08-03 (P74 + tracker drift reconciliation)
 | P64 | AGENTS.md positioning. Decision-first item resolved with Matt: positioning only. README "vs AGENTS.md" subsection recommends the AGENTS.md-canonical shape for multi-tool adopters (shared context in AGENTS.md, CLAUDE.md as `@AGENTS.md` import + Claude-specific surface; Rule 2, never parallel copies). Full support (template + `setup.sh --multi-tool` + Recommended check) deferred until Claude Code reads AGENTS.md natively — reopen trigger recorded in the Backlog entry. | `README.md` (comparisons section), `Backlog.md` (decisions + trigger) | 2026-07-06 |
 
 ---
+| P75 | Replication gate (`[Bug]`). Every prior gate asked "was this change declared?"; none asked "did it reach the surface that enforces it?", so a session could edit a pristine-replica file, pass every check, merge, and leave the user-scope copy that actually executes untouched — observed twice in opposite directions before it was filed. `--check-replication` intersects the session's changed files with the `baseline_shas` manifest, deliberately the same source `/update-agent-sop` reads so the two cannot drift apart, then compares each changed `.claude/` file against its user-scope mirror. Upstream it also reports stale baselines; in consumer projects a differing baseline just means locally modified, which Step 4 of the sync already handles. Invoked as `/update-sop` Step 3e, hard-blocking. Fired correctly on its own shipping session, catching a real stale mirror. Net +1 instruction; D1 broadened rather than adding a check, so totals stay 85/94. | `scripts/validate-state-transitions.sh`, `.claude/commands/update-sop.md`, `docs/sop/compliance-checklist.md`, `docs/benchmark/state-transition-fixtures/` | 2026-08-03 |
 
 ## Roadmap
 

@@ -1681,6 +1681,25 @@ Note this does not excuse the currently owed run — P77's trim is exactly the c
 
 ---
 
+### P82 — Step 2a's collision check fails open when its awk call errors
+`[OPEN] [Bug]`
+
+`.claude/commands/update-sop.md` Step 2a detects P-number collisions in two stages: match the P-number against the default branch, then compare entry titles to decide whether the content actually differs. Run live on 2026-08-03 the awk stage emitted `awk: newline in string ### P1\n10\n11\n...` six times.
+
+**It fails open.** When awk errors, both `branch_title` and `main_title` come back empty, `[ "$branch_title" != "$main_title" ]` is false, and the P-number is silently treated as not-colliding. A real collision would be reported as `collisions: none` with only a stderr warning that scrolls past. That is the same silent-pass class as P73 (a BLOCK message killed before it printed) and P69's S7 (a commit range that was always empty), and it sits in a **hard-block** gate.
+
+The immediate cause is the `-v p="### P${p}"` assignment receiving a multi-line value, so the loop variable is not word-splitting as the snippet assumes. The deeper problem is that a diagnostic-producing check reports success when its diagnostic fails to run.
+
+**Acceptance criteria:**
+- The title comparison either succeeds or reports a collision; it never resolves to "no collision" because the comparison itself failed
+- A fixture reproduces a genuine collision and proves the check blocks
+- A fixture proves the check blocks (rather than passing) when the comparison stage cannot run
+- Verified against the pre-fix snippet, per the `run-tests.sh` standard that a fixture passing both before and after covers nothing
+
+**Source:** observed during Batch 0.30's own `/update-sop` run, 2026-08-03. Related: P75 shipped the same session and is the positive case — its gate fired correctly on first live use.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*

@@ -12,8 +12,9 @@ This project IS the Agent SOP library. All agents working on this project still 
 
 ## Build Plans — READ FIRST
 
-- `docs/build-plans/phase-0-foundation.md` — In Progress (scaffold, core SOP docs, templates)
-- `docs/build-plans/phase-1-parallel-sessions.md` — Planning (P43 parallel multi-agent support)
+Each phase file carries its own `Status:` header. Read the directory rather than
+trusting a status list here - the previous one still called phase 1 "Planning"
+months after the file itself said Shipped.
 
 ---
 
@@ -78,9 +79,12 @@ This project IS the Agent SOP library. All agents working on this project still 
 
 ## Stack
 
-- Format: Markdown only
-- Hosting: GitHub (public repository, to be created)
-- No build process, no dependencies
+- Format: mostly Markdown, plus bash and Python tooling in `scripts/`
+  (`setup.sh`, `validate-state-transitions.sh`, `migrate-to-multi-agent.py`)
+- Hosting: GitHub, `mmjclayton/agent-sop`, public
+- No build step, but there ARE tests: the fixture suites under
+  `docs/benchmark/*-fixtures/run-tests.sh`. Run them when touching the validator
+  or the migration script.
 
 ---
 
@@ -131,57 +135,12 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 5. `docs/agent-memory.md` narrative + decisions/gotchas directories — write to `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/`; update In-Flight/Completed in agent-memory.md by agent-id.
 6. `docs/build-plans/phase-N.md` — append to Batch Log.
 7. `project_resume_<agent-id>.md` — overwrite with current state (per-agent snapshot).
-8. Write session entry to `docs/recent-work/` and refresh `CLAUDE.md` rollup section.
+8. Write session entry to `docs/recent-work/` and refresh the `docs/RECENT-WORK.md` rollup.
 9. Commit docs/ changes with the work.
 
 ---
 
-## Recent Work (rollup)
+## Where the history lives
 
-<!-- recent-work-rollup:start -->
-*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-08-03.*
-
-- 2026-08-03 `solo`: Batch 0.29 — tracker drift reconciliation, P74 shipped, P75 filed
-- 2026-07-27 `solo`: Benchmark figure caveat + `block-no-verify` hook replacement
-- 2026-07-26 `solo`: P67-P69 — digest review, three-paper review, and a reviewer turn that caught the session's own gate
-- 2026-07-26 `solo`: P66, P70-P73 — validator correctness and gate coherence
-- 2026-07-06 `solo`: P64 — AGENTS.md positioning
-- 2026-07-06 `solo`: P60-P63 + P65 — Digest-review corrections batch
-- 2026-07-06 `solo`: Doc-sync pass after P60-P65
-- 2026-05-28 `solo`: P59 — Step 1b reviewer-gate tightening + cross-layer rules guide
-- 2026-05-04 `solo`: P58 — Karpathy before/after pattern (extend across SOP)
-- 2026-05-04 `solo`: P57 — Config `exclude` field for `/update-agent-sop`
-- 2026-05-04 `solo`: P56 — Backend assumptions: gateway / non-Anthropic backend warning
-- 2026-05-04 `solo`: P55 — Sycophantic reviewer detection: substance-assertion tightening
-- 2026-05-04 `solo`: P24 — Multi-agent optimisation guide
-- 2026-05-02 `solo`: P54 — Multi-agent hardening + perf gates + worktree advisory
-- 2026-04-29 `solo`: P53 `/finish` skill — end-to-end verify, simplify, ship
-- 2026-04-26 `solo`: P52 learnings capture pattern (doc-only)
-- 2026-04-24 `solo`: P51 `/restart-sop` optimisations + P49 sample 2
-- 2026-04-20 `solo`: P49 filed + sample 1 of `/update-sop` timing captured
-- 2026-04-20 `solo`: P48 reviewer voice + item-sizing shipped
-- 2026-04-20 `solo`: P47 legacy-resume fallback shipped
-- 2026-04-19 `solo`: README update + hst-tracker sync + P47 filing
-- 2026-04-19 `solo`: P46 mid-session drift detection shipped
-- 2026-04-19 `solo`: P45 state-transition validator shipped
-- 2026-04-19 `solo`: P44 reviewer-turn + substance assertion shipped
-- 2026-04-19 `solo`: P44/P45/P46 drafted from Reddit state-drift feedback
-- 2026-04-19 `solo`: P43 close-out — README parallel-sessions coverage + Rule 5 audit
-- 2026-04-19 `solo`: P43 Phase 1 Batches 1.1 through 1.6 shipped
-- 2026-04-19 `solo`: P43 Batch 1.7 dogfood complete — P43 ships
-- 2026-04-19 `solo`: P43 Batch 1.2 — directory structure + rollup specs
-- 2026-04-19 `solo`: P42 — Secondary-tracker reconciliation + `[DEFERRED]` tag
-- 2026-04-17 `solo`: P41 — README rewrite, License section, Acknowledgements removed, About refreshed
-- 2026-04-17 `solo`: P40 — Section 14 + Section 15.4 trim, Recent Work + Decisions compaction
-- 2026-04-17 `solo`: P32-P39 — Trim, sync mechanism, two repo reviews, R5 pilot, measurement gap (Batch 0.13, commits 3e452b7, 2350a9f, 0632aad, 8977f46, ee1b012, 988ab69, ca3d57b)
-- 2026-04-13 `solo`: P29-P30 — Pre-launch README polish + research digest review
-- 2026-04-09 `solo`: Batch 0.11 — P23-P28 (benchmark framework, optimisations, Managed Agents, digest changes) + graphify research
-- 2026-04-08 `solo`: Batches 0.4-0.10 — P14-P22, ECC adaptation, token optimisation, slash commands
-- 2026-04-07 `solo`: Batches 0.1-0.3f — Initial scaffold + P1-P2-P11-P12-P13
-<!-- recent-work-rollup:end -->
-
----
-
-## Deprioritised
-
-*Items moved here from priority lists above. Never removed.*
+Session records live in `docs/recent-work/`, indexed in `docs/RECENT-WORK.md`.
+Status lives in `Backlog.md`. Neither is duplicated here.
