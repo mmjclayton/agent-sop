@@ -1,7 +1,7 @@
 <!-- SOP-Version: 2026-04-17 -->
 # Harness Configuration Reference
 
-Last updated: 2026-04-17
+Last updated: 2026-08-03
 
 How to configure Claude Code's runtime — hooks and context primitives — to enforce the SOP automatically rather than relying on agent memory. Merges the former `hooks.md` and `context-management.md` on 2026-04-17 as part of the P32 trim.
 
@@ -11,7 +11,7 @@ How to configure Claude Code's runtime — hooks and context primitives — to e
 
 1. **Default settings are sufficient for most projects.** The SOP's 60% context threshold and manual checklists work without any harness configuration.
 2. **Use hooks for repeatable, mechanical enforcement.** Secret scans, session-start context loading, type checks. Anything that should fire every time, regardless of whether the agent remembered.
-3. **Use context primitives (clearing, compaction) only for long sessions.** Clearing: > 30 minutes / 30K tokens of tool results. Compaction: > 60 minutes / 120K tokens.
+3. **Use context primitives (clearing, compaction) only for long sessions.** Clearing: > 30 minutes, or once tool results reach ~15% of the context window. Compaction: > 60 minutes, or at the SOP's 60% threshold.
 4. **Always exclude the memory tool from clearing.** Clearing memory tool results destroys the agent's ability to recall what it saved: `exclude_tools: ["memory"]`.
 5. **Keep blocking hooks fast.** Under 200ms to avoid degrading the session.
 6. **Treat project-scope hooks from cloned repos as untrusted.** Review before use — they execute in your environment. See `docs/sop/security.md`.
@@ -44,14 +44,16 @@ How to configure Claude Code's runtime — hooks and context primitives — to e
 |---------|-------------|-------|
 | `keep` | 4 | Retains the 4 most recent tool results |
 | `exclude_tools` | `["memory"]` | Never clear memory tool results |
-| Trigger | ~30K tokens of tool results | Check periodically, not every turn |
+| Trigger | Tool results at ~15% of the context window | Check periodically, not every turn |
 
 ### Compaction (`compact_20260112`)
 
 | Setting | Recommended | Notes |
 |---------|-------------|-------|
-| Trigger | 120K tokens (60% of 200K) | Aligns with SOP's 60% rule |
-| Minimum | 50K tokens | Below this, compaction removes too much |
+| Trigger | 60% of the model's context window | Aligns with SOP's 60% rule |
+| Minimum | 25% of the context window | Below this, compaction removes too much |
+
+**Express these as proportions, not absolute token counts.** Until 2026-08-03 this table read `120K tokens (60% of 200K)`, which was correct when written and wrong by 5x once Claude Opus 5 shipped with a 1M-token default window. The SOP's own threshold at `claude-agent-sop.md` is percentage-only for exactly this reason: it self-adjusts across model generations, whereas a worked example in absolute tokens silently rots. Resolve the absolute figure for the model in use with `/usage`.
 
 **What survives:** architecture, current task, recent decisions. **What to preserve explicitly:** current task state, file paths being edited, test results, Common Mistakes entries.
 

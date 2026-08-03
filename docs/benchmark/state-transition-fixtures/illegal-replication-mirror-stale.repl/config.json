@@ -1,0 +1,9 @@
+{
+  "local_path": "/nonexistent/fixture-consumer",
+  "github": "mmjclayton/agent-sop",
+  "baseline_shas": {
+    ".claude/commands/update-sop.md": "47623f7de8435c95192baea8e852bbd1cb22dc749f5fd08755ba4eea6e72f6e4",
+    ".claude/agents/sop-checker.md": "9821c56445dbd5f8d2636d51885302acb178936d128231b21161ee80c18287f6"
+  },
+  "exclude": []
+}

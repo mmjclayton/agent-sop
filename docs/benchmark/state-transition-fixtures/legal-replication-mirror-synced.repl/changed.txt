@@ -1,0 +1,2 @@
+.claude/commands/update-sop.md
+.claude/agents/sop-checker.md

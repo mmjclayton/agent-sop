@@ -24,6 +24,13 @@
 #     P44 substance-assertion helper. Checks a review artifact file has
 #     the three required sections (diff summary, severity, finding).
 #
+#   bash scripts/validate-state-transitions.sh --check-replication
+#     P75 replication gate. Intersects this session's changed files with the
+#     baseline_shas manifest in agent-sop.config.json. For each hit under
+#     .claude/, compares the repo file against its user-scope mirror — the
+#     copy that actually executes. Upstream only, also reports stale baseline
+#     SHAs. Silent no-op when the session touched no manifest file.
+#
 # Zero-dependency bash 3.2 (macOS default). No associative arrays.
 
 set -euo pipefail
@@ -40,9 +47,15 @@ DRIFT_SESSION_LOC=""        # fixture: set the session LOC count directly
 DRIFT_SESSION_FILES=""      # fixture: set the session files count directly
 DRIFT_THRESHOLD_LOC=""      # override the LOC threshold (skip config lookup)
 DRIFT_THRESHOLD_FILES=""    # override the files threshold (skip config lookup)
+REPL_CONFIG_FILE=""         # override for --check-replication fixture mode
+REPL_CHANGED_FILE=""        # fixture: file listing this session's changed paths
+REPL_HOME=""                # fixture: stand-in for $HOME when resolving mirrors
 
 print_help() {
-  sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'
+  # Print the leading comment block, stopping at the first non-comment line.
+  # A hardcoded line range silently truncated (or over-ran into `set -euo
+  # pipefail`) every time the usage text changed length.
+  awk 'NR > 1 { if ($0 !~ /^#/) exit; sub(/^# ?/, ""); print }' "$0"
 }
 
 while [ $# -gt 0 ]; do
@@ -58,6 +71,10 @@ while [ $# -gt 0 ]; do
     --drift-session-files) DRIFT_SESSION_FILES="$2"; shift 2 ;;
     --drift-threshold-loc) DRIFT_THRESHOLD_LOC="$2"; shift 2 ;;
     --drift-threshold-files) DRIFT_THRESHOLD_FILES="$2"; shift 2 ;;
+    --check-replication) MODE="check-replication"; shift ;;
+    --repl-config-file) REPL_CONFIG_FILE="$2"; shift 2 ;;
+    --repl-changed-file) REPL_CHANGED_FILE="$2"; shift 2 ;;
+    --repl-home) REPL_HOME="$2"; shift 2 ;;
     -h|--help) print_help; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
@@ -352,6 +369,161 @@ if [ "$MODE" = "check-drift" ]; then
   echo "  1) If you changed scope deliberately: add a '## Scope Change' block to $resume_file with a one-line reason." >&2
   echo "  2) If you drifted unintentionally: amend the commit message(s) to reference the in-flight P-number, or split the work so the declared item ships." >&2
   echo "  3) If the prior resume file is stale: update it (Step 7 of /update-sop) and re-run." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# --check-replication: P75 pristine-replica replication gate
+#
+# Every existing gate asks "was this change declared?". None asks "did this
+# change reach the surface that enforces it?". A session can edit a
+# pristine-replica file, pass Step 3c and 3d, merge, and leave the user-scope
+# copy that actually executes untouched — observed twice, in both directions
+# (Batch 0.27 left user scope stale for eight days; Batch 0.26 found a
+# project-specific step that had leaked the other way).
+#
+# The file list comes from `baseline_shas` in agent-sop.config.json, which is
+# the same source /update-agent-sop reads. A second hardcoded list here would
+# be the same class of bug one layer up (docs/guides/cross-layer-rules.md).
+# ---------------------------------------------------------------------------
+if [ "$MODE" = "check-replication" ]; then
+  # Resolve config: project scope wins over user scope, matching /update-agent-sop.
+  config="$REPL_CONFIG_FILE"
+  if [ -z "$config" ]; then
+    for candidate in ".claude/agent-sop.config.json" "$HOME/.claude/agent-sop.config.json"; do
+      if [ -f "$candidate" ]; then config="$candidate"; break; fi
+    done
+  fi
+  if [ -z "$config" ] || [ ! -f "$config" ]; then
+    echo "check-replication: no agent-sop.config.json found — skipping (project does not track pristine replicas)"
+    exit 0
+  fi
+
+  home_root="${REPL_HOME:-$HOME}"
+
+  sha_of() {
+    if command -v shasum >/dev/null 2>&1; then
+      shasum -a 256 "$1" | cut -d' ' -f1
+    else
+      sha256sum "$1" | cut -d' ' -f1
+    fi
+  }
+
+  # Manifest = keys of baseline_shas. Zero-dep extraction: isolate the block,
+  # then pull "path": "sha" pairs. Restricted to the tracked extensions so a
+  # nested object cannot inject a false key.
+  manifest=$(sed -n '/"baseline_shas"[[:space:]]*:[[:space:]]*{/,/^[[:space:]]*}/p' "$config" \
+    | grep -oE '"[^"]+\.(md|sh|py)"[[:space:]]*:[[:space:]]*"[a-f0-9]{64}"' \
+    | sed 's/"[[:space:]]*:[[:space:]]*"/|/; s/^"//; s/"$//' || true)
+
+  if [ -z "$manifest" ]; then
+    echo "check-replication: baseline_shas is empty — skipping (nothing tracked yet)"
+    exit 0
+  fi
+
+  # Excluded files are never synced, so they can never be out of sync.
+  excluded=$(sed -n '/"exclude"[[:space:]]*:[[:space:]]*\[/,/\]/p' "$config" \
+    | grep -oE '"[^"]+\.(md|sh|py)"' | tr -d '"' || true)
+
+  # Session-changed files: committed in range plus working tree. Fixture mode
+  # supplies the list directly so the check is testable without a repo.
+  if [ -n "$REPL_CHANGED_FILE" ]; then
+    changed=$(cat "$REPL_CHANGED_FILE")
+  else
+    range=""
+    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/@@') || default_branch=""
+    if [ -z "$default_branch" ]; then
+      for candidate in origin/main origin/master origin/develop; do
+        if git rev-parse --verify "$candidate" >/dev/null 2>&1; then default_branch="$candidate"; break; fi
+      done
+    fi
+    if [ -n "$default_branch" ]; then
+      base=$( { git merge-base "$default_branch" HEAD 2>/dev/null || true; } )
+      head_sha=$( { git rev-parse HEAD 2>/dev/null || true; } )
+      if [ -n "$base" ] && [ "$base" != "$head_sha" ]; then range="$base..HEAD"; fi
+    fi
+    committed=""
+    if [ -n "$range" ]; then
+      committed=$( { git diff --name-only "$range" 2>/dev/null || true; } )
+    fi
+    worktree=$( { git diff --name-only HEAD 2>/dev/null || true; } )
+    changed=$(printf '%s\n%s\n' "$committed" "$worktree" | grep -v '^$' | sort -u || true)
+  fi
+
+  if [ -z "$changed" ]; then
+    echo "check-replication: no changed files this session — skipping"
+    exit 0
+  fi
+
+  # Baseline staleness is a real finding upstream, where baseline_shas records
+  # this repo's own shipped state. In a consumer project a differing baseline
+  # means LOCALLY MODIFIED, which /update-agent-sop Step 4 already handles, so
+  # it is not reported there. Resolved once, not per file.
+  cfg_local_path=$(grep -oE '"local_path"[[:space:]]*:[[:space:]]*"[^"]*"' "$config" | sed 's/.*:[[:space:]]*"//; s/"$//' || true)
+  repo_root=$( { git rev-parse --show-toplevel 2>/dev/null || true; } )
+  is_upstream="no"
+  if [ -n "$cfg_local_path" ] && [ -n "$repo_root" ] && [ "$cfg_local_path" = "$repo_root" ]; then
+    is_upstream="yes"
+  fi
+
+  stale_mirror=""
+  stale_baseline=""
+  checked=0
+
+  while IFS='|' read -r path baseline; do
+    [ -n "$path" ] || continue
+    # Only files this session actually touched.
+    printf '%s\n' "$changed" | grep -qxF "$path" || continue
+    # Excluded files are out of scope by declaration.
+    if [ -n "$excluded" ] && printf '%s\n' "$excluded" | grep -qxF "$path"; then continue; fi
+    [ -f "$path" ] || continue
+
+    checked=$((checked + 1))
+    current=$(sha_of "$path")
+
+    case "$path" in
+      .claude/*)
+        # User-scope mirror: the copy that actually executes in every session.
+        mirror="$home_root/$path"
+        if [ ! -f "$mirror" ]; then
+          stale_mirror="$stale_mirror
+  $path -> $mirror (mirror missing)"
+        elif [ "$(sha_of "$mirror")" != "$current" ]; then
+          stale_mirror="$stale_mirror
+  $path -> $mirror (content differs)"
+        fi
+        ;;
+    esac
+
+    if [ "$is_upstream" = "yes" ] && [ "$current" != "$baseline" ]; then
+      stale_baseline="$stale_baseline
+  $path (baseline records $(printf '%.12s' "$baseline")…, file is $(printf '%.12s' "$current")…)"
+    fi
+  done <<EOF
+$manifest
+EOF
+
+  if [ "$checked" = "0" ]; then
+    echo "check-replication: no manifest-tracked files changed this session — skipping"
+    exit 0
+  fi
+
+  if [ -z "$stale_mirror" ] && [ -z "$stale_baseline" ]; then
+    echo "check-replication: OK — all $checked manifest-tracked file(s) changed this session are replicated."
+    exit 0
+  fi
+
+  echo "BLOCK: manifest-tracked files changed this session have not been replicated." >&2
+  if [ -n "$stale_mirror" ]; then
+    echo "  User-scope mirror out of sync (this is the copy that executes):$stale_mirror" >&2
+  fi
+  if [ -n "$stale_baseline" ]; then
+    echo "  Baseline SHA stale in $config:$stale_baseline" >&2
+  fi
+  echo "" >&2
+  echo "Resolve by one of:" >&2
+  echo "  1) Run /update-agent-sop to replicate the change and refresh baselines." >&2
+  echo "  2) If the divergence is deliberate, record it on this item's Batch Log line as: replication deferred (P<n>): <reason>" >&2
   exit 1
 fi
 

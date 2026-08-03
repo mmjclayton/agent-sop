@@ -872,7 +872,8 @@ Inspired by CodeLeash's session-end learnings capture. Adapted for agent-sop:
 
 **Safety:** all four changes are documentation/wording. No new runtime code. Reversible in single-file edits. Failure mode is "no learnings captured" — same as the pre-P52 state.
 
-**Follow-up (deferred, not this item):** if dogfood across 2-3 sessions shows real signal volume from the capture flow, file P53 to install the hook via `setup.sh` (mirroring ship-sop's consent-prompt + idempotent jq merge pattern). Until then, doc-only. Measurement-led, P49-style.
+**Follow-up (deferred, not this item):** if dogfood across 2-3 sessions shows real signal volume from the capture flow, file a fresh P-number to install the hook via `setup.sh` (mirroring ship-sop's consent-prompt + idempotent jq merge pattern). Until then, doc-only. Measurement-led, P49-style. *(Corrected 2026-08-03: this read "file P53", which was allocated to the `/finish` skill on 2026-04-29. Following it would have produced a P-number collision.)*
+**Reopens when:** two or three consecutive sessions produce learnings entries with real signal rather than noise.
 
 ---
 
@@ -1308,7 +1309,7 @@ Claude Code 2.1.218 reinforces the same shape from the other direction: `/code-r
 
 **Skipped from the same digest, with verification reasons** (per the 2026-04-13 "remove or sharpen, not add" decision):
 
-- **Finding 2 — nested subagent spawning disabled by default (`[WON'T]`, stale).** The digest cited 2.1.217 ("no longer spawn nested subagents by default") and checked for reverts only through 2.1.218. **2.1.219 reverted it**: "Subagents can now spawn nested subagents up to depth 3 by default (was 1); set `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` to disable nesting." Local Claude Code is 2.1.220, so depth-3 nesting is the live default. Writing the digest's suggested text would have put a false runtime fact into `multi-agent.md`. The default flipped twice in three releases; pinning SOP prose to it is the wrong shape regardless of which way it currently sits. Consistent with P60's earlier skip of depth-cap guidance. The durable half of 2.1.212 — 20 concurrent subagents, 200 spawns/session, 200 WebSearch calls — is captured as a fan-out ceiling in `multi-agent.md` §4, which is actionable at coordinator-design time and version-independent in a way the nesting default is not.
+- **Finding 2 — nested subagent spawning disabled by default (`[WON'T]`, stale).** The digest cited 2.1.217 ("no longer spawn nested subagents by default") and checked for reverts only through 2.1.218. **2.1.219 reverted it**: "Subagents can now spawn nested subagents up to depth 3 by default (was 1); set `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` to disable nesting." Local Claude Code is 2.1.220, so depth-3 nesting is the live default. Writing the digest's suggested text would have put a false runtime fact into `multi-agent.md`. The default has been restated across 2.1.217 and 2.1.219 and is env-overridable via `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`; pinning SOP prose to it is the wrong shape regardless of which way it currently sits. *(Wording corrected 2026-08-03 per `docs/reviews/2026-07-26_solo_P67-P69.md:28`, which prescribed aligning this line with `multi-agent.md:79`. Only the `multi-agent.md` half of that fix was applied at the time, leaving the claim the review had identified as false — "flipped twice in three releases", when the changelog shows one value change — live in the rationale the `[WON'T]` rests on.)* Consistent with P60's earlier skip of depth-cap guidance. The 2.1.212 fan-out ceilings — 20 concurrent subagents, 200 spawns/session, 200 WebSearch calls — are captured in `multi-agent.md` §4 on a different basis: they are equally version-bound, but a coordinator's fan-out design has to assume *some* ceiling, so the number is actionable at design time in a way a nesting default is not. The version stamp on that bullet is load-bearing and should stay.
 - **Finding 3 — `modified` frontmatter timestamp as a resume staleness signal (`[WON'T]`, does not apply).** 2.1.214 did add an ISO `modified` timestamp to memory-file frontmatter (verified). But `project_resume_<agent-id>.md` is written by `/update-sop` Step 7 as plain markdown with a `Last updated:` line and **no frontmatter at all** — the timestamp is a Claude Code memory-tool feature, and `grep -rln "^modified:" ~/.claude/projects/*/memory/` returns nothing. Guidance keyed to a field that never appears on the file would be dead text on every consumer project. The staleness signal the digest wanted already exists: `restart-sop` Step 4 cross-checks the resume's "What was done" against `git log`. The frontmatter-truncation and scheduled-task fixes in the same release affect no SOP surface.
 
 ---
@@ -1518,7 +1519,7 @@ Raised by Matt's audit on 2026-07-26 and recorded in the resume snapshot as opti
 ---
 
 ### P75 — A shipped hardening can sit unreplicated in user scope indefinitely; nothing detects it
-`[OPEN] [Bug]`
+`[SHIPPED - 2026-08-03] [Bug]`
 
 `/update-sop` closes a session. `/update-agent-sop` replicates pristine files to user scope. Nothing connects them, so a session can ship a change to a pristine-replica file, pass every gate, merge, and leave the copy that actually executes untouched.
 
@@ -1539,6 +1540,145 @@ Raised by Matt's audit on 2026-07-26 and recorded in the resume snapshot as opti
 
 **Source:** found during the Batch 0.29 `/update-agent-sop` run, which was itself only triggered because the date-based staleness warning happened to fire. Had the warning not been overdue, the stale mirrors would have gone unnoticed for longer.
 
+**Shipped 2026-08-03 (Batch 0.30).**
+
+- `scripts/validate-state-transitions.sh` gains `--check-replication`. The file list is the `baseline_shas` keys, so it reads the same source `/update-agent-sop` does rather than a second hardcoded list (AC 3). For each manifest hit under `.claude/`, the repo file is compared against `$HOME/<path>` — the copy that actually executes. Upstream only (detected by `local_path` matching the worktree root), it also reports stale baseline SHAs; in consumer projects a differing baseline means LOCALLY MODIFIED, which `/update-agent-sop` Step 4 already handles, so it is not reported there.
+- `/update-sop` gains Step 3e, invoking the gate and hard-blocking on failure. Deliberate divergence is declared on the Batch Log line as `replication deferred (P<n>): <reason>` — the same enumerated-token discipline as Step 1b's skip token (P66), so a later reader can tell a decision from an omission.
+- Two fixtures (AC 4): `illegal-replication-mirror-stale.repl` reproduces the actual 2026-08-03 state, a user-scope `update-sop.md` still on the pre-P66 text while the repo carries the enumerated token, and fails; `legal-replication-mirror-synced.repl` passes after the sync. Both assert on the diagnostic message, not just the exit code, per the P73 lesson. Fixture count 15 → 17.
+- Verified live: run against this session's own working tree, the gate correctly flagged `scripts/validate-state-transitions.sh` as baseline-stale. The illegal fixture flags `update-sop.md` but not the co-changed `sop-checker.md` whose mirror matches, so it discriminates rather than firing on any change.
+- AC 2 (silent no-op) is covered by three early exits: no config, empty `baseline_shas`, and no manifest-tracked file changed.
+
+**Net instruction count: +1** (Step 3e). No new compliance check — D1 was broadened to cover `--check-replication` and the Step 3e reference instead, so check totals are unchanged at 85/94. Adding a second gate-presence check next to D1 would have restated it.
+
+**Adjacent fix:** `print_help` used a hardcoded `sed -n '2,32p'` range that had already drifted past the comment block into `set -euo pipefail`. Replaced with an awk scan that stops at the first non-comment line, so the usage text cannot silently truncate or over-run again.
+
+---
+
+### P76 — Duplicate check IDs make `M1`-`M4` and `R1` ambiguous
+`[OPEN] [Bug]`
+
+`docs/sop/compliance-checklist.md` defines `M1`-`M4` twice: once for feature-map structure (`:178-186`) and once for multi-agent readiness (`:302-310`). It defines `R1` twice: resume filename (`:215`) and the reviewer-turn gate (`:268`). `README.md:29` advertises "M1-M6 checks for multi-agent parallel-session readiness" and "B11/B12/R1/D1/T1 for the enforcement gates", both of which resolve to two different checks. `.claude/agents/sop-checker.md:193-210` implements only the multi-agent `M1`-`M6`, so the feature-map set is defined but never run under that ID. `B12` (`:142`) also precedes `B11` (`:143`).
+
+A scored audit that reports "M4 FAIL" is currently unactionable without knowing which M4.
+
+**Fix:** rename the feature-map set to a free prefix (`FM1`-`FM4` suggested) and disambiguate one of the two `R1`s. Both are referenced across `README.md`, `.claude/agents/sop-checker.md`, and the checklist itself, so this is a cross-surface rename and must land in one commit — a partial rename is the exact drift class `docs/guides/cross-layer-rules.md` exists to prevent.
+
+**Acceptance criteria:**
+- No check ID is defined twice; a grep for each ID returns exactly one definition
+- `README.md` and `sop-checker.md` reference the renamed IDs
+- Section subtotals and the 85/94 totals are recomputed and independently recounted
+- `B11`/`B12` in numeric order
+
+**Net instruction count: 0** — renaming, not adding.
+
+**Source:** adversarial re-review of the 2026-07-30 digest, 2026-08-03. Not a digest finding; surfaced by counting the checklist rows rather than trusting its summary table.
+
+**Skipped from the 2026-07-30 digest, with verification reasons** (per the 2026-04-13 "remove or sharpen, not add" decision):
+
+- **The digest's repo spot-check was stale, so its "Already addressed?" column is unreliable throughout.** It reports the live README as stating "91 checks code / 82 non-code". `README.md:29` and `compliance-checklist.md:336-337` both say 94/85, and have since 2026-07-26 — four days before the digest ran. Verified by counting rows, not by reading the summary.
+- **Finding 1 — `/doctor` rightsizing pass (`[WON'T]`, already shipped).** The CLAUDE.md-trimming check is real (Claude Code 2.1.206, 9 July 2026, verified against the changelog). But its rule already exists three times over: `claude-agent-sop.md:76` (trim before adding), `:308` (move detail out when sections grow), and `:645` §15.1 ("Information already obvious from reading the schema or code" does not belong in CLAUDE.md). Adding a "run `/doctor` periodically" line prints advice rather than producing a hard block, failing the action-vs-ceremony test (`decisions/2026-04-19_solo_action-vs-ceremony-test-for-sop-additions.md:15`), and pins SOP prose to a version-specific harness feature — the shape P67 rejected. It would also reverse P49/P51's measurement-led-trimming decisions.
+- **Finding 2 — LangChain Deep Agents v0.7 evidence note (`[WON'T]`, already shipped with the opposite inference).** All five claims verify. But P68 already shipped a reading of this exact source at `Backlog.md:1327`: "LangChain is using the benchmark to decide whether to **delete** their todo-list middleware and slim their system prompt. Measure before trimming is the same discipline as the Rule 5 instruction budget." The repo's recorded response is to run the benchmark, not to cite the source as validation. Re-citing it for the opposite conclusion is the forced fit `Backlog.md:1414` warns against.
+- **Finding 3 — nested-subagent depth (`[WON'T]`, would reverse a reviewed decision).** The changelog fact is correct (2.1.219, depth 3). But `multi-agent.md:79` deliberately declines to encode it, and that refusal was reviewed and affirmed at `docs/reviews/2026-07-26_solo_P67-P69.md:28`. The digest asks to write back in exactly the version-bound fact the repo decided not to carry. The stale half of that earlier fix is corrected in this batch.
+- **Finding 5 — new "agent intrusion patterns" doc (`[WON'T]` as framed; the real gap filed as P79).** The digest's stated lesson — that the incident shows egress control "must be default-deny" — does not survive the primary source. The escape ran through a zero-day in the JFrog Artifactory package-registry cache proxy, described as "one of its primary permitted network egress with internet"; a default-deny allowlist would necessarily have included it. The same Hugging Face timeline records an allowlist *succeeding* elsewhere ("the `datasets` library's URL allowlist rejected every non-platform URL before any fetch"), and its own remediation list names strict evaluation isolation, narrow trust boundaries, short-lived credentials and blocked metadata access rather than egress denial. A new doc would also duplicate controls already at `sandboxing.md:73` and `:75`. The genuine uncovered gap is narrower and is filed as P79.
+
+---
+
+### P77 — Finish the P32 instruction-budget trim; the soft cap has been breached since April
+`[OPEN] [Refactor]`
+
+`Backlog.md:668-669` lists four trim candidates from P32. Two shipped via P40 (Section 14 mistakes table, §15.4 benchmark safety). Two were never shipped and never given a P-number: **Section 1 per-file commentary (~5 rows) — compress**, and **Section 8 tag taxonomy (~19 rows) — collapse to one parametric rule**.
+
+Rule 5 sets a ≤150 soft cap and a 200 hard ceiling. The recorded trajectory for `claude-agent-sop.md`: ~230 before P32, ~193 at P32, ~189 at P35, **~178 at P40** (the only point near the soft cap), ~185-190 at P43, then fourteen further additions (P44 +4, P45 +3, P46 +1, P61 +1, P62 +2, P63 +3, P67 +1, P69 +2, P70 +1, P71 +2, and this batch +1). The file has grown from 684 to 726 lines since the last count. It is now at or through its own hard ceiling, and the work to fix it has sat unfiled for three and a half months.
+
+This is also the honest response to the 2026-07-30 digest. Anthropic removed over 80% of Claude Code's system prompt with no measurable eval loss; LangChain cut base input tokens 65%. The transferable action is not a new rule about trimming, it is the trim.
+
+**Acceptance criteria:**
+- Section 1 per-file commentary compressed; Section 8 tag taxonomy collapsed to one parametric rule
+- A precise instruction recount published in the entry, using Rule 5's counting method (`claude-agent-sop.md:74`)
+- Net count stated, and below 200; state whether ≤150 is reached or remains outstanding
+- No rule removed without a trace — superseded rules consolidated in place, per Rule 1
+- Discharges the owed lite benchmark run, which this change can actually be measured by (R5 post-trim is the precedent)
+
+**Source:** `Backlog.md:668-669`, orphaned since 2026-04-17. Re-surfaced 2026-08-03 by the adversarial digest re-review, which found the proposed additions would have pushed an already-breached budget further over.
+
+---
+
+### P78 — Automate `cross-layer-rules.md` Tier 0 across instruction files
+`[OPEN] [Feature]`
+
+One logical rule implemented in two runtimes that disagree has now shipped as a bug four times: P66 (`:1271`, prose said skip, validator said block), P70 (`:1386`, the softer runtime was the one that executed), P73 (`:1476`, single-site fix on a repeated pattern), and the user-scope Step 3e leak (`docs/agent-memory/gotchas/2026-07-26_solo_project-specific-step-leaked-into-user-scope-command.md`). Each time, `cross-layer-rules.md` Tier 0 — grep for siblings before editing either side — would have caught it, and each time it was not run.
+
+**Scope it on divergence, not duplication.** An earlier framing of this check ("the same directive stated in two or more instruction surfaces") is wrong and must not be built: check C15 (`compliance-checklist.md:93`) *requires* projects to restate "never delete without a trace" in CLAUDE.md, and the rule is deliberately restated across more than twenty sites including both shipped templates. A duplication check would flag what another check mandates. The bug is two implementations that *disagree*, not two statements that agree.
+
+**Design constraint from the gotcha:** "Grepping for a step number tests the numbering, not the behaviour. Grep for the distinctive dependency instead." A literal-string check will miss semantically-divergent wording, which is the failure mode that matters.
+
+**Prior art:** check A2 (`:159`) and X3 (`:229`) already do this for exactly one hardcoded pair, the Key Documents table. This generalises them. It also composes with P75's replication gate, which answers the adjacent question of whether a change reached its mirror at all.
+
+**Acceptance criteria:**
+- Detects a divergence fixture reproducing the P66 prose-vs-validator split
+- Does not fire on C15-mandated restatements, proven by a fixture
+- Reads the sibling inventory from one source, not a second hardcoded list
+- Net instruction count stated
+
+**Source:** adversarial re-review, 2026-08-03. Sequence after P75.
+
+---
+
+### P79 — `sandboxing.md` treats the sandbox as protecting the host, never the reverse
+`[OPEN] [Iteration]`
+
+`Backlog.md:1348` already records the gap: "`sandboxing.md` frames the sandbox as protecting the host from agent mistakes; this is the other direction." P69 noted it and then wrote rule 11 about the enforcement layer instead, leaving `sandboxing.md` untouched (still `SOP-Version: 2026-04-17`).
+
+Three specifics are absent from `docs/sop/`, verified by full read of all 83 lines:
+1. An allowlisted egress host is itself a trust boundary. The 2026-07 frontier-lab intrusion escaped through a package-registry cache proxy that was a *permitted* egress point, so default-deny at `sandboxing.md:75` would not have contained it.
+2. Package registries and proxies as attack surface. The word "proxy" appears nowhere in `docs/sop/` outside the rule 11 narrative.
+3. Your own sandbox being used as someone else's staging base — the incident used a third party's public code-evaluation sandbox as its control and egress base.
+
+`.claude/agents/security-reviewer.md` has no sandbox, egress, or network item at all, and is still `sop_version: 2026-04-17`.
+
+**Keep it a clause, not a section.** `security.md:49` already carries the incident narrative. Restating it in a second SOP file duplicates a normative citation across two surfaces, which is the P78 bug class. Extend the existing bullet at `sandboxing.md:27` and cross-reference.
+
+`sandbox.network.strictAllowlist` is verified in the Claude Code changelog (2.1.219, 24 July 2026), so it clears the bar that keeps the `sandbox.credentials` recommendation deferred (`CLAUDE.md:56`). Naming it gives `sandboxing.md:75`'s "outbound network denied by default" an actual mechanism. Consider retiring the `sandbox.credentials` deferral in the same pass if it also verifies.
+
+**Acceptance criteria:**
+- The trust-boundary lesson lands as a clause on an existing bullet, cross-referencing `security.md:49` rather than restating it
+- `strictAllowlist` named with its version
+- Net instruction count stated, and +0 or +1
+
+**Source:** 2026-07-30 digest finding 5, reframed after the primary source contradicted the digest's stated lesson. See P76's skip record.
+
+---
+
+### P80 — Benchmark rubric: pairwise scoring, and read judge reasoning not scores
+`[OPEN] [Iteration]`
+
+Similarweb's LangSmith writeup (29 July 2026) is directly applicable to the A/B benchmark and was flagged-but-unfetched by the 2026-07-30 digest. Three transferable findings:
+
+1. **Pairwise beats absolute scoring.** Show the judge both arms together and ask which is stronger, rather than scoring each in isolation. The benchmark's SOP-arm vs no-SOP-arm design is already pairwise in structure but is scored absolutely.
+2. **A miscalibrated rubric is worse than no rubric** — it produces false confidence. Their concrete case: a rubric rewarding source breadth over attribution quality scored a thinly-attributed report 0.7 while the judge's own reasoning called the attribution thin; recalibrated to prize named verifiable sources, the same report scored 0.3.
+3. **Debug by reading judge reasoning, not scores.** Score/reasoning divergence is the miscalibration signal. `docs/benchmark/results/r5-post-trim/summary.md` already records a scorer error on task 08 (design tokens), which is exactly this failure mode caught by hand.
+
+Orthogonal to P68's k≥3 repetition, and complementary: pairwise scoring reduces the variance that forced k≥3.
+
+**Also worth a line:** ReviewBench (LangChain, 31 July 2026, outside every digest window) measures code-review agents recovering roughly 30% of curated reviewer findings, and finds structured review prompts beat model upgrades. That is an argument for keeping Step 1b's prompt specified, and against reading a clean reviewer pass as evidence the code is clean.
+
+**Source:** adversarial re-review, 2026-08-03.
+
+---
+
+### P81 — The MANDATORY lite benchmark rule fires on changes its instrument cannot measure
+`[OPEN] [Bug]`
+
+`docs/benchmark/README.md:49` requires a lite run "after any SOP edit that changes agent-facing instruction text", k≥3. The frozen lite subset (`:46`) is tasks 05, 07 and 08 — hst-tracker application-code tasks — and `:48` forbids changing its membership.
+
+No task in that subset exercises a compliance check, a slash-command step, a sandboxing rule, or a positioning passage. So for the large class of SOP edits that are pure instruction-text changes, the rule mandates 18 worktree runs that measure nothing about the change. `:65` states "a MANDATORY rule with a silent first exception is not mandatory", which is right, and is precisely why the mismatch needs resolving rather than quietly waived each time.
+
+**Options to weigh, not a decided fix:** scope the trigger to edits the subset can discriminate (behavioural SOP rules, not checklist or reference text); or add a second frozen subset exercising SOP-mechanics; or keep the trigger and require an explicit recorded exemption naming why the instrument cannot see the change.
+
+Note this does not excuse the currently owed run — P77's trim is exactly the change the existing subset *can* measure, which is why the two should ship together.
+
+**Source:** adversarial re-review, 2026-08-03.
+
 ---
 
 ## Shipped Archive
@@ -1551,6 +1691,7 @@ Raised by Matt's audit on 2026-07-26 and recorded in the resume snapshot as opti
 - P72 — Benchmark runner: lite subset, -k repetition, aggregate — SHIPPED 2026-07-26
 - P73 — Validator silent-exit fix + stdout-asserting fixtures — SHIPPED 2026-07-26
 - P74 — Replace `npx block-no-verify` with local argv-matching hook — SHIPPED 2026-07-27 (filed retroactively 2026-08-03)
+- P75 — Replication gate: `--check-replication` + `/update-sop` Step 3e — SHIPPED 2026-08-03
 
 - P67 — Step 1b wait-for-reviewer before substance assertion — SHIPPED 2026-07-26
 - P68 — Benchmark repetition, frozen lite subset, capability suite — SHIPPED 2026-07-26

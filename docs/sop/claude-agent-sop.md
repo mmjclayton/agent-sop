@@ -709,6 +709,8 @@ The SOP's structural checks (file presence, tag format, transition graph, P-numb
 
 **Tokenizer generations (within Anthropic-hosted models).** Claude Sonnet 5 (launched 30 June 2026, default for Free and Pro plans from 1 July 2026) uses a new tokenizer that produces approximately 30% more tokens for the same text than the 4.x family this document's figures were measured on. Token counts published in this SOP and the benchmark docs are not directly comparable across tokenizer generations. Line caps are the enforceable unit; expect session-start token costs to run ~30% higher on Sonnet 5 for identical file reads. Use `/usage` (per-category attribution, Claude Code 2.1.174+) to re-measure on the model actually in use rather than trusting published estimates.
 
+**Context-window generations.** Claude Opus 5 (launched 24 July 2026, the default Opus model in Claude Code from 2.1.219) carries a 1M-token context window as both default and maximum. Every threshold in this SOP is expressed as a proportion for this reason — a rule stated as "60% of the window" survives the change, while a worked example stated as "120K tokens" does not. Any absolute token figure in this library is an illustration for the generation it was measured on, never the enforceable unit.
+
 This section makes no claim about token-budget arithmetic on swapped backends — tokeniser and context-window behaviour vary by provider and have not been measured against this SOP.
 
 ---

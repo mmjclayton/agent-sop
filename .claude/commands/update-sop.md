@@ -332,6 +332,24 @@ Resolution paths when the gate fires:
 - **Unintentional drift:** the commits are under the wrong P-number. Either amend the commit messages to reference the in-flight P-number, or split the work so the declared item ships this session and the drift item becomes its own Backlog entry next session.
 - **Stale resume:** if the declared item already shipped in an earlier session but the resume wasn't refreshed, update the resume (Step 7 would overwrite it anyway) and re-run.
 
+## Step 3e: Replication check (pristine-replica files reached the surface that executes them)
+
+Steps 3c and 3d both ask "was this change declared?". Neither asks "did this change reach the copy that runs?". A session can edit a pristine-replica file, pass every gate, merge, and leave the user-scope mirror untouched — the repo is then correct about intent and wrong about effect. Observed twice in opposite directions: Batch 0.27 left `~/.claude/commands/update-sop.md` eight days behind the shipped state while three trackers recorded it as shipped, and Batch 0.26 found a project-specific step that had leaked the other way.
+
+Step 3e intersects this session's changed files with the `baseline_shas` manifest in `agent-sop.config.json` — the same source `/update-agent-sop` reads, deliberately, so the two cannot drift apart. Sessions touching no manifest file are a silent no-op.
+
+```bash
+if [ -x scripts/validate-state-transitions.sh ]; then
+  bash scripts/validate-state-transitions.sh --check-replication || exit 1
+else
+  echo "Warning: validate-state-transitions.sh not found. Upgrade with /update-agent-sop."
+fi
+```
+
+Resolution paths when the gate fires:
+- **Normal case:** run `/update-agent-sop` to replicate the change and refresh the baselines, then re-run.
+- **Deliberate divergence:** record it on this item's Batch Log line as `replication deferred (P<n>): <reason>`. Use this only when the consumer copy genuinely should not track the repo — the same enumerated-token discipline as Step 1b's skip declaration, so a later reader can tell a decision from an omission.
+
 ## Step 4: Update docs/feature-map.md
 
 **Execution note:** Steps 4, 7, and 8 are independent writes (feature-map, per-agent resume snapshot, recent-work entry). Their tool calls have no inter-dependencies. When you reach Step 4, issue all three writes as a parallel tool-call batch in a single message rather than three sequential turns. Step 5 (decisions/gotchas) and Step 6 (build-plan Batch Log) depend on Step 1's self-eval output and stay sequential.

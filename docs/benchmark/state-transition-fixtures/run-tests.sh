@@ -155,6 +155,67 @@ for review in "$SCRIPT_DIR"/*.review.md; do
   fi
 done
 
+# --------------------------------------------------------------------------
+# P75: replication fixtures (`*.repl/` directories).
+#
+# Each fixture is a directory containing config.json, changed.txt, repo/ and
+# home/. The validator runs from repo/ with the fixture's config, changed-file
+# list and stand-in HOME, so the check is exercised without touching the real
+# user scope. Filename prefix dictates expected exit:
+#   legal-replication-*   → expect exit 0  (mirror in sync)
+#   illegal-replication-* → expect exit 1  (mirror stale — the 2026-08-03 state)
+# --------------------------------------------------------------------------
+for repl in "$SCRIPT_DIR"/*.repl; do
+  [ -d "$repl" ] || continue
+  name="$(basename "${repl%.repl}")"
+
+  case "$name" in
+    legal-replication-*) expected=0 ;;
+    illegal-replication-*) expected=1 ;;
+    *) echo "SKIP: $name has no legal-replication-/illegal-replication- prefix"; continue ;;
+  esac
+
+  if [ ! -d "$repl/repo" ] || [ ! -f "$repl/config.json" ] || [ ! -f "$repl/changed.txt" ]; then
+    echo "SKIP: $name missing repo/, config.json or changed.txt"
+    continue
+  fi
+
+  output=$(cd "$repl/repo" && bash "$VALIDATOR" --check-replication \
+    --repl-config-file ../config.json \
+    --repl-changed-file ../changed.txt \
+    --repl-home ../home 2>&1)
+  actual=$?
+
+  # Same rationale as the .expect-stdout assertions above: a non-zero exit
+  # alone cannot distinguish a reported failure from a silent one.
+  stdout_ok=1
+  missing_line=""
+  if [ -f "$repl/expect-stdout" ]; then
+    while IFS= read -r expect_line; do
+      [ -z "$expect_line" ] && continue
+      case "$output" in
+        *"$expect_line"*) ;;
+        *) stdout_ok=0; missing_line="$expect_line"; break ;;
+      esac
+    done < "$repl/expect-stdout"
+  fi
+
+  if [ "$actual" = "$expected" ] && [ "$stdout_ok" = "1" ]; then
+    echo "PASS: $name (exit $actual)"
+    pass=$((pass + 1))
+  elif [ "$actual" = "$expected" ]; then
+    echo "FAIL: $name — exit $actual correct, but expected output missing: \"$missing_line\""
+    echo "  output: $output"
+    fail=$((fail + 1))
+    failed_cases="$failed_cases $name"
+  else
+    echo "FAIL: $name — expected exit $expected, got $actual"
+    echo "  output: $output"
+    fail=$((fail + 1))
+    failed_cases="$failed_cases $name"
+  fi
+done
+
 echo ""
 echo "Results: $pass passed, $fail failed"
 [ "$fail" -gt 0 ] && echo "Failed: $failed_cases" && exit 1
