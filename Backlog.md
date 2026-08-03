@@ -1490,6 +1490,31 @@ Hit live during the 2026-07-26 session: flipping P67-P69 to `[SHIPPED]` before w
 
 ---
 
+### P74 — `npx block-no-verify` hook: network fetch per Bash call, substring matching, trivially evaded
+`[OPEN] [Bug]`
+
+Raised by Matt's audit on 2026-07-26 and recorded in the resume snapshot as optional and not actioned. Filed here on 2026-08-03; the filing is retroactive because the session that carried the finding never wrote it to the Backlog.
+
+**Three defects in `npx block-no-verify@1.1.2`, wired as a `PreToolUse`/`Bash` hook:**
+
+1. **Network fetch on every Bash call.** `~/.claude/rules/web/hooks.md` rules out remote one-off package execution in hooks. Every Bash invocation in every session reached npm.
+2. **Substring matching over the whole command string.** It fired whenever `git`, `commit`, and a `-n`-ish token appeared anywhere in a multi-line command, in unrelated statements. A command containing no bypass at all was blocked, and a `-m "…--no-verify…"` message body tripped it.
+3. **Trivially evaded.** Building the flag in a variable defeated it, as did `git -c core.hooksPath=/dev/null`, which disables hooks without naming the flag.
+
+**Fix:** replace with a local, argv-matching hook script. No network. Tokenize with quote awareness, split on shell operators, inspect each simple command's argv, so a flag inside a quoted message is one token that never equals `--no-verify` and the false positive is structurally impossible rather than patched around. Catch `core.hooksPath` neutering and short/bundled forms (`-n`, `-nm`), while leaving `git push -n` alone because there `-n` is `--dry-run`.
+
+**Acceptance criteria:**
+- No network access from the hook
+- Commit-message bodies containing `--no-verify` are allowed
+- Multi-statement commands with no bypass are allowed
+- `git push -n` allowed; `git commit -n`, `-nm`, `--no-verify` on commit/push/merge/rebase/cherry-pick/revert/am denied
+- `git -c core.hooksPath=/dev/null` denied
+- Bypass in a later statement of a chain denied
+
+**Scope note:** this is a user-scope harness change (`~/.claude/`), not a repo file. Tracked here because the finding was carried in this project's resume snapshot.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
