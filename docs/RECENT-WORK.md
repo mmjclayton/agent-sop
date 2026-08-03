@@ -15,6 +15,7 @@ Moved out of `CLAUDE.md` on 2026-08-03 so it stops consuming context every sessi
 - 2026-08-03 `solo`: P86-P94 — Template rot root cause, and the fixes it generated
 - 2026-08-03 `solo`: P83-P85 — Whole-codebase audit and pass-one remediation
 - 2026-08-03 `solo`: P75 replication gate, plus a four-agent re-review that overturned most of the digest
+- 2026-08-03 `solo`: Batch 0.34 — Session close-out
 - 2026-07-27 `solo`: Benchmark figure caveat + `block-no-verify` hook replacement
 - 2026-07-26 `solo`: P67-P69 — digest review, three-paper review, and a reviewer turn that caught the session's own gate
 - 2026-07-26 `solo`: P66, P70-P73 — validator correctness and gate coherence

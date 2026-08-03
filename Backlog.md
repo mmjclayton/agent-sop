@@ -120,6 +120,9 @@ Write migration guide at `docs/examples/existing-project-migration.md`.
 ### P8 — Web app domain variant
 `[OPEN] [Feature] [has-open-questions]`
 
+**Recommendation (2026-08-03, from the P83 audit close-out):**
+Close or trigger. `[has-open-questions]` and untouched since 2026-04-07 — four months with no movement. By P71's own rule an item carrying no reopen trigger is a `[WON'T]` candidate at the next review, and this close-out is that review. Either flip to `[WON'T]` with a reason, or attach an observable reopen trigger. Leaving all three `[OPEN]` indefinitely is the accumulation failure P71 was written to prevent.
+
 **Open questions:** What web-app-specific sections beyond the base SOP? Separate doc or addendum?
 
 ---
@@ -127,12 +130,18 @@ Write migration guide at `docs/examples/existing-project-migration.md`.
 ### P9 — Marketing domain variant
 `[OPEN] [Feature] [has-open-questions]`
 
+**Recommendation (2026-08-03, from the P83 audit close-out):**
+Close or trigger. `[has-open-questions]` and untouched since 2026-04-07 — four months with no movement. By P71's own rule an item carrying no reopen trigger is a `[WON'T]` candidate at the next review, and this close-out is that review. Either flip to `[WON'T]` with a reason, or attach an observable reopen trigger. Leaving all three `[OPEN]` indefinitely is the accumulation failure P71 was written to prevent.
+
 **Open questions:** What content/marketing-specific sections are needed?
 
 ---
 
 ### P10 — Data/analytics domain variant
 `[OPEN] [Feature] [has-open-questions]`
+
+**Recommendation (2026-08-03, from the P83 audit close-out):**
+Close or trigger. `[has-open-questions]` and untouched since 2026-04-07 — four months with no movement. By P71's own rule an item carrying no reopen trigger is a `[WON'T]` candidate at the next review, and this close-out is that review. Either flip to `[WON'T]` with a reason, or attach an observable reopen trigger. Leaving all three `[OPEN]` indefinitely is the accumulation failure P71 was written to prevent.
 
 **Open questions:** What data-specific sections are needed?
 
@@ -1555,7 +1564,9 @@ Raised by Matt's audit on 2026-07-26 and recorded in the resume snapshot as opti
 ---
 
 ### P76 — Duplicate check IDs make `M1`-`M4` and `R1` ambiguous
-`[OPEN] [Bug]`
+`[WON'T] [Bug]` — Reason: superseded by P85, which shipped the same fix 2026-08-03.
+
+**Closed 2026-08-03.** Filed independently by a parallel session while P83's audit was running, so the same defect carried two P-numbers. All four acceptance criteria verified met before closing: 0 duplicate IDs (94 rows / 94 unique), `B11` now precedes `B12`, and `RP1`/`F6`/`M4` agree on `project_resume_<agent-id>.md` (3/3). Kept rather than deleted per Rule 1 — the duplicate filing is itself the evidence that two agents can converge on one defect.
 
 `docs/sop/compliance-checklist.md` defines `M1`-`M4` twice: once for feature-map structure (`:178-186`) and once for multi-agent readiness (`:302-310`). It defines `R1` twice: resume filename (`:215`) and the reviewer-turn gate (`:268`). `README.md:29` advertises "M1-M6 checks for multi-agent parallel-session readiness" and "B11/B12/R1/D1/T1 for the enforcement gates", both of which resolve to two different checks. `.claude/agents/sop-checker.md:193-210` implements only the multi-agent `M1`-`M6`, so the feature-map set is defined but never run under that ID. `B12` (`:142`) also precedes `B11` (`:143`).
 
@@ -1669,6 +1680,11 @@ Orthogonal to P68's k≥3 repetition, and complementary: pairwise scoring reduce
 ### P81 — The MANDATORY lite benchmark rule fires on changes its instrument cannot measure
 `[OPEN] [Bug]`
 
+**Recommendation (2026-08-03, from the P83 audit close-out):**
+Suspend the MANDATORY rule until the instrument can satisfy it. As of 2026-08-03 the obligation has fired for three consecutive batches (0.31-0.33 changed seven agent-facing instruction files) and was discharged none of those times, because `run-multi-round.sh:32` pins an April `BASE_COMMIT` with no step syncing current agent-sop into the worktree — the run would re-measure the April SOP. There is also no model pinning, while `results/r5-post-trim/summary.md:54` instructs R6 to use the "same model as R2".
+
+A mandatory rule that cannot be satisfied trains every session to record an exemption, which is exactly what the last three did. Either repair the framework (fix `BASE_COMMIT`, add model pinning) or drop the mandate and mark the framework frozen — but do not keep both. Recommendation: **drop the mandate**; the A/B framework has not run since 2026-04-17 and the fixture suites, which are genuinely maintained, are a separate artefact that should not inherit its obligation.
+
 `docs/benchmark/README.md:49` requires a lite run "after any SOP edit that changes agent-facing instruction text", k≥3. The frozen lite subset (`:46`) is tasks 05, 07 and 08 — hst-tracker application-code tasks — and `:48` forbids changing its membership.
 
 No task in that subset exercises a compliance check, a slash-command step, a sandboxing rule, or a positioning passage. So for the large class of SOP edits that are pure instruction-text changes, the rule mandates 18 worktree runs that measure nothing about the change. `:65` states "a MANDATORY rule with a silent first exception is not mandatory", which is right, and is precisely why the mismatch needs resolving rather than quietly waived each time.
@@ -1683,6 +1699,9 @@ Note this does not excuse the currently owed run — P77's trim is exactly the c
 
 ### P82 — Step 2a's collision check fails open when its awk call errors
 `[OPEN] [Bug]`
+
+**Recommendation (2026-08-03, from the P83 audit close-out):**
+Do this one next; it needs no decision. Observed failing live on 2026-08-03 during this session's own Step 2a run: the awk stage errored six times (`awk: newline in string ### P1...`) and the check still reported "No collisions". Same fail-open class as P73, P84 and P95 — a diagnostic-producing check reporting success when its diagnostic cannot run — and it sits inside a **hard-block** gate.
 
 `.claude/commands/update-sop.md` Step 2a detects P-number collisions in two stages: match the P-number against the default branch, then compare entry titles to decide whether the content actually differs. Run live on 2026-08-03 the awk stage emitted `awk: newline in string ### P1\n10\n11\n...` six times.
 
@@ -1803,6 +1822,11 @@ Original question was enforce vs downgrade. The evidence settled it: the session
 ### P89 — Rule 5 instruction budget is breached and unenforced
 `[OPEN] [Iteration] [has-open-questions]`
 
+**Recommendation (2026-08-03, from the P83 audit close-out):**
+Split the rule; do not add a check against it as worded. Rule 5 scopes to "rules files under `~/.claude/rules/`", which agent-sop does not ship and cannot control — a check against that scope fails on every machine for reasons the project cannot fix. Split into (a) a hard, checkable cap on the instruction count of files agent-sop **ships**, and (b) a documented advisory for total assembled context. P94 shipped (b). Then add the check against (a) only.
+
+Expect the enforceable half to fail on first measurement — `claude-agent-sop.md` alone counts 188 against a 150 soft cap — so this comes with a real trim, not just a check. Merge with **P77**, which is the same problem filed separately.
+
 Rule 5 (`claude-agent-sop.md:69-76`) sets ≤150 distinct instructions soft, 200 hard, across the agent's combined context. Two independent counts using the rule's own method agreed within 6%: `claude-agent-sop.md` 188 (over the soft cap alone), `CLAUDE.md` 101, `restart-sop.md` 29, `update-sop.md` 72, `sop-checker.md` 90. Combined: session start 318, session end 361, subagent 379 — 1.6x to 1.9x over the hard ceiling. Including `~/.claude/rules/`, which Rule 5's own text names as in-budget, puts it near 3.5x.
 
 The count also *under*-reports: the stated method excludes section headings, but `update-sop.md` carries 20 `## Step` headings that are functionally checklist items.
@@ -1817,6 +1841,11 @@ The count also *under*-reports: the stated method excludes section headings, but
 
 ### P90 — Session-end step numbering incoherent across four files
 `[OPEN] [Bug] [has-open-questions]`
+
+**Recommendation (2026-08-03, from the P83 audit close-out):**
+Stop citing bare step numbers across files; cite heading text instead. Picking one canonical sequence rebuilds the problem at the next inserted step, whereas heading citations are drift-proof.
+
+**Ordering is not optional.** Seven compliance checks (`B11`, `D1`, `M1`, `M3`, `M6`, `S4`, `T1`) use step numbers as their grep anchor. Convert every one of those anchors to a heading string or content pattern and confirm all seven still PASS **before** renumbering anything. Renumbering first makes them fail *open*, so a graded project passes checks nobody ran — the most dangerous silent-failure mode in the remaining set.
 
 The same operation carries four different numbers: `README.md` 0-10, `claude-agent-sop.md` 1-9, `CLAUDE.md` 0-9, `update-sop.md` 0-11. "Step 1" means *run tests* in the SOP and *self-evaluate* in the command; "Step 2" means *update Backlog* in one and *run tests* in the other; README is +1 against the other three from step 5 onward. `update-sop.md:100` directs a gotcha to "Step 4", which is feature-map — gotchas are Step 5. `finish.md:136` cites "Section 12" for the session-end checklist; Section 12 is Optional Patterns.
 
