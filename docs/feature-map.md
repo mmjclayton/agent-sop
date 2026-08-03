@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-07-26 (P66, P67-P73)
+Last updated: 2026-08-03 (P74 + tracker drift reconciliation)
 
 ---
 
@@ -68,6 +68,7 @@ Last updated: 2026-07-26 (P66, P67-P73)
 | P67 | Step 1b wait-for-reviewer (`[Bug]`). The gate invoked a reviewer subagent then asserted the artifact existed with no wait between. Subagents are background-by-default from CC 2.1.198, so the assertion could fire on a not-yet-written file and be indistinguishable from a never-run review — a spurious hard block whose cheapest workaround is hand-writing the artifact. New Step 1b item 5 (wait + on-disk existence check), old items 5/6 renumbered; one clause mirrored into the canonical Section 6 checklist line. The defect reproduced live during this session's own reviewer turn. | `.claude/commands/update-sop.md` (Step 1b), `docs/sop/claude-agent-sop.md` (§6), user-scope mirror | 2026-07-26 |
 | P68 | Benchmark repetition, frozen lite subset, capability suite. Every round R1-R5 scored a single run per arm; arXiv:2602.11619 measures single-run evaluation as producing an incorrect model ranking 29.3% of the time, which puts an unknown share of the R2 +33% vs R5 +16% gap down to noise. Methodology now requires k≥3 per task per arm (k≥5 for any published figure), median and range rather than a point estimate, and forbids majority voting (0-2pp on agentic tasks — early trajectory errors propagate). Frozen lite subset {05, 07, 08} for cheap post-edit regression; `state-transition-fixtures/` and `drift-fixtures/` named as the capability suite they already were. Task Inventory corrected 4→8 rows; R1-R5 labelled single-run; README's +8-33% gains its k=1 caveat. Lite-run rule is SHOULD pending runner support (P72). | `docs/benchmark/README.md`, `README.md` | 2026-07-26 |
 | P69 | Gate integrity — the enforcement layer as a tamper surface. `security.md` rule 11: validation scripts and review artifacts are what the gates read to decide pass or fail, so `/update-sop` Step 3c/3d output is suspect when a validator changed inside the range it checked. Not a claim of adversarial intent — a hard block an agent cannot pass legitimately is optimisation pressure, and satisfying the check's letter is cheaper than its intent. New S7 Important conditional check; `code-reviewer` gains a gate-integrity bullet under Security (CRITICAL). Totals 82/91 → 83/92. **First cut was defective and corrected pre-ship after the reviewer turn:** S7's `<merge-base>..<ship-commit>` range is empty for any merged commit so the check could never fail, and its PASS condition was unreachable because rule 11 prescribed a tag Step 1b exempts. Check R1 carried the identical range defect and was fixed in the same pass. | `docs/sop/security.md` (rule 11), `docs/sop/compliance-checklist.md` (S7 + R1 fix + totals), `.claude/agents/sop-checker.md`, `.claude/agents/code-reviewer.md`, `README.md`, user-scope mirrors | 2026-07-26 |
+| P74 | `npx block-no-verify` hook replaced with a local argv-matching script (`[Bug]`, user-scope harness change, filed retroactively 2026-08-03). The npx form fetched a package from the network on every Bash call — ruled out by `~/.claude/rules/web/hooks.md` — substring-matched the whole command string so unrelated multi-statement commands and quoted `-m` message bodies were blocked, and was evaded by building the flag in a variable or by `git -c core.hooksPath=/dev/null`. The replacement tokenizes quote-aware, splits on shell operators and inspects each simple command's argv, so a flag inside a quoted message is one token that never equals `--no-verify` and the false positive is structurally impossible rather than patched around; it also catches the `core.hooksPath` evasion and short/bundled `-n`/`-nm`, while leaving `git push -n` (dry-run) alone. Verified across 8 cases. | `~/.claude/scripts/hooks/block-hook-bypass.js`, `~/.claude/settings.json`, `~/.claude/hooks/hooks.json` (dead ECC artefact, synced so it cannot reintroduce the npx form) | 2026-07-27 |
 | P64 | AGENTS.md positioning. Decision-first item resolved with Matt: positioning only. README "vs AGENTS.md" subsection recommends the AGENTS.md-canonical shape for multi-tool adopters (shared context in AGENTS.md, CLAUDE.md as `@AGENTS.md` import + Claude-specific surface; Rule 2, never parallel copies). Full support (template + `setup.sh --multi-tool` + Recommended check) deferred until Claude Code reads AGENTS.md natively — reopen trigger recorded in the Backlog entry. | `README.md` (comparisons section), `Backlog.md` (decisions + trigger) | 2026-07-06 |
 
 ---
@@ -80,6 +81,8 @@ Last updated: 2026-07-26 (P66, P67-P73)
 
 ### Recently Shipped
 
+**Superseded 2026-08-03 by the Shipped Documents table above.** This sub-table was a second shipped list and it stopped being maintained after 2026-04-09, so it sat frozen at P28 while Shipped Documents carried through P74 — a reader landing here would have concluded the project shipped nothing in four months. Retained rather than deleted, per the never-delete-without-a-trace rule; do not add rows.
+
 | P# | Document | Path | Shipped |
 |----|----------|------|---------|
 | P23 | SOP Benchmark Framework | `docs/benchmark/` | 2026-04-09 |
@@ -90,9 +93,10 @@ Last updated: 2026-07-26 (P66, P67-P73)
 
 ### Medium Priority
 
+*Open items only. P24 sat in this table from 2026-05-04 until 2026-08-03 despite having shipped on the day it was listed; removed to the Shipped Documents table where it already appeared.*
+
 | P# | Document | Path |
 |----|----------|------|
-| P24 | Multi-agent optimisation guide | `docs/sop/multi-agent.md` |
 | P8 | Web app variant | `docs/sop/variants/web-app.md` |
 | P9 | Marketing variant | `docs/sop/variants/marketing.md` |
 | P10 | Data/analytics variant | `docs/sop/variants/data-analytics.md` |
