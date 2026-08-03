@@ -1517,6 +1517,30 @@ Raised by Matt's audit on 2026-07-26 and recorded in the resume snapshot as opti
 
 ---
 
+### P75 — A shipped hardening can sit unreplicated in user scope indefinitely; nothing detects it
+`[OPEN] [Bug]`
+
+`/update-sop` closes a session. `/update-agent-sop` replicates pristine files to user scope. Nothing connects them, so a session can ship a change to a pristine-replica file, pass every gate, merge, and leave the copy that actually executes untouched.
+
+**Observed twice, in opposite directions:**
+
+1. **2026-08-03 (this occurrence).** Batch 0.27 shipped P66's enumerated `review skipped (P<n>)` token and P70's bounded test gate by editing `.claude/commands/update-sop.md` and `.claude/agents/sop-checker.md`. It did not re-run `/update-agent-sop`. For eight days the user-scope `/update-sop` — the copy that runs in every session, in every project — carried neither hardening, while `Backlog.md`, the Batch Log and the feature-map all recorded both as shipped. The repo was correct about intent and wrong about effect.
+2. **2026-07-26 (Batch 0.26).** The mirror image: a RepCanvas-specific Step 3e had leaked *into* user scope and was removed. Recorded at `docs/agent-memory/gotchas/2026-07-26_solo_project-specific-step-leaked-into-user-scope-command.md`.
+
+**Why the existing gates miss it.** Step 3c validates Backlog transitions, Step 3d detects P-number drift, S7 catches undeclared changes to watched files. All three ask "was this change declared?" — none asks "did this change reach the surface that enforces it?". The staleness warning in `/restart-sop` Step 0 is date-based (`last_update_check` vs cadence), so it stays silent for a whole week after a mirror goes stale, and it fires just as loudly when nothing has changed at all.
+
+**Fix (proposed):** add a `/update-sop` step that intersects the session's changed files with the `/update-agent-sop` manifest. On a non-empty intersection, compare each file's SHA against its `baseline_shas` entry and against the user-scope mirror; report any mismatch and require either a `/update-agent-sop` run or an explicit declaration before the session closes. Content-triggered, not date-triggered.
+
+**Acceptance criteria:**
+- Changing a manifest-tracked file without re-running `/update-agent-sop` is reported before the session commits
+- Sessions touching no manifest file are unaffected (silent no-op)
+- The check reads the same manifest and `baseline_shas` as `/update-agent-sop`, not a second hardcoded list — a divergent list would be the same class of bug one layer up (see `docs/guides/cross-layer-rules.md`)
+- A fixture proves the check fails against the 2026-08-03 state and passes after the sync
+
+**Source:** found during the Batch 0.29 `/update-agent-sop` run, which was itself only triggered because the date-based staleness warning happened to fire. Had the warning not been overdue, the stale mirrors would have gone unnoticed for longer.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
