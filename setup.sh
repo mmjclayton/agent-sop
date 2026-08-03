@@ -112,7 +112,26 @@ for f in "$CLAUDE_TEMPLATE" \
     fi
 done
 
-# ── Helper: copy file if it does not exist (or if --force) ────────────────────
+# ── Tiering: --force applies to the replica tier only ─────────────────────────
+#
+# The header above splits installed files in two. Pristine-replica content
+# (docs/sop/, docs/guides/, scripts/, and the user-scope commands and agents)
+# is meant to be overwritten — that is how /update-agent-sop delivers upstream
+# changes, so --force is correct there.
+#
+# Per-project files are the opposite. CLAUDE.md and Backlog.md accumulate the
+# project's own content from the moment setup runs; Backlog.md is the SOP's
+# declared single source of truth for work item status. Overwriting either with
+# a blank [bracket placeholder] template destroys state that exists nowhere
+# else, and there is no version of that a user wants. Until P86 these helpers
+# applied one unconditional `cp` to both tiers, so the end-of-run tip to re-run
+# with --code was a live route to losing a populated Backlog.
+#
+# The per-project tier therefore refuses --force outright rather than taking a
+# backup: a .bak file makes the loss recoverable, refusing makes it impossible.
+# To re-scaffold one of these deliberately, delete the file first.
+
+# ── Helper: copy replica-tier file if missing (or if --force) ─────────────────
 
 copy_if_missing() {
     local src="$1"
@@ -128,14 +147,38 @@ copy_if_missing() {
     echo "  create  $(basename "$dest")"
 }
 
-# ── Helper: write content if file does not exist (or if --force) ──────────────
+# ── Helper: copy per-project file — never overwrites, --force or not ──────────
+
+copy_project_file() {
+    local src="$1"
+    local dest="$2"
+
+    if [ -f "$dest" ]; then
+        if [ "$FORCE" = true ]; then
+            echo "  keep  $(basename "$dest") (per-project file — --force does not overwrite it)"
+        else
+            echo "  skip  $(basename "$dest") (already exists)"
+        fi
+        return
+    fi
+
+    mkdir -p "$(dirname "$dest")"
+    cp "$src" "$dest"
+    echo "  create  $(basename "$dest")"
+}
+
+# ── Helper: write per-project file — never overwrites, --force or not ─────────
 
 write_if_missing() {
     local dest="$1"
     local content="$2"
 
-    if [ -f "$dest" ] && [ "$FORCE" = false ]; then
-        echo "  skip  $(basename "$dest") (already exists, use --force to overwrite)"
+    if [ -f "$dest" ]; then
+        if [ "$FORCE" = true ]; then
+            echo "  keep  $(basename "$dest") (per-project file — --force does not overwrite it)"
+        else
+            echo "  skip  $(basename "$dest") (already exists)"
+        fi
         return
     fi
 
@@ -174,10 +217,10 @@ else
 fi
 echo ""
 
-copy_if_missing "$CLAUDE_TEMPLATE" "$TARGET/CLAUDE.md"
-copy_if_missing "$TEMPLATE_DIR/backlog-template.md" "$TARGET/Backlog.md"
-copy_if_missing "$TEMPLATE_DIR/agent-memory-template.md" "$TARGET/docs/agent-memory.md"
-copy_if_missing "$TEMPLATE_DIR/build-plan-template.md" "$TARGET/docs/build-plans/phase-0-foundation.md"
+copy_project_file "$CLAUDE_TEMPLATE" "$TARGET/CLAUDE.md"
+copy_project_file "$TEMPLATE_DIR/backlog-template.md" "$TARGET/Backlog.md"
+copy_project_file "$TEMPLATE_DIR/agent-memory-template.md" "$TARGET/docs/agent-memory.md"
+copy_project_file "$TEMPLATE_DIR/build-plan-template.md" "$TARGET/docs/build-plans/phase-0-foundation.md"
 # Review template — pristine replica, referenced by /update-sop Step 1b
 copy_if_missing "$TEMPLATE_DIR/review-template.md" "$TARGET/docs/templates/review-template.md"
 # Reviewer agents (Step 1b) write artifacts here — pre-create so first invocation does not fail on missing dir
