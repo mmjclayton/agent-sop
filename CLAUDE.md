@@ -113,7 +113,7 @@ git add -A && git commit -m "docs: description"
 
 ## Session & Memory Hygiene
 
-Memory files live at `~/.claude/projects/[project-hash]/memory/`.
+Memory files live at `~/.claude/projects/-Users-matt-clayton-Projects-agent-sop/memory/`.
 
 ### Session start checklist
 1. Read CLAUDE.md.
