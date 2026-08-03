@@ -1867,7 +1867,7 @@ Added a user-scope subsection to Section 1: what belongs at user versus project 
 ---
 
 ### P95 — Sentinel splice destroys the file when the end marker is malformed
-`[IN PROGRESS] [Bug]`
+`[SHIPPED - 2026-08-03] [Bug]`
 
 Found by the P92 reviewer against the new script, then confirmed present in `scripts/refresh-rollup.sh` — **shipped since 2026-04-19 and run on every `/update-sop` Step 8b**.
 

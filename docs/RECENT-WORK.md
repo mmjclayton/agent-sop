@@ -10,6 +10,7 @@ Moved out of `CLAUDE.md` on 2026-08-03 so it stops consuming context every sessi
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-08-03.*
 
 - 2026-08-03 `solo`: Batch 0.29 — tracker drift reconciliation, P74 shipped, P75 filed
+- 2026-08-03 `solo`: P95 — The P92 review returned BLOCK, and it was right
 - 2026-08-03 `solo`: P86-P94 — Template rot root cause, and the fixes it generated
 - 2026-08-03 `solo`: P83-P85 — Whole-codebase audit and pass-one remediation
 - 2026-08-03 `solo`: P75 replication gate, plus a four-agent re-review that overturned most of the digest

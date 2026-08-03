@@ -110,3 +110,4 @@ Last updated: 2026-08-03 (P86-P94 audit remediation + template rot root-cause)
 | P92 | Derived Current Priority Items | `scripts/refresh-priorities.sh` | 2026-08-03 |
 | P93 | Templates ship the split rollup layout | `setup.sh`, `docs/templates/` | 2026-08-03 |
 | P94 | User-scope guidance + `paths:` load gate | `docs/sop/claude-agent-sop.md` | 2026-08-03 |
+| P95 | Sentinel-splice data-loss guard + priorities fixtures | `scripts/refresh-rollup.sh`, `docs/benchmark/priorities-fixtures/` | 2026-08-03 |
