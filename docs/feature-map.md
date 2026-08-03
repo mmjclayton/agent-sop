@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-08-03 (P83-P85 whole-codebase audit + pass-one remediation)
+Last updated: 2026-08-03 (P86-P94 audit remediation + template rot root-cause)
 
 ---
 
@@ -104,3 +104,9 @@ Last updated: 2026-08-03 (P83-P85 whole-codebase audit + pass-one remediation)
 | P83 | Whole-codebase audit (six-agent review) | `docs/reviews/2026-08-03_solo_full-codebase-audit.md` | 2026-08-03 |
 | P84 | Pass-one remediation: silent failures + dead gates | `scripts/detect-trackers.sh`, `scripts/refresh-rollup.sh`, `scripts/validate-state-transitions.sh` | 2026-08-03 |
 | P85 | Compliance check-ID dedup + recent-work ownership | `docs/sop/compliance-checklist.md`, `docs/sop/claude-agent-sop.md` | 2026-08-03 |
+| P86 | setup.sh --force tiering (no per-project overwrite) | `setup.sh` | 2026-08-03 |
+| P88 | Definition of Done spec/template reconciliation | `docs/sop/claude-agent-sop.md` | 2026-08-03 |
+| P91 | Stable anchors replace line-range hints (9 sites) | `docs/sop/`, `docs/templates/` | 2026-08-03 |
+| P92 | Derived Current Priority Items | `scripts/refresh-priorities.sh` | 2026-08-03 |
+| P93 | Templates ship the split rollup layout | `setup.sh`, `docs/templates/` | 2026-08-03 |
+| P94 | User-scope guidance + `paths:` load gate | `docs/sop/claude-agent-sop.md` | 2026-08-03 |

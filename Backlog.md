@@ -1752,7 +1752,7 @@ Commit `55b3cea`.
 ---
 
 ### P86 — `setup.sh --force` destroys per-project state with no backup
-`[OPEN] [Bug] [has-open-questions]`
+`[SHIPPED - 2026-08-03] [Bug] [has-open-questions]`
 
 `setup.sh:17-27` documents two tiers — "per-project, customised" (`CLAUDE.md`, `Backlog.md`, `docs/agent-memory.md`) versus "pristine-replica SOP content" meant to be overwritten. `copy_if_missing` (`:116`) and `write_if_missing` (`:132`) apply one unconditional `cp` to both under `--force`, with no backup, no confirmation and no git-clean check. A user following the script's own "re-run with `--code`" tip loses a live `Backlog.md` — the SOP's declared single source of truth — to a blank template.
 
@@ -1786,7 +1786,7 @@ A 10-LOC edit to `docs/sop/claude-agent-sop.md` therefore skips the reviewer. Wo
 ---
 
 ### P88 — Definition of Done is gated on but never defined
-`[OPEN] [Bug] [has-open-questions]`
+`[SHIPPED - 2026-08-03] [Bug] [has-open-questions]`
 
 `restart-sop.md` references it 4 times, `update-sop.md` 3 times (Step 1 self-evaluation gates on it). `grep -c 'Definition of Done'` returns 0 in both `docs/sop/claude-agent-sop.md` and this repo's `CLAUDE.md`. The CLAUDE.md structure spec (`claude-agent-sop.md:168-212`) never lists the section and Section 11's required-section rules never mention it. Only the two templates carry it. `/update-sop` Step 1 is therefore unsatisfiable in agent-sop's own repo.
 
@@ -1825,7 +1825,7 @@ The same operation carries four different numbers: `README.md` 0-10, `claude-age
 ---
 
 ### P91 — Line-range hints rot; replace with stable anchors
-`[IN PROGRESS] [Bug]`
+`[SHIPPED - 2026-08-03] [Bug]`
 
 The SOP did not permit line-range hints, it **mandated** them (`claude-agent-sop.md:580`, "any file over 200 lines"), and the worked example was wrong in the repo it was drawn from: hst-tracker's `:root` block runs lines 8-151 with 103 properties, not "lines 1-80" with "80+ tokens", in a 10,978-line file. Numeric ranges rot on every edit with nothing to detect it, and a stale range is worse than no hint — it sends the agent to the wrong slice and the agent draws a confident conclusion from the wrong text.
 
@@ -1838,7 +1838,7 @@ Two unbacked quantities in the `:311` rationale were verified before editing and
 ---
 
 ### P92 — Current Priority Items is a hand-maintained second source of truth
-`[IN PROGRESS] [Refactor]`
+`[SHIPPED - 2026-08-03] [Refactor]`
 
 CLAUDE.md declares `Backlog.md` the single source of truth for status, then kept a hand-written copy of the open items beside that declaration. Rule 2 violation shipped in both templates and the SOP spec. Drifted in every project that used it — worst observed 117 days, and agent-sop's own copy drifted within a single session.
 
@@ -1847,7 +1847,7 @@ Rejected the pointer-to-Backlog fix: it removes the drift by removing the benefi
 ---
 
 ### P93 — Templates reintroduce the CLAUDE.md rollup on every new project
-`[IN PROGRESS] [Bug]`
+`[SHIPPED - 2026-08-03] [Bug]`
 
 Five projects have migrated the Recent Work rollup out of CLAUDE.md, but both templates still shipped the block inside it, so every new project reintroduced a section that grows by one line per session in the file read at every session start. `setup.sh` now creates `docs/RECENT-WORK.md` with the sentinels (per-project tier, protected by P86); templates carry a pointer. Safe because `refresh-rollup.sh` resolves its target at run time (P84).
 
@@ -1856,13 +1856,28 @@ C13 broke on a fresh install and was caught by testing, not review: it required 
 ---
 
 ### P94 — No user-scope guidance, while Rule 5 counts user-scope files
-`[IN PROGRESS] [Feature]`
+`[SHIPPED - 2026-08-03] [Feature]`
 
 The SOP covered project `CLAUDE.md` thoroughly and said nothing about `~/.claude/CLAUDE.md` or `~/.claude/rules/` — while Rule 5 names rules files as in-budget. Measured on this machine: `~/.claude/rules/common/` ~247 directives, `~/.claude/rules/web/` ~157, which is most of what pushes the combined context past the 200 ceiling (P89).
 
 Added a user-scope subsection to Section 1: what belongs at user versus project scope, and the `paths:` frontmatter load gate — a rules file without it loads into **every** session and subagent, and nothing in the project surfaces it because the files live outside the repo.
 
 **Related:** P89. This is the advisory half of the Rule 5 split; the enforceable half is still open.
+
+---
+
+### P95 — Sentinel splice destroys the file when the end marker is malformed
+`[IN PROGRESS] [Bug]`
+
+Found by the P92 reviewer against the new script, then confirmed present in `scripts/refresh-rollup.sh` — **shipped since 2026-04-19 and run on every `/update-sop` Step 8b**.
+
+The awk splice deletes every line between the sentinels by setting `skip=1` at the start marker and clearing it at the end marker. If the end marker is missing or mistyped (`:ends` for `:end`), `skip` is never cleared and the splice deletes the entire remainder of the file — silently, exit 0, with a "Rollup refreshed" success message. Reproduced in both scripts: seeded content after a typo'd marker, and it vanished.
+
+Both scripts now verify the end sentinel before touching the file and refuse with a named error. Regression fixtures at `docs/benchmark/priorities-fixtures/run-tests.sh`, proven to discriminate against the pre-fix scripts via `PRIORITIES=` / `ROLLUP=` overrides.
+
+**Also open (not fixed here):** Step 3c accepts a Batch Log line that *cites* a `docs/reviews/` path without checking that the path resolves. Batch 0.30 recorded this in prose ("a false citation the validator would have accepted") and it was never fixed, so any plausible filename clears the gate. One `test -f` in `scripts/validate-state-transitions.sh` plus a fixture. Filed here rather than silently carried.
+
+**Source:** P92 reviewer, `docs/reviews/2026-08-03_solo_P92.md` (CRITICAL, CONFIRMED).
 
 ---
 

@@ -76,6 +76,17 @@ for other in docs/RECENT-WORK.md CLAUDE.md; do
     fi
 done
 
+# The awk splice below drops every line between the sentinels. If the end
+# sentinel is missing or mistyped, `skip` is never cleared and the splice deletes
+# the whole remainder of the file — silently, exit 0, "refreshed" message. Found
+# by the P92 review against the sibling script and confirmed here; this bug has
+# been live since 2026-04-19 and runs on every /update-sop (P95).
+if ! grep -q '<!-- recent-work-rollup:end -->' "$ROLLUP_FILE"; then
+    echo "Error: $ROLLUP_FILE has the start sentinel but no <!-- recent-work-rollup:end -->." >&2
+    echo "       Refusing to splice — that would delete everything after the start marker." >&2
+    exit 1
+fi
+
 TMP=$(mktemp)
 trap 'rm -f "$TMP"' EXIT
 

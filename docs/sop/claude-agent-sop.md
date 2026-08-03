@@ -146,6 +146,48 @@ Claude Code has two memory systems. They serve different purposes and must not o
 
 ---
 
+### User-scope files (`~/.claude/`, apply to every project)
+
+Everything above is project scope. Three files at user scope apply to every
+project on the machine, and the SOP said nothing about them until P94 — while
+Rule 5 counts one of them against its instruction budget.
+
+| File | Purpose | Counts toward Rule 5? |
+|------|---------|----------------------|
+| `~/.claude/CLAUDE.md` | Durable personal working preferences: how you want agents to communicate, verify, and finish work. Instructions *you* write. | Yes |
+| `~/.claude/rules/**.md` | Standards and conventions, usually split by language or domain. | Yes — and this is the one that surprises people |
+| `~/.claude/projects/[hash]/memory/` | Auto-memory: notes the agent writes itself. | No |
+
+**What belongs where.** User scope holds what is true of *you* across every
+project — communication preferences, review expectations, how to handle
+destructive actions. Project scope holds what is true of *the codebase* —
+architecture, gotchas, commands, stack. A rule that would be wrong in another
+repo belongs in that repo's `CLAUDE.md`, not here. The common failure is putting
+project-specific conventions at user scope, where they silently misapply
+everywhere else.
+
+**The `paths:` load gate.** A rules file with no `paths:` frontmatter loads into
+**every session and every subagent**, regardless of what the task touches. Scope
+each file to the work it applies to:
+
+```markdown
+---
+paths:
+  - "**/*.{tsx,jsx,astro,vue,svelte}"
+  - "**/*.{css,scss,sass,less}"
+---
+```
+
+This matters directly for Rule 5. An unscoped rules directory is the largest and
+least visible contributor to the instruction budget, because nothing in the
+project surfaces it — the files live outside the repo and load silently. Audit
+`~/.claude/rules/` with the same counting method Rule 5 defines, and add
+`paths:` frontmatter to anything that is not genuinely universal. Agent-facing
+guidance that only matters for one stack should not load when the agent is
+editing a shell script.
+
+---
+
 ## 2. File Ownership Rules
 
 | Information type | Lives in | Never in |
