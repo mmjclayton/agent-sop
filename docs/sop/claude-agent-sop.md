@@ -155,7 +155,8 @@ Claude Code has two memory systems. They serve different purposes and must not o
 | Shipped feature inventory | `docs/feature-map.md` | CLAUDE.md |
 | Stack, conventions, hard rules | `CLAUDE.md` | agent-memory.md |
 | Cross-session decisions, gotchas, invariants | `docs/agent-memory.md` | CLAUDE.md |
-| Per-session handoff | `project_resume.md` (local) | Any in-repo file |
+| Per-session summary (2-4 lines) | `docs/recent-work/YYYY-MM-DD_<agent-id>_<slug>.md` | The rollup section — it is derived from this directory, never hand-edited. Extended narrative belongs in the build-plan Batch Log, not here. |
+| Per-session handoff | `project_resume_<agent-id>.md` (local) | Any in-repo file |
 | Brand and copy rules | `.claude/brand-voice.md` | CLAUDE.md, agent-memory.md |
 | Long-term feedback and preferences | `~/.claude/memory/` files | In-repo files |
 

@@ -175,15 +175,15 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| M1 | Last updated header present | `Last updated: YYYY-MM-DD` near top of file |
-| M2 | Shipped features section exists | Header for shipped/completed features with a table |
-| M3 | Roadmap section exists with priority tiers | At least one priority tier (High/Medium/Low) |
+| FM1 | Last updated header present | `Last updated: YYYY-MM-DD` near top of file |
+| FM2 | Shipped features section exists | Header for shipped/completed features with a table |
+| FM3 | Roadmap section exists with priority tiers | At least one priority tier (High/Medium/Low) |
 
 ### Recommended
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| M4 | Backlog shipped items reflected here | All `[SHIPPED]` P-numbers in Backlog.md appear in the shipped features table |
+| FM4 | Backlog shipped items reflected here | All `[SHIPPED]` P-numbers in Backlog.md appear in the shipped features table |
 
 ---
 
@@ -212,9 +212,9 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| R1 | File named exactly project_resume.md | No project-specific prefix (e.g. not `project_myapp_resume.md`) |
-| R2 | Contains required sections | What was done, What is next, Blockers (or equivalent headings) |
-| R3 | Uses snapshot format | Single session block, not a growing log with multiple dated entries. Should have `Last updated:` near the top. |
+| RP1 | Resume file follows the per-agent naming convention | `project_resume_<agent-id>.md`, or the legacy unsuffixed `project_resume.md` on single-agent projects. No project-specific prefix (e.g. not `project_myapp_resume.md`). Matches F6 and M4 — a multi-agent project passing those must not fail here. |
+| RP2 | Contains required sections | What was done, What is next, Blockers (or equivalent headings) |
+| RP3 | Uses snapshot format | Single session block, not a growing log with multiple dated entries. Should have `Last updated:` near the top. |
 
 ---
 
