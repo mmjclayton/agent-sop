@@ -1824,6 +1824,48 @@ The same operation carries four different numbers: `README.md` 0-10, `claude-age
 
 ---
 
+### P91 — Line-range hints rot; replace with stable anchors
+`[IN PROGRESS] [Bug]`
+
+The SOP did not permit line-range hints, it **mandated** them (`claude-agent-sop.md:580`, "any file over 200 lines"), and the worked example was wrong in the repo it was drawn from: hst-tracker's `:root` block runs lines 8-151 with 103 properties, not "lines 1-80" with "80+ tokens", in a 10,978-line file. Numeric ranges rot on every edit with nothing to detect it, and a stale range is worse than no hint — it sends the agent to the wrong slice and the agent draws a confident conclusion from the wrong text.
+
+**Nine sites, not the six first identified.** Found by sweeping rather than trusting the list. The three extra: `claude-md-template-code.md:39` (a dispatch row shipping `(lines N-N)`); the `:311` token-overhead passage that motivated the rule; and `compliance-checklist.md:112` — **C24 scored projects on having the rot pattern**, requiring `(lines N-N)` notation. Inverted, with a pre-P91 exemption.
+
+Two unbacked quantities in the `:311` rationale were verified before editing and are now caveated: a "1.7x" read-overhead multiplier with no derivation anywhere in the repo, and "reduce overhead significantly" with zero supporting measurement (`grep line-range docs/benchmark/` returns nothing). The directional point survives and is kept.
+
+**Source:** handoff review 2026-08-03, independently verified. Related: P92-P94.
+
+---
+
+### P92 — Current Priority Items is a hand-maintained second source of truth
+`[IN PROGRESS] [Refactor]`
+
+CLAUDE.md declares `Backlog.md` the single source of truth for status, then kept a hand-written copy of the open items beside that declaration. Rule 2 violation shipped in both templates and the SOP spec. Drifted in every project that used it — worst observed 117 days, and agent-sop's own copy drifted within a single session.
+
+Rejected the pointer-to-Backlog fix: it removes the drift by removing the benefit. Applied the pattern this repo already proves with the Recent Work rollup — sentinel markers plus a regenerating script, which is why the rollup does not go stale. `scripts/refresh-priorities.sh` derives `[OPEN]`/`[IN PROGRESS]`/`[BLOCKED]` from Backlog.md; `/update-sop` Step 3 calls it. Opt-in, so pre-P92 projects are untouched until they migrate.
+
+---
+
+### P93 — Templates reintroduce the CLAUDE.md rollup on every new project
+`[IN PROGRESS] [Bug]`
+
+Five projects have migrated the Recent Work rollup out of CLAUDE.md, but both templates still shipped the block inside it, so every new project reintroduced a section that grows by one line per session in the file read at every session start. `setup.sh` now creates `docs/RECENT-WORK.md` with the sentinels (per-project tier, protected by P86); templates carry a pointer. Safe because `refresh-rollup.sh` resolves its target at run time (P84).
+
+C13 broke on a fresh install and was caught by testing, not review: it required a `## Recent Work (rollup)` header alongside the sentinels, which a dedicated file does not have. The header is now required only when the block lives inside CLAUDE.md.
+
+---
+
+### P94 — No user-scope guidance, while Rule 5 counts user-scope files
+`[IN PROGRESS] [Feature]`
+
+The SOP covered project `CLAUDE.md` thoroughly and said nothing about `~/.claude/CLAUDE.md` or `~/.claude/rules/` — while Rule 5 names rules files as in-budget. Measured on this machine: `~/.claude/rules/common/` ~247 directives, `~/.claude/rules/web/` ~157, which is most of what pushes the combined context past the 200 ceiling (P89).
+
+Added a user-scope subsection to Section 1: what belongs at user versus project scope, and the `paths:` frontmatter load gate — a rules file without it loads into **every** session and subagent, and nothing in the project surfaces it because the files live outside the repo.
+
+**Related:** P89. This is the advisory half of the Rule 5 split; the enforceable half is still open.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
