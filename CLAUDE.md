@@ -141,6 +141,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-08-03.*
 
+- 2026-08-03 `solo`: Batch 0.29 — tracker drift reconciliation, P74 shipped, P75 filed
 - 2026-07-27 `solo`: Benchmark figure caveat + `block-no-verify` hook replacement
 - 2026-07-26 `solo`: P67-P69 — digest review, three-paper review, and a reviewer turn that caught the session's own gate
 - 2026-07-26 `solo`: P66, P70-P73 — validator correctness and gate coherence
