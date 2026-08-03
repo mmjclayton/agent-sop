@@ -558,13 +558,22 @@ Use `SESSION_RANGE` from Step 0a so the check partitions per-agent in parallel s
 ```bash
 if [ -n "$SESSION_RANGE" ]; then
   IDS=$(git log "$SESSION_RANGE" --format='%s' | grep -oE '\b[A-Z]+-?[0-9]+\b' | sort -u)
+  # Read the tracker list line-by-line rather than iterating unquoted command
+  # substitution: `for t in $(...)` word-splits on IFS, so a tracker path
+  # containing a space is torn into fragments that match no file, grep fails on
+  # each, and the block silently never fires. Same fail-open class this gate
+  # exists to catch.
+  TRACKERS=$(bash scripts/detect-trackers.sh)  # same detection as Step 3b
   for id in $IDS; do
-    for tracker in $(bash scripts/detect-trackers.sh); do  # same detection as Step 3b
+    while IFS= read -r tracker; do
+      [ -n "$tracker" ] || continue
       if grep -qE "^##+ .*${id}.*\[OPEN\]" "$tracker"; then
         echo "BLOCK: ${id} still [OPEN] in ${tracker}"
         exit 1
       fi
-    done
+    done <<EOF
+$TRACKERS
+EOF
   done
 fi
 ```

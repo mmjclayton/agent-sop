@@ -1,6 +1,6 @@
 # Agent SOP — Feature Map & Roadmap
 
-Last updated: 2026-08-03 (P75 replication gate + correctness sweep)
+Last updated: 2026-08-03 (P83-P85 whole-codebase audit + pass-one remediation)
 
 ---
 
@@ -101,3 +101,6 @@ Last updated: 2026-08-03 (P75 replication gate + correctness sweep)
 | P8 | Web app variant | `docs/sop/variants/web-app.md` |
 | P9 | Marketing variant | `docs/sop/variants/marketing.md` |
 | P10 | Data/analytics variant | `docs/sop/variants/data-analytics.md` |
+| P83 | Whole-codebase audit (six-agent review) | `docs/reviews/2026-08-03_solo_full-codebase-audit.md` | 2026-08-03 |
+| P84 | Pass-one remediation: silent failures + dead gates | `scripts/detect-trackers.sh`, `scripts/refresh-rollup.sh`, `scripts/validate-state-transitions.sh` | 2026-08-03 |
+| P85 | Compliance check-ID dedup + recent-work ownership | `docs/sop/compliance-checklist.md`, `docs/sop/claude-agent-sop.md` | 2026-08-03 |

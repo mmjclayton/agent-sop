@@ -449,7 +449,7 @@ Skip agent-memory.md, build plans, and MEMORY.md/project_resume.md. The lightwei
 | Stack or convention changes | `CLAUDE.md` |
 | Copy or tone rule established | `.claude/brand-voice.md` |
 | Key Documents table updated in either CLAUDE.md or agent-memory.md | Update the other file to match. `CLAUDE.md` is authoritative if they conflict. |
-| Session ends | `project_resume.md` (overwrite with snapshot), `docs/agent-memory.md` (In-Flight) |
+| Session ends | `project_resume_<agent-id>.md` (overwrite with snapshot), `docs/agent-memory.md` (In-Flight), new `docs/recent-work/YYYY-MM-DD_<agent-id>_<slug>.md` entry, then refresh the derived rollup via `scripts/refresh-rollup.sh` |
 
 ---
 

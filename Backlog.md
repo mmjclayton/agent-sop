@@ -1701,7 +1701,7 @@ The immediate cause is the `-v p="### P${p}"` assignment receiving a multi-line 
 ---
 
 ### P83 — Whole-codebase audit (six-agent parallel review)
-`[IN PROGRESS] [Iteration]`
+`[SHIPPED - 2026-08-03] [Iteration]`
 
 Six parallel review agents across four axes — token/context budget, redundancy, architecture, script correctness — plus instruction-budget compliance and staleness. Every CRITICAL and HIGH finding was independently verified by the coordinating agent before inclusion: reproduced where a failing case could be constructed, otherwise confirmed by direct file inspection.
 
@@ -1716,7 +1716,7 @@ Measured: instruction count 318 / 361 / 379 for session-start / session-end / su
 ---
 
 ### P84 — Pass-one remediation: five silent failures and two dead gates
-`[IN PROGRESS] [Bug]`
+`[SHIPPED - 2026-08-03] [Bug]`
 
 Every fix reproduced against a failing case before the change was written.
 
@@ -1739,7 +1739,7 @@ Stale claims corrected: three uncaveated "33%" citations in files that ship to c
 ---
 
 ### P85 — Compliance check-ID collisions and docs/recent-work ownership gap
-`[IN PROGRESS] [Bug]`
+`[SHIPPED - 2026-08-03] [Bug]`
 
 `docs/sop/compliance-checklist.md` self-describes as the canonical list the sop-checker agent reports against, but carried 94 rows under 89 unique IDs — so `FAIL: M3` was ambiguous. Renamed the two sets with zero external citations and kept the two the README markets by name: Section 5 feature-map `M1-M4` → `FM1-FM4`, Section 7 resume `R1-R3` → `RP1-RP3`. Section 11 keeps `M1-M6` (12 citation sites); Section 9 keeps `R1`. Row count unchanged at 94, so README's advertised totals stay correct.
 

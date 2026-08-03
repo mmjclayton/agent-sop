@@ -63,6 +63,19 @@ if ! grep -q "$SENTINEL_START" "$ROLLUP_FILE"; then
     exit 1
 fi
 
+# Mid-migration guard. Moving the rollup out of CLAUDE.md requires a human to
+# delete the old sentinel block by hand, so both files carrying it is reachable
+# — and silent. The unrefreshed copy then reads as a live rollup while going
+# stale, and compliance checks C13/M5 accept either location, so nothing else
+# flags it. Warn rather than block: refreshing the resolved target is still the
+# correct action.
+for other in docs/RECENT-WORK.md CLAUDE.md; do
+    if [ "$other" != "$ROLLUP_FILE" ] && [ -f "$other" ] && grep -q "$SENTINEL_START" "$other"; then
+        echo "Warning: $other also carries the rollup sentinel but was not refreshed." >&2
+        echo "         Delete its sentinel block, or pass it explicitly as the first argument." >&2
+    fi
+done
+
 TMP=$(mktemp)
 trap 'rm -f "$TMP"' EXIT
 
