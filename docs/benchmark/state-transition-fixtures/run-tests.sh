@@ -97,7 +97,7 @@ EOF
   stdout_ok=1
   missing_line=""
   if [ -f "${base}.expect-stdout" ]; then
-    while IFS= read -r expect_line; do
+    while IFS= read -r expect_line || [ -n "$expect_line" ]; do
       [ -z "$expect_line" ] && continue
       case "$output" in
         *"$expect_line"*) ;;
@@ -191,7 +191,7 @@ for repl in "$SCRIPT_DIR"/*.repl; do
   stdout_ok=1
   missing_line=""
   if [ -f "$repl/expect-stdout" ]; then
-    while IFS= read -r expect_line; do
+    while IFS= read -r expect_line || [ -n "$expect_line" ]; do
       [ -z "$expect_line" ] && continue
       case "$output" in
         *"$expect_line"*) ;;

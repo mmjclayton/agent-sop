@@ -6,3 +6,6 @@
 # archive preserves the audit trail per CLAUDE.md Rule 2.
 docs/agent-memory/learnings/*.md
 !docs/agent-memory/learnings/README.md
+
+# Python bytecode from scripts/
+__pycache__/

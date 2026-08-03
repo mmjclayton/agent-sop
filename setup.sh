@@ -26,7 +26,8 @@
 #   docs/guides/*.md                   Optional patterns, multi-agent routing, managed agents, hill-climbing
 #
 # What it installs user-scope (one install, all projects benefit):
-#   ~/.claude/commands/*.md            Slash commands (/restart-sop, /update-sop, /update-agent-sop)
+#   ~/.claude/commands/*.md            Slash commands (/restart-sop, /update-sop, /update-agent-sop,
+#                                      /migrate-to-multi-agent, /finish)
 #   ~/.claude/agents/*.md              Reference agents (sop-checker, code-reviewer, etc.)
 #   ~/.claude/agent-sop.config.json    Update tracking (source path, baseline SHAs, reminder cadence)
 #

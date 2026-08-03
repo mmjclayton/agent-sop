@@ -587,7 +587,7 @@ See `docs/guides/sop-common-mistakes.md` for the full table of agent-behaviour m
 
 ## 15. Benchmark-Proven Practices
 
-*The following practices are backed by A/B benchmark data (SOP vs no-SOP agents on identical tasks). They produced a 33% quality improvement on vague, context-dependent tasks. See `docs/benchmark/results/` for full methodology and data.*
+*The following practices are backed by A/B benchmark data (SOP vs no-SOP agents on identical tasks). Round 2 measured a +33% quality improvement on vague, context-dependent tasks; rounds R1-R5 span +8% to +33% at k=1 per arm, so treat the range as directional rather than a measured effect size. The +33% figure specifically was measured against the pre-P32 SOP with a less capable model baseline and should not be cited unconditionally for the current post-trim SOP — see `docs/benchmark/results/r5-post-trim/summary.md` and the Limitations section of `docs/benchmark/README.md`.*
 
 ### 15.1 Common Mistakes Section (Required for Code Projects)
 
@@ -672,7 +672,7 @@ The intent-based version tells the agent what to do when they arrive. The file-p
 
 ### 15.3 Vague Prompt Resilience
 
-The SOP should be designed to help agents succeed when prompts are vague and product-level ("fix the tonnage bug", "add skip exercise"), not just when prompts are precise ("modify line 42 of file X"). In benchmarks, precise prompts masked context deficiencies — both SOP and baseline agents scored similarly. Vague prompts exposed a 33% quality gap.
+The SOP should be designed to help agents succeed when prompts are vague and product-level ("fix the tonnage bug", "add skip exercise"), not just when prompts are precise ("modify line 42 of file X"). In benchmarks, precise prompts masked context deficiencies — both SOP and baseline agents scored similarly. Vague prompts exposed a quality gap of +33% in Round 2 (k=1, pre-P32 SOP, weaker model baseline — directional, not a measured effect size; see Section 15's opening note).
 
 **Implication for CLAUDE.md authors:** write context that answers the questions a developer would ask when handed a vague task:
 - "Where does this logic live?" (intent-rich dispatch)

@@ -13,7 +13,10 @@ set -u
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-VALIDATOR="$REPO_ROOT/scripts/validate-state-transitions.sh"
+# Overridable so the suite can be pointed at a deliberately broken validator to
+# prove the fixtures actually discriminate — a suite that passes against a stub
+# is not testing anything. Matches state-transition-fixtures/run-tests.sh:19.
+VALIDATOR="${VALIDATOR:-$REPO_ROOT/scripts/validate-state-transitions.sh}"
 
 if [ ! -x "$VALIDATOR" ]; then
   echo "Validator not executable: $VALIDATOR" >&2
@@ -61,11 +64,41 @@ for resume in "$SCRIPT_DIR"/*.resume.md; do
     --drift-threshold-files 3 2>&1)
   actual=$?
 
-  if [ "$actual" = "$expected" ]; then
+  # Optional stdout assertion. When `<base>.expect-stdout` exists, every line in
+  # it must appear somewhere in the validator's output.
+  #
+  # Exit-code-only assertions cannot distinguish a reported failure from a
+  # silent one. P73 was exactly that: a `grep`/`pipefail`/`errexit` interaction
+  # killed the script before its BLOCK message printed, so operators saw a bare
+  # non-zero exit with no explanation — and every fixture still passed, because
+  # the exit code was non-zero either way. The `--check-drift` path this harness
+  # covers has the same shape and had no such assertion until now. When a
+  # check's product is a diagnostic message, assert on the message.
+  #
+  # `|| [ -n "$expect_line" ]` keeps the final line when the expectation file
+  # has no trailing newline — without it, `read` returns non-zero on the last
+  # line and silently drops the very assertion the fixture was written for.
+  stdout_ok=1
+  missing_line=""
+  if [ -f "${base}.expect-stdout" ]; then
+    while IFS= read -r expect_line || [ -n "$expect_line" ]; do
+      [ -z "$expect_line" ] && continue
+      case "$output" in
+        *"$expect_line"*) ;;
+        *) stdout_ok=0; missing_line="$expect_line"; break ;;
+      esac
+    done < "${base}.expect-stdout"
+  fi
+
+  if [ "$actual" = "$expected" ] && [ "$stdout_ok" = "1" ]; then
     echo "PASS: $name (exit $actual)"
     pass=$((pass + 1))
   else
-    echo "FAIL: $name — expected exit $expected, got $actual"
+    if [ "$actual" != "$expected" ]; then
+      echo "FAIL: $name — expected exit $expected, got $actual"
+    else
+      echo "FAIL: $name — exit $actual correct, but expected stdout line missing: $missing_line"
+    fi
     echo "  output: $output"
     fail=$((fail + 1))
     failed="$failed $name"

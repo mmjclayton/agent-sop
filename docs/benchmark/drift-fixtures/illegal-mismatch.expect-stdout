@@ -1,0 +1,4 @@
+BLOCK: session drift detected.
+Declared in-flight (project_resume): P100
+Actual commit P-numbers: P101 P102
+## Scope Change

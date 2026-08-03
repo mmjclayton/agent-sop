@@ -266,15 +266,11 @@ Many projects maintain tracker files separate from `Backlog.md` — audit findin
 **Detection (auto, no config):** scan every `.md` path listed in CLAUDE.md's Key Documents & Dispatch table. A file is a secondary tracker if any of its headings (`^##` or `^###`) carry a status tag — one of `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[DEFERRED]`, `[SHIPPED`, `[VERIFIED`, `[WON'T]`. Skip `Backlog.md` itself (covered by Step 3).
 
 ```bash
-# List candidates pulled from the Key Documents table
-grep -oE '\`[^\`]+\.md\`' CLAUDE.md | tr -d '\`' | while read f; do
-  [ "$f" = "Backlog.md" ] && continue
-  [ -f "$f" ] || continue
-  if grep -qE '^##+ .*\[(OPEN|IN PROGRESS|BLOCKED|DEFERRED|SHIPPED|VERIFIED|WON.T)' "$f"; then
-    echo "tracker: $f"
-  fi
-done
+# One definition, shared with Step 11's hard block. Emits one bare path per line.
+bash scripts/detect-trackers.sh
 ```
+
+Empty output means the project has no secondary trackers — a normal state, not an error. If the script is missing (pre-migration project), invoke it via the agent-sop upstream: `bash ~/Projects/agent-sop/scripts/detect-trackers.sh`.
 
 **For each detected tracker:**
 
@@ -504,7 +500,7 @@ The script lives at `scripts/refresh-rollup.sh` (installed by `setup.sh`; presen
 bash ~/Projects/agent-sop/scripts/refresh-rollup.sh
 ```
 
-Verify with: `grep -A 20 'recent-work-rollup:start' CLAUDE.md`
+The script resolves its own target — `docs/RECENT-WORK.md` when that file carries the sentinels, otherwise `CLAUDE.md` — and prints the path it wrote. Verify against that path: `grep -A 20 'recent-work-rollup:start' <printed-path>`
 
 **Why a script, not inline:** the prior inline snippet used `local var=$(cmd)` inside a compound output group, which leaks assignment lines to stdout under zsh (macOS default). A script with an explicit `#!/usr/bin/env bash` shebang forces the right interpreter regardless of the caller's shell. See `docs/agent-memory/decisions/2026-04-19_solo_rollup-refresh-snippet-zsh-bug.md`.
 
@@ -563,7 +559,7 @@ Use `SESSION_RANGE` from Step 0a so the check partitions per-agent in parallel s
 if [ -n "$SESSION_RANGE" ]; then
   IDS=$(git log "$SESSION_RANGE" --format='%s' | grep -oE '\b[A-Z]+-?[0-9]+\b' | sort -u)
   for id in $IDS; do
-    for tracker in $(detect_trackers); do  # same detection as Step 3b
+    for tracker in $(bash scripts/detect-trackers.sh); do  # same detection as Step 3b
       if grep -qE "^##+ .*${id}.*\[OPEN\]" "$tracker"; then
         echo "BLOCK: ${id} still [OPEN] in ${tracker}"
         exit 1

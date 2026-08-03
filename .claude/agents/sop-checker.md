@@ -136,6 +136,7 @@ Either condition is a PASS. Both absent is FAIL with fix: "Create `docs/sop/secu
 
 **S3 — No `--dangerously-skip-permissions` usage (Important):**
 Grep `.claude/settings.json`, `CLAUDE.md`, and any shell scripts (`*.sh`, CI configs) for the literal flag `--dangerously-skip-permissions`. Any occurrence outside a prohibition sentence (e.g. security guidance saying "never use") is a FAIL with fix: "Remove the flag; use explicit permission rules (`allowedTools`, `permissions.deny`) in `.claude/settings.json` instead. Hardened in Claude Code v2.1.97."
+**S4 — Context-file integrity flag present (Important):**
 Grep `.claude/commands/restart-sop.md` for the pattern `memory-poisoning`. The Step 4 guard must check `git status --porcelain` against CLAUDE.md, `Backlog.md`, and `docs/agent-memory*` before the agent acts on their contents, and `docs/sop/security.md` must name the project's own persistent context files as injection surfaces. Projects predating P61 (before 2026-07-06) are exempt — note the exemption rather than failing. FAIL fix: "Sync `/update-agent-sop` to pull the P61 memory-poisoning guard into restart-sop.md and security.md."
 
 **S5 — CI workflows invoking Claude Code are hardened (Critical, conditional):**
@@ -204,8 +205,8 @@ Grep `.claude/commands/update-sop.md` and `.claude/commands/restart-sop.md` for 
 **M4 — Per-agent resume file exists (Important):**
 In the target's local memory dir (`~/.claude/projects/[hash]/memory/`), list `project_resume_*.md`. At least one must exist. Legacy `project_resume.md` also acceptable for solo-agent projects.
 
-**M5 — CLAUDE.md rollup refreshed within 7 days (Recommended):**
-Read the rollup section between `<!-- recent-work-rollup:start -->` and `<!-- recent-work-rollup:end -->` sentinels. Extract `Last refreshed: YYYY-MM-DD` and compare against today. If over 7 days old, WARN.
+**M5 — Recent Work rollup refreshed within 7 days (Recommended):**
+Locate the rollup file: `docs/RECENT-WORK.md` if it carries the sentinels, otherwise `CLAUDE.md`. Read the rollup section between `<!-- recent-work-rollup:start -->` and `<!-- recent-work-rollup:end -->`. Extract `Last refreshed: YYYY-MM-DD` and compare against today. If over 7 days old, WARN. Do not FAIL on the rollup being absent from `CLAUDE.md` — moving it out is a supported layout.
 
 **M6 — Background-subagent handling documented (Recommended):**
 Grep `.claude/commands/update-sop.md` for the pattern `background`. The pre-flight check (collect or terminate outstanding subagents before Step 1) must be present. If the project has its own multi-agent doc, it should note background-by-default behaviour (Claude Code 2.1.198+). Missing: WARN with fix: "Sync `/update-agent-sop` to pull the P62 pre-flight check."

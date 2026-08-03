@@ -88,7 +88,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | C10 | Stack section exists and populated | `## Stack` header with content (not just placeholders) |
 | C11 | Key Commands section exists and populated | `## Key Commands` header with at least one command |
 | C12 | Rules for Automated Builds section exists | `## Rules for Automated Builds` header with numbered list |
-| C13 | Recent Work (rollup) section exists with sentinel markers | `## Recent Work (rollup)` header AND `<!-- recent-work-rollup:start -->` / `<!-- recent-work-rollup:end -->` comment sentinels present. Legacy `## Recent Work` acceptable during migration window before `/update-sop --migrate-to-multi-agent` has run. |
+| C13 | Recent Work (rollup) section exists with sentinel markers | `## Recent Work (rollup)` header AND `<!-- recent-work-rollup:start -->` / `<!-- recent-work-rollup:end -->` comment sentinels present — in `CLAUDE.md`, or in `docs/RECENT-WORK.md` when the rollup has been moved out to stop it consuming per-session context. Check `docs/RECENT-WORK.md` first, then `CLAUDE.md`; either location passes. Legacy `## Recent Work` acceptable during migration window before `/update-sop --migrate-to-multi-agent` has run. |
 | C14 | Deprioritised section exists | `## Deprioritised` header |
 | C15 | Non-negotiable rules referenced | Text references "never delete without a trace" or equivalent, and "single source of truth" or "one source of truth" |
 | C16 | Conflict precedence defined or referenced | Text mentions precedence order or references the SOP conflict resolution |
@@ -273,7 +273,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 ## 10. Benchmark-Proven Practices
 
-*These checks verify the patterns from SOP Section 15 that produced a 33% quality improvement in A/B benchmarks.*
+*These checks verify the patterns from SOP Section 15. A/B benchmarks measured those patterns at +8% to +33% across rounds R1-R5 at k=1 per arm — directional, not a measured effect size. See SOP Section 15's opening note for the citation caveat on the +33% figure specifically.*
 
 ### Important (code projects only)
 
@@ -313,7 +313,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| M5 | CLAUDE.md rollup refreshed within 7 days | `CLAUDE.md` contains `<!-- recent-work-rollup:start -->` / `<!-- recent-work-rollup:end -->` sentinels. The `Last refreshed: YYYY-MM-DD` line inside is within the last 7 days (advisory; rollup is auto-refreshed by `/update-sop`, so staleness indicates `/update-sop` was skipped). |
+| M5 | Recent Work rollup refreshed within 7 days | The rollup file — `docs/RECENT-WORK.md` if it carries the sentinels, else `CLAUDE.md` — contains `<!-- recent-work-rollup:start -->` / `<!-- recent-work-rollup:end -->`. The `Last refreshed: YYYY-MM-DD` line inside is within the last 7 days (advisory; rollup is auto-refreshed by `/update-sop`, so staleness indicates `/update-sop` was skipped). |
 | M6 | Background-subagent handling documented | `.claude/commands/update-sop.md` contains the pre-flight check (collect or terminate outstanding subagents before Step 1), and any project multi-agent doc notes background-by-default behaviour (Claude Code 2.1.198+). Grep-verifiable by pattern `background` in `.claude/commands/update-sop.md`. |
 
 ---

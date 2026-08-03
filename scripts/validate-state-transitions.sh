@@ -612,8 +612,17 @@ legal_paths_from() {
 # Override precedence: --before-file > --before <ref> > HEAD (default).
 resolve_before() {
   if [ -n "$BEFORE_FILE" ]; then
-    [ -f "$BEFORE_FILE" ] && cat "$BEFORE_FILE"
-    return
+    # Explicit `return 0`, not a bare `return`. A bare return inherits the
+    # exit status of the preceding `&&` list, so a missing --before-file made
+    # this function return 1 — and because it is called as a plain statement
+    # (`resolve_before > "$TMP_BEFORE"`), errexit killed the script before the
+    # "no before-state ... Skipping" message below could print. The symptom was
+    # exit 1 with zero bytes on both stdout and stderr: the same silent-failure
+    # class as the P73 pipefail bug, in a different shape.
+    if [ -f "$BEFORE_FILE" ]; then
+      cat "$BEFORE_FILE"
+    fi
+    return 0
   fi
   local ref="${BEFORE_REF:-HEAD}"
   # Verify ref exists — else skip (fresh repo with no commits)

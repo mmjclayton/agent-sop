@@ -135,9 +135,12 @@ cmd_run() {
     exit 1
   fi
 
-  # Read task prompt
-  local task_file="$TASKS_DIR/task-0${task_num}-*.md"
-  task_file=$(ls $task_file 2>/dev/null | head -1)
+  # Read task prompt. `|| true` guards the no-match case: under `set -o
+  # pipefail` a failing `ls` propagates through `head` and errexit kills the
+  # script before the err() below can name the missing task. Quote the glob
+  # expansion so a path containing spaces does not word-split.
+  local task_file
+  task_file=$( { ls "$TASKS_DIR/task-0${task_num}-"*.md 2>/dev/null || true; } | head -1)
   if [ -z "$task_file" ]; then
     err "Task file not found for task $task_num"
     exit 1

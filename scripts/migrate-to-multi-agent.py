@@ -266,9 +266,37 @@ def extract_archived(content: str, fallback_date: str) -> list[dict]:
     )
 
 
+def recent_work_path(entry: dict, out_dir: Path) -> Path:
+    """Target path for a Recent Work entry. Single source of truth for the name."""
+    return out_dir / f"{entry['date']}_solo_{make_slug(entry['title'])}.md"
+
+
+def bullet_path(entry: dict, out_dir: Path, archive_dir: Path) -> Path:
+    """Target path for a decision/gotcha/archived entry."""
+    target = archive_dir if entry.get("superseded_date") else out_dir
+    return target / f"{entry['date']}_solo_{make_slug(entry['title'])}.md"
+
+
+def find_collisions(planned: list[tuple[Path, str]]) -> dict[Path, list[str]]:
+    """Group planned writes by target path and return only the contended ones.
+
+    Filenames are `{date}_solo_{slug(title)}.md`, so two entries sharing a date
+    and a title-derived slug resolve to the same path. `Path.write_text`
+    overwrites unconditionally, so without this check the second write destroys
+    the first with no warning and a zero exit — while the run still reports
+    "Extracted N entries", counting entries processed rather than files
+    persisted. That is a silent deletion of cross-session memory, which the
+    SOP's Rule 1 forbids outright. The docstring's idempotency guarantee covers
+    re-runs of identical content; it never covered this within-run case.
+    """
+    by_path: dict[Path, list[str]] = {}
+    for path, title in planned:
+        by_path.setdefault(path, []).append(title)
+    return {path: titles for path, titles in by_path.items() if len(titles) > 1}
+
+
 def write_recent_work(entry: dict, out_dir: Path, dry_run: bool) -> Path:
-    slug = make_slug(entry["title"])
-    path = out_dir / f"{entry['date']}_solo_{slug}.md"
+    path = recent_work_path(entry, out_dir)
     body = "\n".join(entry["body_lines"]).strip()
     content = (
         f"# {entry['title']}\n\n"
@@ -291,9 +319,8 @@ def write_bullet(
     archive_dir: Path,
     dry_run: bool,
 ) -> Path:
-    slug = make_slug(entry["title"])
-    target = archive_dir if entry.get("superseded_date") else out_dir
-    path = target / f"{entry['date']}_solo_{slug}.md"
+    path = bullet_path(entry, out_dir, archive_dir)
+    target = path.parent
     body = "\n".join(entry["body_lines"]).strip()
     content = (
         f"# {entry['title']}\n\n"
@@ -371,6 +398,41 @@ def main() -> int:
     got_dir = Path("docs/agent-memory/gotchas")
     got_arch = got_dir / "archive"
 
+    # Force archive directory for all archived entries. Normalised before the
+    # collision pre-pass below so their target paths resolve identically there
+    # and at write time.
+    for e in arch_entries:
+        e["superseded_date"] = e.get("superseded_date") or "pre-cutoff"
+        e["superseded_reason"] = e.get("superseded_reason") or "archived"
+
+    # Collision pre-pass. Runs before any write — including under --dry-run —
+    # so a contended filename aborts with the tree untouched rather than
+    # part-migrated.
+    planned: list[tuple[Path, str]] = (
+        [(recent_work_path(e, rw_dir), e["title"]) for e in rw_entries]
+        + [(bullet_path(e, dec_dir, dec_arch), e["title"]) for e in dec_entries]
+        + [(bullet_path(e, got_dir, got_arch), e["title"]) for e in got_entries]
+        + [(bullet_path(e, dec_dir, dec_arch), e["title"]) for e in arch_entries]
+    )
+    collisions = find_collisions(planned)
+    if collisions:
+        print(
+            f"\nERROR: {len(collisions)} filename collision(s) — refusing to write.",
+            file=sys.stderr,
+        )
+        for path, titles in sorted(collisions.items()):
+            print(f"  {path}", file=sys.stderr)
+            for title in titles:
+                print(f"    - {title}", file=sys.stderr)
+        print(
+            "\nThese entries share a date and a title-derived slug, so they resolve\n"
+            "to one filename and the later write would silently overwrite the\n"
+            "earlier one. Disambiguate by editing a title (or a date) in the source\n"
+            "file, then re-run. Nothing has been written.",
+            file=sys.stderr,
+        )
+        return 1
+
     print("\nRecent Work:")
     for e in rw_entries:
         write_recent_work(e, rw_dir, args.dry_run)
@@ -382,9 +444,6 @@ def main() -> int:
         write_bullet(e, got_dir, got_arch, args.dry_run)
     print("\nArchived (treated as decisions):")
     for e in arch_entries:
-        # Force archive directory for all archived entries
-        e["superseded_date"] = e.get("superseded_date") or "pre-cutoff"
-        e["superseded_reason"] = e.get("superseded_reason") or "archived"
         write_bullet(e, dec_dir, dec_arch, args.dry_run)
 
     print(f"\n{'DRY RUN — ' if args.dry_run else ''}Extracted {total} entries.")

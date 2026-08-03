@@ -6,7 +6,7 @@
 
 Standard operating procedures and product-management discipline for Claude Code sessions. A defined file set, six non-negotiable rules, session start/end checklists, a Backlog with status tags and P-numbers, build plans with phases and batch logs, and a feature map — together they give every session a consistent place to read context from at the start and write state to at the end.
 
-Plain markdown plus four slash commands. No daemon, no database, no MCP server, no background process.
+Plain markdown plus five slash commands. No daemon, no database, no MCP server, no background process.
 
 ## Why this exists
 
@@ -56,7 +56,7 @@ Every session from then on starts with `/restart-sop` and ends with `/update-sop
 
 ## Using the slash commands
 
-Four slash commands cover the full session lifecycle. They install to `~/.claude/commands/` on setup and work in any project with the SOP files.
+Five slash commands cover the full session lifecycle. They install to `~/.claude/commands/` on setup and work in any project with the SOP files.
 
 ### `/restart-sop` — at the start of every session
 
@@ -213,7 +213,7 @@ Both target the "Claude Code has no memory across sessions" problem. They solve 
 | State | Plain markdown files committed to your repo | SQLite + ChromaDB + MCP server + daemon |
 | Capture | Deliberate, human-authored, written during `/update-sop` | Automatic, passive, via SessionStart/SessionEnd/Stop hooks |
 | Retrieval | Agent reads `docs/agent-memory.md` + decisions/gotchas directories during `/restart-sop` | Agent queries the memory store via MCP tool calls |
-| Surface | 4 slash commands + 5 agents + 17 reference markdown files | Daemon process, React UI, MCP server, background indexing |
+| Surface | 5 slash commands + 5 agents + 19 reference markdown files | Daemon process, React UI, MCP server, background indexing |
 | Version control | Everything in `git` — diff, blame, revert as usual | Separate data store outside git |
 | Onboarding | `./setup.sh /path/to/project` | Install plugin, run daemon, connect MCP |
 | Dependency profile | `bash`, `awk`, `python3` (for migration), `git` | Node, SQLite, ChromaDB, MCP |
