@@ -751,7 +751,23 @@ while IFS=$'\t' read -r p after_status; do
             #     which made "free text is not accepted" untrue.
             skip_re="review skipped \(${p}\): *(docs-only|test-only|dep-bump|below-threshold)\b"
             if printf '%s' "$batch_line" | grep -qE 'docs/reviews/'; then
-              : # review artifact cited — gate satisfied
+              # A citation is not evidence until the path resolves. Until P95
+              # this branch accepted the mere presence of the string
+              # "docs/reviews/", so any plausible filename cleared the gate —
+              # including one for a review that was never written. Batch 0.30
+              # recorded exactly that ("a false citation the validator would
+              # have accepted") and corrected it by hand; nothing stopped the
+              # next one. Extract every cited path and require each to exist.
+              missing_reviews=""
+              for cited in $(printf '%s' "$batch_line" | grep -oE 'docs/reviews/[A-Za-z0-9._/-]+\.md'); do
+                [ -f "$cited" ] || missing_reviews="$missing_reviews $cited"
+              done
+              if [ -n "$missing_reviews" ]; then
+                echo "BLOCK: $p ([${item_type}]) cites a review artifact that does not exist:${missing_reviews}"
+                echo "  A cited path that does not resolve is not a review. Either write the artifact,"
+                echo "  or declare the skip as: review skipped (${p}): <docs-only|test-only|dep-bump|below-threshold>"
+                violations=$((violations + 1))
+              fi
             elif printf '%s' "$batch_line" | grep -qEi "$skip_re"; then
               : # enumerated Step 1b skip, bound to this P-number — gate satisfied
             else

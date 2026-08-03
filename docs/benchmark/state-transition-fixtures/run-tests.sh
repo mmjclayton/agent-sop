@@ -77,6 +77,20 @@ for before in "$SCRIPT_DIR"/*.before.md; do
 - 2026-04-19 P108 docs/reviews/fixture_P108.md
 - 2026-04-19 P109 docs/reviews/fixture_P109.md
 EOF
+    # Create the artifacts the stub cites. Before P95 the validator checked only
+    # that the string "docs/reviews/" appeared, so these paths never had to
+    # exist — which is precisely the fail-open P95 closed. The harness must now
+    # produce a real file, which also makes the legal-* fixtures honest: they
+    # assert "a review exists", not "a review is mentioned".
+    mkdir -p "$tmp/docs/reviews"
+    for n in 100 101 102 103 104 105 106 107 108 109; do
+      cat > "$tmp/docs/reviews/fixture_P${n}.md" <<REVIEW
+# Review — fixture P${n}
+
+## Findings
+- \`fixture.sh:1\` synthetic anchor so --assert-review has something concrete
+REVIEW
+    done
   fi
   # Copy fixtures into place so relative paths resolve
   cp "$before" "$tmp/before.md"
