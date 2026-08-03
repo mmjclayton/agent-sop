@@ -1700,6 +1700,130 @@ The immediate cause is the `-v p="### P${p}"` assignment receiving a multi-line 
 
 ---
 
+### P83 — Whole-codebase audit (six-agent parallel review)
+`[IN PROGRESS] [Iteration]`
+
+Six parallel review agents across four axes — token/context budget, redundancy, architecture, script correctness — plus instruction-budget compliance and staleness. Every CRITICAL and HIGH finding was independently verified by the coordinating agent before inclusion: reproduced where a failing case could be constructed, otherwise confirmed by direct file inspection.
+
+Artefact: `docs/reviews/2026-08-03_solo_full-codebase-audit.md` (~1,100 lines). Findings carry a verification mark — `[R]` reproduced, `[V]` verified by inspection, `[A]` agent-reported — so they can be weighted rather than taken uniformly.
+
+**Headline:** the repo's gates are specified in prose and enforced in code, and the two have drifted, with the prose consistently stronger. `docs/guides/cross-layer-rules.md` exists to prevent exactly this and was never run against the repo that authored it.
+
+Measured: instruction count 318 / 361 / 379 for session-start / session-end / subagent contexts against Rule 5's stated 200 hard ceiling (`claude-agent-sop.md` alone is 188, over the 150 soft cap); session-start token cost ~20,800, which fails README's "well under 2% of a 1M context window" on the repo's own estimator; ~114 KB of tracked duplication; edit-fanout of 6-8 files for every representative change.
+
+**Source:** requested 2026-08-03. Remediation split into P84 (shipped), P85 (shipped), and the decision-blocked set P86-P90.
+
+---
+
+### P84 — Pass-one remediation: five silent failures and two dead gates
+`[IN PROGRESS] [Bug]`
+
+Every fix reproduced against a failing case before the change was written.
+
+**Silent failures** — each exited non-zero with zero bytes on stdout and stderr:
+- `scripts/refresh-rollup.sh` died on every invocation after Batch 0.30 moved the rollup to `docs/RECENT-WORK.md` while the script still defaulted to `CLAUDE.md`. Target now resolved at run time (explicit arg > `docs/RECENT-WORK.md` > `CLAUDE.md`) so unmigrated consumer projects keep working.
+- Same script died when any `docs/recent-work/` entry lacked a `# ` heading; its own `(untitled)` fallback was unreachable under `pipefail`.
+- `scripts/validate-state-transitions.sh` `resolve_before()` ended in a bare `return` inheriting an `&&` list's status, so a missing `--before-file` killed the script under `errexit` before the "no before-state" message printed.
+- `docs/benchmark/run-benchmark.sh:140` lost its "Task file not found" message to the same `pipefail`/glob interaction.
+
+**Dead gates** — labelled hard blocks that could never fire:
+- `/update-sop` Step 11 called `detect_trackers`, defined nowhere in the repo, so its `exit 1` was unreachable. Extracted to `scripts/detect-trackers.sh`; the two calling steps run in separate bash blocks, so a shared definition has to live in a file.
+- `docs/benchmark/drift-fixtures/run-tests.sh` asserted exit codes only, so a validator returning correct exits while printing nothing — the P73 shape — passed all five fixtures. Ported the `.expect-stdout` assertion, added the `VALIDATOR` override, added a fixture asserting the BLOCK text. Proven: a stub with correct exit codes and no output now fails.
+
+Also fixed the unterminated-final-line bug in all three assertion loops across both harnesses, and added filename-collision detection to `scripts/migrate-to-multi-agent.py` — two entries sharing a date and a title-derived slug resolved to one path and `write_text` overwrote the first silently while the run reported both as extracted. It now aborts before the first write, naming every colliding title.
+
+Stale claims corrected: three uncaveated "33%" citations in files that ship to consumers (`results/r5-post-trim/summary.md:54` forbids citing it unconditionally); slash-command count stated as three and four when five ship; restored the missing `**S4 —**` heading in `sop-checker.md` without which the memory-poisoning check could never be reported by ID.
+
+**Verification:** both fixture suites green (17 / 5), shell and Python syntax clean, DoD sweep confirms no remaining instances of either bug class. Commit `4473da2`.
+
+---
+
+### P85 — Compliance check-ID collisions and docs/recent-work ownership gap
+`[IN PROGRESS] [Bug]`
+
+`docs/sop/compliance-checklist.md` self-describes as the canonical list the sop-checker agent reports against, but carried 94 rows under 89 unique IDs — so `FAIL: M3` was ambiguous. Renamed the two sets with zero external citations and kept the two the README markets by name: Section 5 feature-map `M1-M4` → `FM1-FM4`, Section 7 resume `R1-R3` → `RP1-RP3`. Section 11 keeps `M1-M6` (12 citation sites); Section 9 keeps `R1`. Row count unchanged at 94, so README's advertised totals stay correct.
+
+`RP1` also contradicted `F6` and `M4` outright — it required "File named exactly project_resume.md" while both others require `project_resume_<agent-id>.md`, so a multi-agent project passed F6/M4 and failed RP1 simultaneously. Reworded rather than deleted; deleting would have shifted the 85/94 totals and needed a Rule 1 trace.
+
+`docs/recent-work/` appeared in neither the Section 2 ownership table nor the Section 7 update-trigger table — named only in a session-end step. It is the largest shipped-work prose surface in the repo with no assigned scope, which is the root cause of the narrative duplicated across recent-work, the Batch Log, feature-map rows and agent-memory Completed Work. Added with its 2-4 line spec and an explicit note that the rollup is derived, never hand-edited.
+
+Commit `55b3cea`.
+
+---
+
+### P86 — `setup.sh --force` destroys per-project state with no backup
+`[OPEN] [Bug] [has-open-questions]`
+
+`setup.sh:17-27` documents two tiers — "per-project, customised" (`CLAUDE.md`, `Backlog.md`, `docs/agent-memory.md`) versus "pristine-replica SOP content" meant to be overwritten. `copy_if_missing` (`:116`) and `write_if_missing` (`:132`) apply one unconditional `cp` to both under `--force`, with no backup, no confirmation and no git-clean check. A user following the script's own "re-run with `--code`" tip loses a live `Backlog.md` — the SOP's declared single source of truth — to a blank template.
+
+`scripts/migrate-to-multi-agent.py` already models the safer pattern: it refuses to run on a dirty tree.
+
+**Open question:** refuse `--force` on the per-project tier outright, or keep it with timestamped backups? Refusing is safer but breaks anyone scripting it.
+
+**Acceptance criteria:**
+- Per-project files survive `--force`, or are recoverable from a timestamped backup
+- Pristine-replica tier still force-syncs (verified by grep for a known SOP string)
+- Dirty-tree re-run aborts with a named reason
+- A seeded non-empty `exclude` array in `~/.claude/agent-sop.config.json` survives `--force`
+
+**Source:** P83 audit §2.1 (verified by code reading; reproduced by a review agent).
+
+---
+
+### P87 — Step 1b trigger (b) has no execution arm
+`[OPEN] [Bug] [has-open-questions]`
+
+`claude-agent-sop.md:410` states the SOP's only unconditional gate: SOP self-modification fires the reviewer turn "regardless of LOC". Verified at HEAD: `grep -c 'self-modification' .claude/commands/update-sop.md` → 0, `grep -c 'review_triggers'` → 0, and the validator performs zero path inspection. `update-sop.md` implements trigger (a) only.
+
+A 10-LOC edit to `docs/sop/claude-agent-sop.md` therefore skips the reviewer. Worse, the `docs-only` skip token clears every downstream check — the validator matches the token by regex and never inspects paths — so the strongest-sounding gate in the SOP is satisfiable by a self-declared four-word string that no code verifies.
+
+**Open question:** enforce with a validator pathspec check, or downgrade `:410` to advisory prose? Enforcing means every `[Feature]`/`[Refactor]` touching `docs/sop/**` in this repo *and in every consumer project* needs a real reviewer artefact, unconditionally. Downgrading is one line and honest but abandons the only unconditional gate.
+
+**Note:** this decision gates roughly 25 of the audit's remaining items. It also determines whether P84/P85 are retroactively non-compliant — compliance check S7 is retrospective and commit-scoped.
+
+**Source:** P83 audit §2.3.
+
+---
+
+### P88 — Definition of Done is gated on but never defined
+`[OPEN] [Bug] [has-open-questions]`
+
+`restart-sop.md` references it 4 times, `update-sop.md` 3 times (Step 1 self-evaluation gates on it). `grep -c 'Definition of Done'` returns 0 in both `docs/sop/claude-agent-sop.md` and this repo's `CLAUDE.md`. The CLAUDE.md structure spec (`claude-agent-sop.md:168-212`) never lists the section and Section 11's required-section rules never mention it. Only the two templates carry it. `/update-sop` Step 1 is therefore unsatisfiable in agent-sop's own repo.
+
+**Open question:** add `## Definition of Done` to the CLAUDE.md spec, or remove the gating references? Evidence points against the obvious branch: `phase-0-foundation.md:105` records "Definition of Done removed (hurt bug fixes)", `results/r4-final-summary.md:30` measured ~0% effect, and `sop-hill-climbing.md:42` codifies "Remove to save tokens". The gap looks like a deliberate removal that was never de-gated, not an oversight.
+
+**Source:** P83 audit §2.7.
+
+---
+
+### P89 — Rule 5 instruction budget is breached and unenforced
+`[OPEN] [Iteration] [has-open-questions]`
+
+Rule 5 (`claude-agent-sop.md:69-76`) sets ≤150 distinct instructions soft, 200 hard, across the agent's combined context. Two independent counts using the rule's own method agreed within 6%: `claude-agent-sop.md` 188 (over the soft cap alone), `CLAUDE.md` 101, `restart-sop.md` 29, `update-sop.md` 72, `sop-checker.md` 90. Combined: session start 318, session end 361, subagent 379 — 1.6x to 1.9x over the hard ceiling. Including `~/.claude/rules/`, which Rule 5's own text names as in-budget, puts it near 3.5x.
+
+The count also *under*-reports: the stated method excludes section headings, but `update-sop.md` carries 20 `## Step` headings that are functionally checklist items.
+
+`grep -n 'instruction budget\|Rule 5\|150' docs/sop/compliance-checklist.md` returns nothing — the flagship rule is the only rule with no compliance check, and `docs/agent-memory/decisions/2026-04-19_solo_p43-rule-5-precise-instruction-count-deferred.md` records the measurement being deferred as too expensive. It has not been redone across the 30+ P-numbers shipped since.
+
+**Open question:** add a compliance check, or restate the budget honestly? Adding a check means shipping one the reference implementation fails on day one. Carrying an aspirational rule that the reference implementation breaks by 1.9x is the option to rule out.
+
+**Source:** P83 audit §3.1.
+
+---
+
+### P90 — Session-end step numbering incoherent across four files
+`[OPEN] [Bug] [has-open-questions]`
+
+The same operation carries four different numbers: `README.md` 0-10, `claude-agent-sop.md` 1-9, `CLAUDE.md` 0-9, `update-sop.md` 0-11. "Step 1" means *run tests* in the SOP and *self-evaluate* in the command; "Step 2" means *update Backlog* in one and *run tests* in the other; README is +1 against the other three from step 5 onward. `update-sop.md:100` directs a gotcha to "Step 4", which is feature-map — gotchas are Step 5. `finish.md:136` cites "Section 12" for the session-end checklist; Section 12 is Optional Patterns.
+
+**Ordering hazard — read before starting.** Seven compliance checks (`B11`, `D1`, `M1`, `M3`, `M6`, `S4`, `T1`) use step numbers as their grep anchor. Renumbering without converting those anchors first makes them fail **open**, so a graded project passes checks nobody ran. Convert every anchor to a heading string or content pattern and confirm all seven still PASS *before* touching any numbering.
+
+**Open question:** pick one canonical sequence, or stop citing bare step numbers cross-file and cite headings instead?
+
+**Source:** P83 audit §3.2.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
