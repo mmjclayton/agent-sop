@@ -203,6 +203,11 @@ Claude Code has two memory systems. They serve different purposes and must not o
 ## Session & Memory Hygiene
 [Start checklist / End checklist]
 
+## Definition of Done
+[Self-evaluation rubrics by task type: Bug fix / Feature / Refactor / Test writing.
+`/update-sop` Step 1 and `/restart-sop` both reference this section by name, so a
+project without it leaves those steps unsatisfiable. Both templates ship it.]
+
 ## Recent Work (rollup)
 [Auto-generated summary of `docs/recent-work/`. Rendered between sentinel markers:
 `<!-- recent-work-rollup:start -->` and `<!-- recent-work-rollup:end -->`.
@@ -729,3 +734,5 @@ Applies when more than one agent works the same project — either in parallel s
 The SOP is a living document. Use benchmark data — not gut feeling — to iteratively improve it: run A/B benchmark, identify what helped/hurt/had no effect, fix and re-run.
 
 See `docs/guides/sop-hill-climbing.md` for the methodology and the five benchmark-proven principles.
+
+**One measured null result, and its scope.** R3 found the Definition of Done section produced ~0% quality change *on bug fixes* (`docs/benchmark/results/r4-final-summary.md:30`), and `sop-hill-climbing.md:42` files it under "remove to save tokens" on that basis. Read the scope before acting on it: the same results file says DoD "may help features but not tested in isolation" (`:38`). The rubric therefore stays in the standard file set — it is the self-evaluation target `/update-sop` Step 1 names — and the honest reading is that its bug-fix rubric is the cheapest part to trim, not that the section is dead weight.
