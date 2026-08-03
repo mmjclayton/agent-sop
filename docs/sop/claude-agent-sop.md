@@ -179,7 +179,7 @@ Claude Code has two memory systems. They serve different purposes and must not o
 
 ## Key Documents & Dispatch
 [Table: Area | File | Purpose — minimum 5 entries]
-[Include line-range hints for large files, e.g. "CSS tokens — client/src/index.css (lines 1-80)"]
+[Point large files at a stable anchor, never a line range, e.g. "CSS tokens — `client/src/index.css`, in the `:root` block"]
 [Test command + after-shipping reminder]
 
 ## Current Priority Items
@@ -308,7 +308,9 @@ docs/recent-work/
 
 **CLAUDE.md size limit:** Keep the per-session sections of CLAUDE.md under 200 lines / 2,000 tokens for non-code projects, or **300 lines / 3,000 tokens for code projects that include a Common Mistakes section** (benchmark data shows the extra ~100 lines for Common Mistakes pays for itself in fewer wrong turns and prevented production bugs). Per-session sections are everything an agent reads every session: Agent SOP, Build Plans, Key Documents, Priority Items, Backlog Management, Key Commands, Common Mistakes, Rules for Automated Builds, Session & Memory Hygiene, Dispatch Quick Reference, and Recent Work. Project-specific reference sections (Auth, Database, Design System, and similar) may extend beyond the target — these are consulted on demand, not read every session, so their context cost is incurred only when relevant. If per-session sections are growing beyond the limit, move detail into `docs/agent-memory.md`, build plans, or source-file comments. Token equivalences here are 4.x-tokenizer figures — Claude Sonnet 5's tokenizer (default from July 2026) produces approximately 30% more tokens for the same text, so treat the line limits as authoritative and the token figures as tokenizer-relative (see Section 15.5).
 
-**Token overhead:** Every file read by an agent costs approximately 1.7x its raw token count (loading and processing overhead). This is why the size limit matters and why the Dispatch Quick Reference enforces a minimum rather than a maximum. Keep referenced files lean and targeted. Line-range hints (e.g. "CSS tokens - client/src/index.css lines 1-80") reduce overhead significantly for large files.
+**Token overhead:** A file read costs more than its raw token count — loading and processing carry overhead on top. This document has carried a "1.7x" figure for that since P22 with no derivation behind it and no measurement in `docs/benchmark/`; treat it as intuition, not a number to compute budgets from, and measure per project with `/usage` (Claude Code 2.1.174+). What survives the caveat is directional and still load-bearing: large files are expensive to read whole. That is why the size limit matters and why the Dispatch Quick Reference enforces a minimum rather than a maximum.
+
+Keep referenced files lean, and point large ones at a **stable anchor** — a symbol, a block, or a grep target — so the agent reads the relevant slice without reading the file. Never a line range. Ranges rot on the next edit and nothing detects it, and a stale range is worse than no hint at all: it sends the agent to the wrong slice, and the agent draws a confident conclusion from the wrong text. Anchors cost one extra tool call (grep, then read) against a range's zero. That is the right trade — an extra call is cheap, a false conclusion is not.
 
 **What belongs in Gotchas:** not just lessons from mistakes, but also: data model invariants that aren't obvious from the schema (e.g. "ExerciseCategory is the shared library, Exercise is program-scoped - edits go to taxonomyOverrides"), named utility functions for cross-cutting concerns (e.g. "use displayMuscleGroup() for all muscle group display logic"), and framework-specific patterns that agents commonly get wrong.
 
@@ -531,7 +533,7 @@ Every project's CLAUDE.md must include a Key Documents & Dispatch section. Requi
 - Minimum 5 named entry-point files with full relative paths
 - Notes column must include contextual guidance (related components, gotchas, constraints)
 - Updated at the start of each phase — not just at project setup
-- Include line-range hints for large files (e.g. "CSS tokens — client/src/index.css (lines 1-80)")
+- Point large files at a stable anchor — a symbol, block, or grep target — never a line range (e.g. "CSS tokens — `client/src/index.css`, in the `:root` block")
 - Include test command and after-shipping reminder
 
 **Correct format:**
@@ -575,7 +577,7 @@ Large-project-only patterns (`claude-progress.txt`, sub-agent delegation, schema
 2. Add Completed Work and Archived sections to docs/agent-memory.md.
 3. Replace the session checklists in CLAUDE.md with the standard ones from this SOP.
 4. Add project_resume.md to the MEMORY.md index if missing.
-5. Add line-range hints to the Key Documents table for any file over 200 lines.
+5. Give every Key Documents entry over 200 lines a stable anchor (symbol, block, or grep target). Never a line range — ranges rot silently and a stale one sends the agent to the wrong slice.
 6. Verify Dispatch Quick Reference has at least 5 named files and is current.
 
 ---
@@ -656,7 +658,7 @@ The Key Documents & Dispatch section must use **intent-based descriptions**, not
 |---------------------|----------|-------|
 | Change workout logging | `WorkoutLogger.jsx` | State machine. ExerciseCard is separate file. |
 | Change the data model | `schema.prisma` | Always create a migration. Follow protocol. |
-| Change colours/spacing | `index.css` (lines 1-80) | 80+ CSS tokens. Never hardcode hex. |
+| Change colours/spacing | `index.css` — tokens in the `:root` block | Never hardcode hex. |
 ```
 
 **Compare with the weaker pattern (file-path only):**

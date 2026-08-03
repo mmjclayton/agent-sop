@@ -36,7 +36,7 @@ Current phase files:
 | Check copy/tone rules | `.claude/brand-voice.md` | Brand voice, terminology |
 | Run more than one agent on this repo | `docs/sop/multi-agent.md` (deep mechanics in `docs/guides/multi-agent-parallel-sessions.md`) | Decision tree, optimisation rules, Common Mistakes |
 | [Change X] | `[path]` | [what to know when you arrive] |
-| [Change Y] | `[path]` (lines N-N) | [include line range for large files] |
+| [Change Y] | `[path]` | [for large files, name a stable anchor — a symbol, block, or grep target. Never a line range.] |
 
 Test: `[test command]`
 After shipping: update Backlog.md + docs/feature-map.md

@@ -36,7 +36,7 @@ Current phase files:
 | Check copy/tone rules | `.claude/brand-voice.md` | Brand voice, terminology |
 | Run more than one agent on this repo | `docs/sop/multi-agent.md` (deep mechanics in `docs/guides/multi-agent-parallel-sessions.md`) | Decision tree, optimisation rules, Common Mistakes |
 | Change the data model | `[path/to/schema]` | Always create a migration. Follow schema change protocol. |
-| Change colours, spacing, layout | `[path/to/styles]` (lines N-N) | CSS tokens. Never hardcode hex values. |
+| Change colours, spacing, layout | `[path/to/styles]` | CSS tokens live in the `[:root]` block. Never hardcode hex values. |
 | [Change X] | `[path]` | [what to know when you arrive — name related components, gotchas] |
 | [Change Y] | `[path]` | [include context the file path alone does not convey] |
 
@@ -152,7 +152,7 @@ After shipping: update Backlog.md + docs/feature-map.md
 - **Responsive strategy:** [e.g. mobile-first, desktop-first, single breakpoint with fluid scaling]
 - **Touch targets:** [minimum size, e.g. 44x44px]
 - **Icon system:** [e.g. Lucide, Heroicons, custom SVGs]
-- **CSS tokens location:** [file + line range, e.g. `client/src/index.css` (lines 1-80)]
+- **CSS tokens location:** [file + a stable anchor, e.g. `client/src/index.css`, in the `:root` block. Never a line range — ranges rot on the next edit.]
 
 ---
 

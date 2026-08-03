@@ -109,7 +109,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | ID | Check | What to look for |
 |----|-------|-----------------|
 | C23 | Recent Work entries include PR/commit refs | Entries contain `PR`, `#`, or commit hash patterns |
-| C24 | Key Documents table has line-range hints | Table entries for large files include `(lines N-N)` notation |
+| C24 | Key Documents table anchors large files | Entries for files over 200 lines name a stable anchor — a symbol, a block, or a grep target (e.g. "tokens in the `:root` block", "grep `@app.command`"). A `(lines N-N)` range FAILS: ranges rot on the next edit with nothing to detect it, and a stale range sends the agent to the wrong slice where it draws a confident conclusion from the wrong text (P91). Projects predating P91 (before 2026-08-03) are exempt — note the exemption rather than failing. |
 
 ---
 
