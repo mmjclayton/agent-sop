@@ -1914,6 +1914,39 @@ Both scripts now verify the end sentinel before touching the file and refuse wit
 
 ---
 
+### P96 — Step 7 never resolved the resume directory, so writes and reads diverged
+`[OPEN] [Bug]`
+
+`/restart-sop` Step 0d and `scripts/validate-state-transitions.sh --check-drift` both derived the memory directory from `git rev-parse --show-toplevel`. `/update-sop` Step 7 — the only step that **writes** the file — named `~/.claude/projects/[project-hash]/memory/project_resume_${AGENT_ID}.md` and never resolved `[project-hash]` at all.
+
+With no rule, an agent writes into the memory directory the *session* owns. The harness names those after the session's launch path, so a session started outside the project lands in a catch-all directory shared by every project touched the same way. Three failures follow:
+
+1. **The drift gate silently no-ops.** The snapshot is written where Step 3d never looks, so `--check-drift` reports `no project_resume file found — skipping` and P46's enforcement is dead on exactly the projects that hit this.
+2. **The write-side legacy fallback can overwrite another project's file.** Step 7 said: if the project uses an unsuffixed `project_resume.md` and `$AGENT_ID` is `solo`, write to that filename. In a shared directory that file belongs to whichever project got there first.
+3. **`solo` is not unique across projects.** Every single-worktree project resolves to it, so only the directory separates two projects' snapshots.
+
+**Observed twice.** `project_resume_solo.md` in the shared directory is Intelligent Studio's, already marked SUPERSEDED with a note that it "sat in the shared `-Users-matt-clayton` memory directory rather than Intelligent Studio's own". On 2026-08-07 an agent working on a different project reached Step 7, found `project_resume_solo.md` and `project_resume.md` in the same directory, recognised neither was its own, and refused the step rather than following it. The SOP instructed the destructive action; only agent judgement prevented it.
+
+Two more instances of the same over-broad-lookup shape were found while fixing it, neither reachable from Step 7:
+- `.claude/agents/sop-checker.md` located memory directories by matching a *substring* of the project's directory name against `~/.claude/projects/`, so an audit could score a project against another project's files.
+- The SessionStart hook in `docs/sop/harness-configuration.md` read `~/.claude/projects/*/memory/project_resume.md` — every project on the machine — and loaded the result as this session's context.
+- `/restart-sop` Step 2's sibling-agent scan used the same glob. Siblings live in separate worktrees, so it now enumerates `git worktree list` and resolves each root.
+
+**Acceptance criteria:**
+- `scripts/resolve-resume-path.sh` exists and is the only implementation of the derivation
+- `/update-sop` Step 7, `/restart-sop` Step 0d + Step 2, and `--check-drift` all call it
+- No SOP surface still carries an unresolved `[project-hash]` for the resume file
+- Write-side legacy fallback removed; read-side fallback retained
+- Fixture suite at `docs/benchmark/resume-path-fixtures/run-tests.sh`, proven to discriminate against the pre-fix behaviour via a `RESOLVER=` stub (12 of 13 cases fail against it)
+- `scripts/resolve-resume-path.sh` added to the `/update-agent-sop` file table so existing consumer projects receive it
+- Compliance checks F6, RP1, M4 and `sop-checker` require the resolved directory rather than a name match
+
+**Also open (not fixed here):** agent-id resolution is still implemented three times — `/update-sop` Step 0, `/restart-sop` Step 0, and `scripts/validate-state-transitions.sh` — and `resolve-resume-path.sh` now adds a fourth. All four share the same precedence chain (`CLAUDE_AGENT_ID` > `.sop-agent-id` > `solo` > path hash), so they agree today. That is exactly the position the resume path was in before this bug: agreeing copies, until one surface needed the rule and did not get it. Unifying it is a Tier A candidate — `--agent-id` already exists on the resolver and the other three could call it. Not done here because Step 0's value feeds `docs/recent-work/` and `docs/reviews/` filenames and the validator's other modes, so the change is wider than this fix and deserves its own diff. Filed rather than silently carried.
+
+**Source:** reported by an agent running agent-sop on a consumer project, 2026-08-07, when Step 7 directed it at a file belonging to another project.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
