@@ -457,12 +457,29 @@ If no build plan exists for the current work, skip this step.
 Resolve the write target with `scripts/resolve-resume-path.sh`. **Do not hand-construct this path and do not write into whichever memory directory the current session happens to own.** The directory is derived from the git repo root, so it is the same one `/restart-sop` and the drift validator read from.
 
 ```bash
-if [ ! -f scripts/resolve-resume-path.sh ]; then
-  echo "Warning: resolve-resume-path.sh not found. Upgrade with /update-agent-sop or run from upstream: bash ~/Projects/agent-sop/scripts/resolve-resume-path.sh"
-  exit 1
-fi
+# Project copy first; upstream checkout as fallback. The user-scope command is
+# updated by /update-agent-sop before the project-scope script is, so a project
+# that has not synced yet would otherwise hard-block here on a missing file.
+# Upstream location comes from agent-sop.config.json rather than a hardcoded
+# path, so this works on any machine.
+resolve_resolver() {
+  [ -f scripts/resolve-resume-path.sh ] && { printf 'scripts/resolve-resume-path.sh'; return 0; }
+  local upstream
+  upstream=$(sed -n 's/.*"local_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+    agent-sop.config.json "$HOME/.claude/agent-sop.config.json" 2>/dev/null | head -1)
+  [ -n "$upstream" ] && [ -f "$upstream/scripts/resolve-resume-path.sh" ] && {
+    printf '%s' "$upstream/scripts/resolve-resume-path.sh"; return 0; }
+  return 1
+}
 
-RESUME=$(bash scripts/resolve-resume-path.sh) || exit 1
+RESOLVER=$(resolve_resolver) || {
+  echo "BLOCK: resolve-resume-path.sh not found in this project or upstream."
+  echo "  Run /update-agent-sop to sync it. Do not hand-construct the path — that is the P96 defect."
+  exit 1
+}
+[ "$RESOLVER" = "scripts/resolve-resume-path.sh" ] || echo "Note: using upstream resolver ($RESOLVER). Run /update-agent-sop to install it locally."
+
+RESUME=$(bash "$RESOLVER") || exit 1
 mkdir -p "$(dirname "$RESUME")"
 echo "Resume target: $RESUME"
 ```
