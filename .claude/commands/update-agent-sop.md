@@ -49,6 +49,7 @@ These are the files this command keeps in sync. Everything else (CLAUDE.md, Back
 | `scripts/refresh-rollup.sh` | `scripts/refresh-rollup.sh` | project |
 | `scripts/refresh-in-flight.sh` | `scripts/refresh-in-flight.sh` | project |
 | `scripts/validate-state-transitions.sh` | `scripts/validate-state-transitions.sh` | project |
+| `scripts/resolve-resume-path.sh` | `scripts/resolve-resume-path.sh` | project |
 | `docs/templates/review-template.md` | `docs/templates/review-template.md` | project |
 | `docs/agent-memory/in-flight/README.md` | `docs/agent-memory/in-flight/README.md` | project |
 | `~/.claude/commands/restart-sop.md` | `.claude/commands/restart-sop.md` | user |

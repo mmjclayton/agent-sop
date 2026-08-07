@@ -1915,7 +1915,7 @@ Both scripts now verify the end sentinel before touching the file and refuse wit
 ---
 
 ### P96 — Step 7 never resolved the resume directory, so writes and reads diverged
-`[OPEN] [Bug]`
+`[SHIPPED - 2026-08-07] [Bug]`
 
 `/restart-sop` Step 0d and `scripts/validate-state-transitions.sh --check-drift` both derived the memory directory from `git rev-parse --show-toplevel`. `/update-sop` Step 7 — the only step that **writes** the file — named `~/.claude/projects/[project-hash]/memory/project_resume_${AGENT_ID}.md` and never resolved `[project-hash]` at all.
 
@@ -1932,16 +1932,22 @@ Two more instances of the same over-broad-lookup shape were found while fixing i
 - The SessionStart hook in `docs/sop/harness-configuration.md` read `~/.claude/projects/*/memory/project_resume.md` — every project on the machine — and loaded the result as this session's context.
 - `/restart-sop` Step 2's sibling-agent scan used the same glob. Siblings live in separate worktrees, so it now enumerates `git worktree list` and resolves each root.
 
-**Acceptance criteria:**
-- `scripts/resolve-resume-path.sh` exists and is the only implementation of the derivation
-- `/update-sop` Step 7, `/restart-sop` Step 0d + Step 2, and `--check-drift` all call it
-- No SOP surface still carries an unresolved `[project-hash]` for the resume file
-- Write-side legacy fallback removed; read-side fallback retained
-- Fixture suite at `docs/benchmark/resume-path-fixtures/run-tests.sh`, proven to discriminate against the pre-fix behaviour via a `RESOLVER=` stub (12 of 13 cases fail against it)
-- `scripts/resolve-resume-path.sh` added to the `/update-agent-sop` file table so existing consumer projects receive it
-- Compliance checks F6, RP1, M4 and `sop-checker` require the resolved directory rather than a name match
+**Fix.** New `scripts/resolve-resume-path.sh` is the single source of truth for the derivation, unified rather than parity-tested per `docs/guides/cross-layer-rules.md` Tier A (the rule is a pure function of repo root, HOME and agent-id). Modes: `--read`, `--dir`, `--agent-id`, and a default write target. It refuses (exit 2) when the repo root is the home directory, because no project-scoped directory can be derived there. Writes always target the per-agent filename; the legacy unsuffixed file stays readable but is never written, and gets marked superseded once a per-agent file exists.
 
-**Also open (not fixed here):** agent-id resolution is still implemented three times — `/update-sop` Step 0, `/restart-sop` Step 0, and `scripts/validate-state-transitions.sh` — and `resolve-resume-path.sh` now adds a fourth. All four share the same precedence chain (`CLAUDE_AGENT_ID` > `.sop-agent-id` > `solo` > path hash), so they agree today. That is exactly the position the resume path was in before this bug: agreeing copies, until one surface needed the rule and did not get it. Unifying it is a Tier A candidate — `--agent-id` already exists on the resolver and the other three could call it. Not done here because Step 0's value feeds `docs/recent-work/` and `docs/reviews/` filenames and the validator's other modes, so the change is wider than this fix and deserves its own diff. Filed rather than silently carried.
+**Acceptance criteria:**
+- `scripts/resolve-resume-path.sh` exists and is the only implementation of the derivation - DONE
+- `/update-sop` Step 7, `/restart-sop` Step 0d + Step 2, and `--check-drift` all call it - DONE
+- No SOP surface still carries an unresolved `[project-hash]` for the resume file - DONE
+- Write-side legacy fallback removed; read-side fallback retained - DONE
+- Fixture suite at `docs/benchmark/resume-path-fixtures/run-tests.sh`, proven to discriminate against the pre-fix behaviour via a `RESOLVER=` stub (12 of 13 cases fail against it) - DONE
+- `scripts/resolve-resume-path.sh` added to the `/update-agent-sop` file table so existing consumer projects receive it - DONE
+- Compliance checks F6, RP1, M4 and `sop-checker` require the resolved directory rather than a name match - DONE
+
+**Also open (not fixed here):** agent-id resolution is implemented three times — `/update-sop` Step 0 (`update-sop.md:21`), `/restart-sop` Step 0 (`restart-sop.md:48`), and `scripts/resolve-resume-path.sh:99`. This diff removed a fourth from `scripts/validate-state-transitions.sh` by routing it through the resolver.
+
+They agree only because the P96 reviewer caught them not agreeing. The resolver's first cut treated an empty or `0` worktree count as `solo`, where both inline copies fall through to the path hash — so a root whose worktree count could not be determined would have produced a different agent-id, a different filename, and a stranded resume file. Corrected to match the inline copies exactly, with a comment saying why, and covered by two new fixtures (`multi-worktree-agent-id-is-path-hash`, `sibling-worktree-gets-distinct-agent-id`) — the hash branch had no coverage anywhere in the repo before this.
+
+That near-miss is the argument for unifying: three copies of one rule, one of which drifted within hours of being written. Tier A candidate — `--agent-id` already exists on the resolver and the other two could call it. Not done here because Step 0's value also feeds `docs/recent-work/` and `docs/reviews/` filenames, so the change is wider than this fix and deserves its own diff. Filed rather than silently carried.
 
 **Source:** reported by an agent running agent-sop on a consumer project, 2026-08-07, when Step 7 directed it at a file belonging to another project.
 

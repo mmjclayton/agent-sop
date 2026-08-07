@@ -304,7 +304,7 @@ After shipping: update Backlog.md + docs/feature-map.md
 
 ## Session & Memory Hygiene
 
-Memory files live at `~/.claude/projects/[project-hash]/memory/`.
+Memory files live in the directory `bash scripts/resolve-resume-path.sh --dir` returns. Resolve it rather than hand-building a `~/.claude/projects/...` path — the directory is derived from the git repo root, and a path built by hand lands in whichever one the session happens to own.
 
 ### Session start: run `/restart-sop`
 
@@ -329,7 +329,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 4. `docs/feature-map.md` — append shipped items.
 5. `docs/agent-memory.md` narrative + decisions/gotchas directories — new decisions → `docs/agent-memory/decisions/YYYY-MM-DD_<agent-id>_<slug>.md`, new gotchas → `docs/agent-memory/gotchas/`; update In-Flight/Completed lines in `agent-memory.md` by agent-id.
 6. `docs/build-plans/phase-N.md` — append to Batch Log.
-7. `project_resume_<agent-id>.md` — overwrite with current state (per-agent snapshot).
+7. `project_resume_<agent-id>.md` — overwrite with current state (per-agent snapshot). Resolve the path with `bash scripts/resolve-resume-path.sh`; never hand-construct it or write into whichever memory directory the session happens to own.
 8. Write session entry to `docs/recent-work/`, then refresh the rollup with `bash scripts/refresh-rollup.sh` (writes `docs/RECENT-WORK.md`).
 9. Commit `docs/` changes with the work.
 

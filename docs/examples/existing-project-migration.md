@@ -23,7 +23,7 @@ Run through this checklist to see what you already have and what is missing.
 - [ ] `docs/agent-memory.md` exists
 - [ ] `docs/feature-map.md` exists
 - [ ] `docs/build-plans/` directory exists with at least one phase file
-- [ ] `project_resume.md` exists in local auto-memory (`~/.claude/projects/[hash]/memory/`)
+- [ ] `project_resume_<agent-id>.md` exists in the directory `bash scripts/resolve-resume-path.sh --dir` returns
 
 ### Common gaps in existing projects
 
@@ -182,8 +182,8 @@ When removing duplicates, leave a pointer to the authoritative location (e.g. "S
 
 ### MEMORY.md
 
-- Ensure it exists at `~/.claude/projects/[project-hash]/memory/MEMORY.md`.
-- Ensure it contains a pointer to `project_resume.md`.
+- Ensure it exists at `$(bash scripts/resolve-resume-path.sh --dir)/MEMORY.md`. Resolve the directory rather than hand-building it.
+- Ensure it contains a pointer to the resume file.
 - Keep entries under 150 characters each, under 200 lines total.
 
 ---

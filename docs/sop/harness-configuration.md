@@ -81,7 +81,7 @@ File-backed persistent notes. The API primitive behind `docs/agent-memory.md`. F
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "cat CLAUDE.md docs/agent-memory.md 2>/dev/null; cat ~/.claude/projects/*/memory/project_resume.md 2>/dev/null; echo '--- Context loaded ---'"
+        "command": "cat CLAUDE.md docs/agent-memory.md 2>/dev/null; r=$(bash scripts/resolve-resume-path.sh --read 2>/dev/null) && cat \"$r\"; echo '--- Context loaded ---'"
       }]
     }]
   }
@@ -89,6 +89,8 @@ File-backed persistent notes. The API primitive behind `docs/agent-memory.md`. F
 ```
 
 Automates steps 1-3 of the session start checklist. Agent still runs `git log` and reads the Backlog item manually.
+
+The resume file is resolved, not globbed. An earlier version of this hook read `~/.claude/projects/*/memory/project_resume.md`, which matches every project's resume file on the machine — including the catch-all directory shared by home-launched sessions — and so could load another project's state as this session's context.
 
 ### b. PreCompact / SessionEnd — checklist reminder
 

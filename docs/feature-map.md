@@ -112,3 +112,4 @@ Last updated: 2026-08-03 (P87 trigger (b) enforcement; P95 citation check)
 | P94 | User-scope guidance + `paths:` load gate | `docs/sop/claude-agent-sop.md` | 2026-08-03 |
 | P95 | Sentinel-splice data-loss guard + priorities fixtures | `scripts/refresh-rollup.sh`, `docs/benchmark/priorities-fixtures/` | 2026-08-03 |
 | P87 | Step 1b trigger (b) execution arm, tag-independent | `scripts/validate-state-transitions.sh` | 2026-08-03 |
+| P96 | Unified resume-path resolver (write/read directory parity) | `scripts/resolve-resume-path.sh`, `docs/benchmark/resume-path-fixtures/` | 2026-08-07 |
