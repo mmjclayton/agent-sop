@@ -121,30 +121,23 @@ When `SESSION_RANGE` is empty, the drift guard in Step 4 is a no-op.
 Print a one-line reminder of the P-number(s) declared in `project_resume_<agent-id>.md`. This is informational — the enforcement layer (`/update-sop` Step 3d) checks the session's commits against these declarations at session end, with `## Scope Change` as the escape hatch. The reminder here exists so the agent sees the declaration explicitly before starting work, and notices if it drifted before committing.
 
 ```bash
-root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
-if [ -n "$root" ]; then
-  project_hash=$(printf '%s' "$root" | sed 's|[^a-zA-Z0-9-]|-|g' | sed 's|--*|-|g' | sed 's|^-||')
-  resume="$HOME/.claude/projects/-$project_hash/memory/project_resume_${AGENT_ID:-solo}.md"
-  # Fallback: legacy unsuffixed project_resume.md. Always tried when the
-  # per-agent file is absent, regardless of AGENT_ID. Long-lived projects
-  # predating the per-agent filename convention keep the reassertion working
-  # without forcing `/migrate-to-multi-agent` first. On non-`solo` agents,
-  # emit a one-line advisory so the operator knows to migrate.
-  if [ ! -f "$resume" ]; then
-    legacy="$HOME/.claude/projects/-$project_hash/memory/project_resume.md"
-    if [ -f "$legacy" ]; then
-      resume="$legacy"
-      [ "${AGENT_ID:-solo}" != "solo" ] && echo "Reading legacy unsuffixed resume ($resume). Run \`/migrate-to-multi-agent\` to move to per-agent format."
-    fi
-  fi
-  if [ -f "$resume" ]; then
+# Path resolution is delegated to scripts/resolve-resume-path.sh — the single
+# source of truth shared with /update-sop Step 7 and the drift validator.
+# Never inline the derivation here: the reason Step 7 could target a different
+# directory from this step was two copies of the rule and one missing copy.
+if [ -f scripts/resolve-resume-path.sh ]; then
+  if resume=$(bash scripts/resolve-resume-path.sh --read); then
     pnums=$(grep -oE '\bP[0-9]+\b' "$resume" | sort -u | tr '\n' ' ' | sed 's/ *$//')
     [ -n "$pnums" ] && echo "In-flight declared: $pnums (from $resume)"
   fi
+else
+  echo "Warning: resolve-resume-path.sh not found. Upgrade with /update-agent-sop or run from upstream: bash ~/Projects/agent-sop/scripts/resolve-resume-path.sh --read"
 fi
 ```
 
-If no resume file exists (first session, or fresh repo), the reassertion is silently skipped.
+If no resume file exists (first session, or fresh repo), the resolver exits 1 and the reassertion is silently skipped.
+
+If the resolver exits 2, the repo root is the home directory — the memory directory it would derive is the harness catch-all shared by every home-launched session rather than a project-scoped one. Re-run the session from inside the project repo. Do not fall back to writing into the shared directory; that is the P96 defect.
 
 ## Step 0e: Backend assumption advisory
 
@@ -184,22 +177,34 @@ Pay special attention to:
 
 ### Step 2: Read memory files (this agent's resume + optional sibling-agent snapshots)
 
-Read these local memory files:
-- `~/.claude/projects/[project-hash]/memory/MEMORY.md` (auto-memory index)
-- `~/.claude/projects/[project-hash]/memory/project_resume_${AGENT_ID}.md` (this agent's last session snapshot)
-
-If `project_resume_${AGENT_ID}.md` does not exist, fall back to `project_resume.md` (legacy single-agent filename). If neither exists, note this and continue.
-
-When `$AGENT_ID` is not `solo`, also list sibling agents' resume files for advisory context — they reveal parallel in-flight work:
+Read these local memory files, using the resolver rather than a hand-built path:
 
 ```bash
-for f in ~/.claude/projects/*/memory/project_resume_*.md; do
-  [ -e "$f" ] || continue
-  [ "$(basename "$f")" = "project_resume_${AGENT_ID}.md" ] && continue
-  echo "=== $f ==="
-  sed -n '/^## What was done/,/^## /p' "$f" | head -20
+MEM_DIR=$(bash scripts/resolve-resume-path.sh --dir) || exit 1
+RESUME=$(bash scripts/resolve-resume-path.sh --read) && echo "Resume: $RESUME"
+echo "Memory index: $MEM_DIR/MEMORY.md"
+```
+
+- `$MEM_DIR/MEMORY.md` (auto-memory index)
+- `$RESUME` (this agent's last session snapshot; the resolver already applies the legacy `project_resume.md` fallback)
+
+If the resolver exits 1, no resume file exists yet. Note this and continue.
+
+When `$AGENT_ID` is not `solo`, also list sibling agents' resume files for advisory context — they reveal parallel in-flight work. Sibling agents run in separate git worktrees, and each worktree has its own repo root and therefore its own memory directory, so enumerate worktrees rather than globbing every project on the machine:
+
+```bash
+git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt; do
+  dir=$(bash scripts/resolve-resume-path.sh --dir --root "$wt" 2>/dev/null) || continue
+  for f in "$dir"/project_resume_*.md; do
+    [ -e "$f" ] || continue
+    [ "$(basename "$f")" = "project_resume_${AGENT_ID}.md" ] && continue
+    echo "=== $f ==="
+    sed -n '/^## What was done/,/^## /p' "$f" | head -20
+  done
 done
 ```
+
+A `~/.claude/projects/*/memory/` glob here would sweep in unrelated projects' snapshots — including everything in the catch-all directory shared by home-launched sessions — and present them as parallel work on this repo.
 
 These are read-only advisory — do not overwrite another agent's resume.
 

@@ -7,8 +7,9 @@ the sentinels.
 Moved out of `CLAUDE.md` on 2026-08-03 so it stops consuming context every session.
 
 <!-- recent-work-rollup:start -->
-*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-08-03.*
+*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-08-07.*
 
+- 2026-08-07 `solo`: P96 — The write step never resolved the path the read steps derived
 - 2026-08-03 `solo`: Batch 0.29 — tracker drift reconciliation, P74 shipped, P75 filed
 - 2026-08-03 `solo`: P95 — The P92 review returned BLOCK, and it was right
 - 2026-08-03 `solo`: P87 — Trigger (b) gets an execution arm

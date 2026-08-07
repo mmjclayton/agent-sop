@@ -57,7 +57,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| F6 | Per-agent resume file exists (local) | `~/.claude/projects/[hash]/memory/project_resume_<agent-id>.md` — at least one file matching this pattern. Legacy unsuffixed `project_resume.md` also accepted for single-agent projects. |
+| F6 | Per-agent resume file exists (local) | At least one `project_resume_<agent-id>.md` in the directory returned by `bash scripts/resolve-resume-path.sh --dir`. Legacy unsuffixed `project_resume.md` also accepted for single-agent projects. Resolve the directory — do not name-match across `~/.claude/projects/`, which finds the shared catch-all and scores this project against another's files. |
 | F7 | MEMORY.md index exists (local) | `~/.claude/projects/[hash]/memory/MEMORY.md` — same discovery method |
 | F8 | docs/recent-work/ directory exists | Directory at `docs/recent-work/` with `README.md`. Created by Phase 1 Batch 1.2 / pre-existing in SOP-setup projects from 2026-04-19 onwards. Legacy projects pre-migration acceptable. |
 | F9 | docs/agent-memory/decisions/ directory exists | If `docs/agent-memory.md` exists, the `decisions/` subdirectory under `docs/agent-memory/` must exist with `README.md`. Legacy projects pre-migration acceptable. |
@@ -212,7 +212,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| RP1 | Resume file follows the per-agent naming convention | `project_resume_<agent-id>.md`, or the legacy unsuffixed `project_resume.md` on single-agent projects. No project-specific prefix (e.g. not `project_myapp_resume.md`). Matches F6 and M4 — a multi-agent project passing those must not fail here. |
+| RP1 | Resume file follows the per-agent naming convention, in the resolved directory | `project_resume_<agent-id>.md`, or the legacy unsuffixed `project_resume.md` on single-agent projects. No project-specific prefix (e.g. not `project_myapp_resume.md`) — projects are separated by the repo-root-derived directory, not by the filename. The file must sit in the directory `scripts/resolve-resume-path.sh --dir` returns; one found only in the shared catch-all directory fails this check. Matches F6 and M4 — a multi-agent project passing those must not fail here. |
 | RP2 | Contains required sections | What was done, What is next, Blockers (or equivalent headings) |
 | RP3 | Uses snapshot format | Single session block, not a growing log with multiple dated entries. Should have `Last updated:` near the top. |
 
@@ -307,7 +307,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 |----|-------|-----------------|
 | M2 | Per-entry directory structure exists | `docs/recent-work/`, `docs/agent-memory/decisions/`, `docs/agent-memory/gotchas/` all exist with `README.md`. Legacy projects pre-migration: accept the legacy `## Recent Work` / `## Decisions Made` / `## Gotchas and Lessons` narrative sections provided a cutover note references the migration (Batch 1.6). |
 | M3 | Commit-range uses merge-base | `resolve_session_commit_range` snippet present in `.claude/commands/update-sop.md` Step 0a and `.claude/commands/restart-sop.md` Step 0c. Snippet uses `git merge-base <default-branch> HEAD` (not last-N commits, not git author filtering). Grep-verifiable by pattern `git merge-base`. |
-| M4 | Per-agent resume file exists | `~/.claude/projects/[hash]/memory/` contains at least one `project_resume_<agent-id>.md`. Legacy `project_resume.md` accepted as fallback when `$AGENT_ID` is `solo`. |
+| M4 | Per-agent resume file exists | The directory returned by `bash scripts/resolve-resume-path.sh --dir` contains at least one `project_resume_<agent-id>.md`. Legacy `project_resume.md` accepted as fallback when `$AGENT_ID` is `solo`. |
 
 ### Recommended
 

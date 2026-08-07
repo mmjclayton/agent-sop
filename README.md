@@ -93,7 +93,7 @@ Runs the session-end checklist (9 canonical steps; the pre-flight and self-evalu
 5. Update `docs/feature-map.md` with shipped items
 6. Write any new decisions to `docs/agent-memory/decisions/` and new gotchas to `docs/agent-memory/gotchas/` as individual files; update the narrative sections of `docs/agent-memory.md` by your agent-id
 7. Append to the current build plan's Batch Log
-8. Overwrite `project_resume_<agent-id>.md` with a fresh snapshot
+8. Overwrite `project_resume_<agent-id>.md` with a fresh snapshot, at the path `scripts/resolve-resume-path.sh` returns
 9. Write the session summary to `docs/recent-work/YYYY-MM-DD_<agent-id>_<slug>.md`, refresh the Recent Work rollup in `CLAUDE.md` via `bash scripts/refresh-rollup.sh`
 10. Commit the docs changes together with the feature work
 
@@ -175,7 +175,9 @@ The In-Flight Work section is itself derived: each agent owns a file at `docs/ag
 
 `docs/recent-work/` holds one file per session summary. The `## Recent Work (rollup)` section of `CLAUDE.md` is auto-generated from this directory via `/update-sop` Step 8b — derived, idempotent, regenerates deterministically.
 
-`project_resume_<agent-id>.md` is a point-in-time snapshot per agent — overwritten each session, not appended to. Records what was done, what is next, any blockers. Lives in machine-local memory (`~/.claude/projects/[project-hash]/memory/`), not in the repo. Single-agent projects use id `solo`.
+`project_resume_<agent-id>.md` is a point-in-time snapshot per agent — overwritten each session, not appended to. Records what was done, what is next, any blockers. Lives in machine-local memory, not in the repo. Single-agent projects use id `solo`.
+
+The path is always resolved by `scripts/resolve-resume-path.sh`, never hand-written. The directory it returns is derived from the git repo root, so it is stable no matter where the session was launched. That matters because the harness names its memory directories after the session's launch path: a session started outside the project gets a catch-all directory shared with every other project touched the same way, where `solo` is not a unique name and one project's snapshot can land on another's.
 
 ## Parallel multi-agent sessions
 

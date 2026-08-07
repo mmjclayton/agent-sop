@@ -134,7 +134,7 @@ If In-Flight Work is populated or `project_resume.md` has no What's Next — pre
 4. `docs/feature-map.md` — append shipped items.
 5. `docs/agent-memory.md` narrative + decisions/gotchas directories — write to `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/`; update In-Flight/Completed in agent-memory.md by agent-id.
 6. `docs/build-plans/phase-N.md` — append to Batch Log.
-7. `project_resume_<agent-id>.md` — overwrite with current state (per-agent snapshot).
+7. `project_resume_<agent-id>.md` — overwrite with current state (per-agent snapshot). Resolve the path with `bash scripts/resolve-resume-path.sh`; never hand-construct it.
 8. Write session entry to `docs/recent-work/` and refresh the `docs/RECENT-WORK.md` rollup.
 9. Commit docs/ changes with the work.
 

@@ -42,7 +42,9 @@ The user will provide a target project path (e.g. `~/Projects/my-app`). All chec
 
 ### Phase 2: File Existence Checks
 
-Check each file in the checklist's Section 1. For local files (project_resume.md, MEMORY.md), search `~/.claude/projects/` for a directory whose name contains the target project's directory name, then check inside its `memory/` folder.
+Check each file in the checklist's Section 1. For local files (project_resume.md, MEMORY.md), resolve the memory directory with `bash scripts/resolve-resume-path.sh --dir` run from the target project.
+
+**Do not search `~/.claude/projects/` for a directory whose name merely contains the project's directory name.** That substring match is the P96 defect in audit form: it matches the harness's catch-all directory for home-launched sessions, which holds several projects' resume files at once, so the audit can score a project against another project's state. If the resolver is unavailable in the target, derive the directory from the target's git repo root the same way the resolver does — never from a name match.
 
 ### Phase 3: Per-File Structure Checks
 
@@ -203,7 +205,7 @@ Check for `docs/recent-work/README.md`, `docs/agent-memory/decisions/README.md`,
 Grep `.claude/commands/update-sop.md` and `.claude/commands/restart-sop.md` for `git merge-base`. Both files must contain the pattern. Failure: any file uses `git log -10` or `git log --author=` as the drift scan.
 
 **M4 — Per-agent resume file exists (Important):**
-In the target's local memory dir (`~/.claude/projects/[hash]/memory/`), list `project_resume_*.md`. At least one must exist. Legacy `project_resume.md` also acceptable for solo-agent projects.
+In the target's local memory dir — resolved via `bash scripts/resolve-resume-path.sh --dir`, not by name matching — list `project_resume_*.md`. At least one must exist. Legacy `project_resume.md` also acceptable for solo-agent projects.
 
 **M5 — Recent Work rollup refreshed within 7 days (Recommended):**
 Locate the rollup file: `docs/RECENT-WORK.md` if it carries the sentinels, otherwise `CLAUDE.md`. Read the rollup section between `<!-- recent-work-rollup:start -->` and `<!-- recent-work-rollup:end -->`. Extract `Last refreshed: YYYY-MM-DD` and compare against today. If over 7 days old, WARN. Do not FAIL on the rollup being absent from `CLAUDE.md` — moving it out is a supported layout.

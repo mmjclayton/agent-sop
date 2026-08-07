@@ -124,7 +124,7 @@ Every project must have the following files. Create them at project initialisati
 |------|------|---------|
 | Auto-memory index | `~/.claude/projects/[project-hash]/memory/MEMORY.md` | Index of all memory files. Maintained automatically. |
 | Memory files | `~/.claude/projects/[project-hash]/memory/[type]_[topic].md` | Individual memory entries. Types: `user`, `feedback`, `project`, `reference`. |
-| Resume point (per-agent) | `~/.claude/projects/[project-hash]/memory/project_resume_<agent-id>.md` | Per-session handoff: what was done, what is next, any blockers. Overwritten every session end. `solo` agent uses `project_resume_solo.md` (or legacy `project_resume.md` — `/restart-sop` falls back when present). See `docs/guides/multi-agent-parallel-sessions.md`. |
+| Resume point (per-agent) | Resolve with `bash scripts/resolve-resume-path.sh` — never hand-construct | Per-session handoff: what was done, what is next, any blockers. Overwritten every session end. `solo` agent uses `project_resume_solo.md` (or legacy `project_resume.md` — reads fall back when present, writes never do). See `docs/guides/multi-agent-parallel-sessions.md`. |
 
 **Two memory systems — clear separation:**
 Claude Code has two memory systems. They serve different purposes and must not overlap:
@@ -138,7 +138,11 @@ Claude Code has two memory systems. They serve different purposes and must not o
 
 **Reliability warning:** Auto-memory recall is unreliable — stored rules are frequently not applied in subsequent sessions (multiple confirmed community reports as of 2026). `docs/agent-memory.md` is the authoritative cross-session context source. Never store project-critical information only in auto-memory.
 
-**Filename rule:** The resume file is named `project_resume_<agent-id>.md`, where `<agent-id>` is resolved per `docs/guides/multi-agent-parallel-sessions.md` Section 1. Single-agent projects produce `project_resume_solo.md`. Legacy projects with an unsuffixed `project_resume.md` remain supported — `/restart-sop` falls back to it when `project_resume_<agent-id>.md` is absent.
+**Path rule:** Never hand-construct the resume path. Resolve it with `bash scripts/resolve-resume-path.sh` (`--read` for the read target, no argument for the write target). The script is the single source of truth for both the directory and the filename, and every consumer — `/update-sop` Step 7, `/restart-sop`, the drift validator — calls it.
+
+The directory is derived from the **git repo root**, not from the directory the session was launched in. This distinction is the whole point: the harness names its memory directories after the session's launch path, so a session started outside the project owns a catch-all directory shared with every other project touched the same way. Writing a resume snapshot there puts it somewhere the readers never look and next to other projects' resume files. See P96.
+
+**Filename rule:** The resume file is named `project_resume_<agent-id>.md`, where `<agent-id>` is resolved per `docs/guides/multi-agent-parallel-sessions.md` Section 1. Single-agent projects produce `project_resume_solo.md`. Legacy projects with an unsuffixed `project_resume.md` remain readable — the resolver falls back to it when the per-agent file is absent — but writes always target the per-agent filename. `solo` is not unique across projects, so only the project-scoped directory keeps two projects' snapshots apart.
 
 **Distinction:** `docs/agent-memory.md` is permanent cross-session context (architectural decisions, data model invariants, named utility functions, patterns) — committed to git, visible to all contributors. `project_resume.md` is a point-in-time snapshot (where the project stands, what is next) — local, overwritten each session. Different purpose, different audience. Never confuse them.
 
@@ -401,6 +405,8 @@ Status: [emoji] [Planning / In Progress / Shipped YYYY-MM-DD]
 
 Snapshot, not a log. Per-agent file — multiple agents on separate worktrees each own their own file. Overwrite the entire content each session. Historical context belongs in build-plan batch logs.
 
+Resolve the path with `bash scripts/resolve-resume-path.sh`; do not build it from `~/.claude/projects/...` by hand. The resolver derives the directory from the git repo root so the write target matches what `/restart-sop` and the drift validator read.
+
 ```
 # Session Resume — [Project Name] — Agent <agent-id>
 
@@ -416,7 +422,7 @@ Last updated: YYYY-MM-DD
 [(none) or specific blocker with context]
 ```
 
-Legacy single-agent projects may still have an unsuffixed `project_resume.md`. `/restart-sop` Step 2 falls back to it when `project_resume_<agent-id>.md` is absent.
+Legacy single-agent projects may still have an unsuffixed `project_resume.md`. The resolver falls back to it on reads when `project_resume_<agent-id>.md` is absent. Writes never target it — mark it superseded once a per-agent file exists.
 
 ---
 
@@ -474,7 +480,7 @@ Skip agent-memory.md, build plans, and MEMORY.md/project_resume.md. The lightwei
 4. docs/feature-map.md — append shipped items
 5. docs/agent-memory.md narrative + decisions/gotchas directories — write new decisions to docs/agent-memory/decisions/YYYY-MM-DD_<agent-id>_<slug>.md, new gotchas to docs/agent-memory/gotchas/, update In-Flight/Completed lines in agent-memory.md by agent-id
 6. docs/build-plans/phase-N.md — append to Batch Log (must reference review path for [Feature]/[Refactor] items over threshold — Step 3c validator enforces)
-7. project_resume_<agent-id>.md — overwrite with current state (snapshot, per-agent)
+7. project_resume_<agent-id>.md — overwrite with current state (snapshot, per-agent). Resolve the path with `bash scripts/resolve-resume-path.sh`; never hand-construct it.
 8. Write session entry to docs/recent-work/ and refresh CLAUDE.md rollup section
 9. Commit docs/ changes with the work
 ```

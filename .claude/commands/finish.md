@@ -141,7 +141,7 @@ Run the full `/update-sop` checklist (`docs/sop/claude-agent-sop.md` Section 12 
 - Backlog state-transition validation (Step 3c).
 - Drift check (Step 3d).
 - `feature-map.md`, `agent-memory.md`, build-plan Batch Log.
-- `project_resume_<agent-id>.md` snapshot.
+- `project_resume_<agent-id>.md` snapshot, written to the path `scripts/resolve-resume-path.sh` returns.
 - `docs/recent-work/` session entry + rollup refresh.
 - Final commit.
 

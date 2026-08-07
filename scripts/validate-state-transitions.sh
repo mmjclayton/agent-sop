@@ -170,59 +170,38 @@ if [ "$MODE" = "check-drift" ]; then
   # Resolve resume file
   resume_file="$DRIFT_RESUME_FILE"
   if [ -z "$resume_file" ]; then
-    # Always resolve worktree root first — used both for agent-id derivation
-    # and for the memory-dir path below. Without this, `$root` is only set on
-    # the auto-detect branch and `set -u` trips when CLAUDE_AGENT_ID is preset.
-    root=$(git rev-parse --show-toplevel 2>/dev/null) || root=""
-    # Find agent-id
-    agent_id="${CLAUDE_AGENT_ID:-}"
-    if [ -z "$agent_id" ]; then
-      if [ -n "$root" ] && [ -f "$root/.sop-agent-id" ]; then
-        agent_id=$(head -1 "$root/.sop-agent-id" | tr -d '[:space:]')
-      else
-        # `|| true`: outside a git repo `git worktree list` exits 128. 2>/dev/null
-        # hides the message but not the status, pipefail carries it past wc/tr,
-        # and errexit then killed the whole script — `--check-drift` in a non-git
-        # directory exited 128 with empty stdout AND empty stderr, which D1
-        # asserts must not happen ("--check-drift works when invoked"). The rest
-        # of this script is built to degrade gracefully off-git; this line was
-        # the one place that did not. Found by the P66-P73 review, after an
-        # earlier audit that checked only sites matching `grep|find|diff` and
-        # therefore missed every failing `git` subcommand.
-        worktree_count=$( { git worktree list 2>/dev/null || true; } | wc -l | tr -d '[:space:]')
-        if [ "$worktree_count" = "1" ]; then
-          agent_id="solo"
-        elif [ -n "$root" ]; then
-          if command -v shasum >/dev/null 2>&1; then
-            agent_id=$(printf '%s' "$root" | shasum -a 256 | cut -c1-6)
-          else
-            agent_id=$(printf '%s' "$root" | sha256sum | cut -c1-6)
-          fi
-        fi
-      fi
+    # Delegated to scripts/resolve-resume-path.sh (P96). This block previously
+    # inlined the agent-id and memory-dir derivation, which /restart-sop
+    # duplicated verbatim and /update-sop Step 7 did not implement at all —
+    # so the writer and the two readers could target different directories.
+    # One implementation now serves all three; see the script header and
+    # docs/guides/cross-layer-rules.md Tier A.
+    #
+    # `|| resolver_status=$?` is load-bearing under `set -e`: the resolver
+    # exits 1 when no resume file exists (first session) and 2 when the repo
+    # root is the home directory. Both are conditions this check degrades
+    # through, not crashes on, so the status is captured rather than fatal.
+    resolver="$(cd "$(dirname "$0")" && pwd)/resolve-resume-path.sh"
+    resolver_status=0
+    resolver_err=$(mktemp)
+    resume_file=$(bash "$resolver" --read 2>"$resolver_err") || resolver_status=$?
+    # Always re-emit the resolver's stderr when it wrote any. On success that is
+    # the legacy-fallback migration advisory, which P47 made load-bearing. On
+    # failure it is the specific reason — "not a git repository", or the
+    # home-root refusal — which the generic "no project_resume file found"
+    # message below would otherwise replace with something misleading. The
+    # resolver stays silent on the ordinary first-session case (exit 1, no
+    # output), so this adds no noise where D1 requires graceful degradation.
+    if [ -s "$resolver_err" ]; then
+      cat "$resolver_err" >&2
     fi
-    [ -z "$agent_id" ] && agent_id="solo"
-    # Locate project memory dir (derived from worktree path). Claude Code
-    # normalises all non-alphanumeric path chars to hyphens, so matt_clayton
-    # becomes matt-clayton. Collapse consecutive hyphens so `My__Projects`
-    # matches the observed single-hyphen naming convention.
-    if [ -n "$root" ]; then
-      project_hash=$(printf '%s' "$root" | sed 's|[^a-zA-Z0-9-]|-|g' | sed 's|--*|-|g' | sed 's|^-||')
-      resume_file="$HOME/.claude/projects/-$project_hash/memory/project_resume_${agent_id}.md"
-      # Fallback: legacy unsuffixed project_resume.md. Always tried, regardless
-      # of agent-id. Long-lived projects predating the per-agent filename
-      # convention keep drift enforcement without forcing `/migrate-to-multi-agent`
-      # first. When agent-id is non-`solo` (parallel worktree) and the fallback
-      # actually fires, emit a one-line advisory so the operator knows to migrate.
-      if [ ! -f "$resume_file" ]; then
-        legacy_resume="$HOME/.claude/projects/-$project_hash/memory/project_resume.md"
-        if [ -f "$legacy_resume" ]; then
-          resume_file="$legacy_resume"
-          if [ "$agent_id" != "solo" ]; then
-            echo "check-drift: reading legacy unsuffixed resume file ($resume_file). Run \`/migrate-to-multi-agent\` to move to per-agent format." >&2
-          fi
-        fi
-      fi
+    rm -f "$resolver_err"
+    if [ "$resolver_status" != "0" ]; then
+      resume_file=""
+    fi
+    if [ "$resolver_status" = "2" ]; then
+      echo "check-drift: repo root is the home directory — the memory directory there is" >&2
+      echo "  the harness catch-all shared across projects, not project-scoped. Drift check skipped." >&2
     fi
   fi
 

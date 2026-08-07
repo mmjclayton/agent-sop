@@ -390,7 +390,7 @@ These files live on your machine, not in git.
 
 ### project_resume.md
 
-Location: `~/.claude/projects/[project-hash]/memory/project_resume.md`
+Location: whatever `bash scripts/resolve-resume-path.sh` returns — a project-scoped directory derived from the git repo root. Do not hand-build the path.
 
 You do not need to create this manually. On your first Claude Code session, the agent will create it as part of the session end checklist. If you want to seed it:
 
@@ -412,7 +412,7 @@ P1 — User authentication (register, login, refresh routes).
 
 ### MEMORY.md
 
-Location: `~/.claude/projects/[project-hash]/memory/MEMORY.md`
+Location: `$(bash scripts/resolve-resume-path.sh --dir)/MEMORY.md` — resolve the directory, do not hand-build it.
 
 This is an index of auto-memory files. It will be populated automatically as Claude Code stores memories. You can seed it with a pointer to the resume file:
 

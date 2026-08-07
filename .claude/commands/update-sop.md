@@ -454,7 +454,27 @@ If no build plan exists for the current work, skip this step.
 
 ## Step 7: Update project_resume_<agent-id>.md
 
-Overwrite `~/.claude/projects/[project-hash]/memory/project_resume_${AGENT_ID}.md` with a fresh snapshot. Per-agent file — do not edit other agents' resume files.
+Resolve the write target with `scripts/resolve-resume-path.sh`. **Do not hand-construct this path and do not write into whichever memory directory the current session happens to own.** The directory is derived from the git repo root, so it is the same one `/restart-sop` and the drift validator read from.
+
+```bash
+if [ ! -f scripts/resolve-resume-path.sh ]; then
+  echo "Warning: resolve-resume-path.sh not found. Upgrade with /update-agent-sop or run from upstream: bash ~/Projects/agent-sop/scripts/resolve-resume-path.sh"
+  exit 1
+fi
+
+RESUME=$(bash scripts/resolve-resume-path.sh) || exit 1
+mkdir -p "$(dirname "$RESUME")"
+echo "Resume target: $RESUME"
+```
+
+Overwrite `$RESUME` with a fresh snapshot. Per-agent file — do not edit other agents' resume files.
+
+**Why this is resolved rather than written by hand (P96).** This step used to name `~/.claude/projects/[project-hash]/memory/project_resume_${AGENT_ID}.md` with no derivation for `[project-hash]`, while `/restart-sop` and the drift validator both derived it from the repo root. An agent with no rule writes into the directory the *session* owns, which for a session launched outside the project is the harness's catch-all bucket. Two failures followed:
+
+- **The write and the read landed in different directories.** The snapshot went somewhere Step 3d never looks, so drift detection degraded to `no project_resume file found — skipping` and silently no-opped.
+- **The catch-all bucket holds several projects' resume files, and every single-worktree project resolves to agent-id `solo`.** The legacy fallback below would then select another project's file. Overwriting it destroys unrelated state.
+
+If the resolver exits 2, the repo root is the home directory and no project-scoped directory can be derived. Stop and re-run the session from inside the project repo. Do not write into the shared directory.
 
 ```
 # Session Resume — [Project Name] — Agent <agent-id>
@@ -473,7 +493,14 @@ Last updated: [today's date]
 
 This file is a snapshot, not a log. Overwrite the entire content.
 
-**Legacy fallback:** if the project still uses the unsuffixed `project_resume.md` (single-agent legacy format) and `$AGENT_ID` is `solo`, write to that filename for backwards compatibility. Otherwise always use the suffixed filename.
+**Legacy fallback is read-only.** Writes always go to the per-agent filename the resolver returns. The unsuffixed `project_resume.md` stays readable — `/restart-sop` and the drift validator fall back to it when no per-agent file exists yet — but nothing writes to it. A write-side fallback is what allowed one project's session to select and overwrite another project's file.
+
+When the resolved directory still holds a legacy unsuffixed `project_resume.md` after this step has written the per-agent file, mark the legacy file superseded rather than deleting it (Section 0 never-delete-without-a-trace):
+
+```
+**SUPERSEDED - YYYY-MM-DD.** Live resume is `project_resume_<agent-id>.md` in this
+directory. Kept for history only; do not treat as current state.
+```
 
 ## Step 8: Write session entry to docs/recent-work/
 
@@ -523,7 +550,13 @@ The script resolves its own target — `docs/RECENT-WORK.md` when that file carr
 
 ## Step 9: Update MEMORY.md index
 
-If any new memory files were created during this session, add them to `~/.claude/projects/[project-hash]/memory/MEMORY.md`. Each entry should be one line under ~150 characters.
+If any new memory files were created during this session, add them to the memory index. Resolve its directory the same way Step 7 does — the index lives beside the resume file and has the same collision exposure:
+
+```bash
+MEMORY_INDEX="$(bash scripts/resolve-resume-path.sh --dir)/MEMORY.md" || exit 1
+```
+
+Each entry should be one line under ~150 characters. Do not hand-construct `~/.claude/projects/[project-hash]/memory/MEMORY.md`; an unresolved placeholder here lands the index in whichever directory the session owns, which is the P96 defect applied to a different file.
 
 ## Step 10: Commit
 

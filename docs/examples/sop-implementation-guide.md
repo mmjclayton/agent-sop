@@ -222,7 +222,7 @@ Status: In Progress
 
 ### 4.1 — `project_resume.md`
 
-Location: `~/.claude/projects/[project-hash]/memory/project_resume.md`
+Location: whatever `bash scripts/resolve-resume-path.sh` returns — a project-scoped directory derived from the git repo root. Do not hand-build the path.
 
 This is a **snapshot**, not a log. Overwrite the entire file each session.
 
@@ -243,7 +243,7 @@ Last updated: [YYYY-MM-DD]
 
 ### 4.2 — `MEMORY.md`
 
-Location: `~/.claude/projects/[project-hash]/memory/MEMORY.md`
+Location: `$(bash scripts/resolve-resume-path.sh --dir)/MEMORY.md` — resolve the directory, do not hand-build it.
 
 One-line index of memory files. Each entry under ~150 characters.
 
