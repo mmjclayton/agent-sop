@@ -2,6 +2,7 @@
 
 **Date:** 2026-08-07
 **Agent:** solo
+**Commits:** `4296811` (PR #15), `14bf4b6` (PR #16)
 
 An agent running agent-sop on a consumer project reached `/update-sop` Step 7, found two resume files in its memory directory that belonged to other projects, and refused the step rather than overwrite either. It was right to. Step 7 named `~/.claude/projects/[project-hash]/memory/project_resume_${AGENT_ID}.md` and never resolved `[project-hash]`, while `/restart-sop` Step 0d and `--check-drift` both derived that directory from `git rev-parse --show-toplevel`. The only step that writes the file was the one step with no derivation.
 
