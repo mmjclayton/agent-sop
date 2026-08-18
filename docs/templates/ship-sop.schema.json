@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/mmjclayton/ship-sop/main/docs/templates/ship-sop.schema.json",
+  "title": "ship-sop configuration",
+  "description": "Per-project configuration for ship-sop auto-mode and per-agent toggles.",
+  "type": "object",
+  "required": ["trigger", "agents"],
+  "properties": {
+    "trigger": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["auto", "manual", "off"],
+          "description": "auto = SessionStop hook fires the pipeline; manual = /ship only; off = pipeline disabled entirely"
+        },
+        "throttle": {
+          "type": "object",
+          "properties": {
+            "min_diff_lines": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 10,
+              "description": "Skip auto-fire if diff is smaller than this many lines"
+            },
+            "skip_docs_only": {
+              "type": "boolean",
+              "default": false,
+              "description": "Skip auto-fire entirely when only .md / docs/ files changed (doc-builder otherwise still runs to keep generated docs in sync)"
+            },
+            "cooldown_seconds": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 300,
+              "description": "Minimum seconds between consecutive auto-fires on the same diff state"
+            },
+            "skip_branch_patterns": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": ["^wip/", "^spike/", "^exp/"],
+              "description": "Regex patterns; auto-fire skips branches matching any of these"
+            }
+          }
+        }
+      }
+    },
+    "agents": {
+      "type": "object",
+      "description": "Per-agent toggles. Keys are agent names; values control whether the gate runs and what severity blocks ship.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["enabled"],
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "If false, the gate is skipped"
+          },
+          "block_on": {
+            "type": "string",
+            "enum": ["CRITICAL", "HIGH", "MEDIUM", "never"],
+            "default": "CRITICAL",
+            "description": "Severity that hard-blocks ship. 'never' makes the gate advisory."
+          },
+          "auto_file_backlog": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether the agent should auto-file findings as Backlog entries"
+          }
+        }
+      }
+    },
+    "release": {
+      "type": "object",
+      "properties": {
+        "auto_publish": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, /release publishes without confirmation prompt. Strongly discouraged."
+        },
+        "default_branch": {
+          "type": "string",
+          "default": "main",
+          "description": "Branch from which releases are cut"
+        },
+        "version_source": {
+          "type": "string",
+          "default": "package.json",
+          "description": "File to read the current version from. Supports package.json, pyproject.toml, Cargo.toml, version.txt"
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "description": "Optional housekeeping for files written under docs/reviews/.",
+      "properties": {
+        "retain_ship_artifact_days": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "If > 0, prune ship-sop gate artifacts (YYYYMMDD-HHMMSS-*.md) older than this many days at hook fire time. Agent-sop /update-sop reviews (YYYY-MM-DD_<agent-id>_P<n>.md) are never touched. Default 0 disables retention."
+        }
+      }
+    }
+  }
+}

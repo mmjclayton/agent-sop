@@ -9,3 +9,6 @@ docs/agent-memory/learnings/*.md
 
 # Python bytecode from scripts/
 __pycache__/
+
+# ship-sop runtime artifacts
+.ship/
