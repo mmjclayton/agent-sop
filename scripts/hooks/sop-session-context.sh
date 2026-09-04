@@ -42,6 +42,7 @@ mkdir -p "$MARKER_DIR" 2>/dev/null && : > "$MARKER" 2>/dev/null
 NAME=$(basename "$ROOT")
 BRANCH=$(git -C "$ROOT" branch --show-current 2>/dev/null)
 AGENT=$(sop_agent_id "$ROOT")
+PTYPE=$(sop_project_type "$ROOT")
 
 # ── Resume snapshot ───────────────────────────────────────────────────────────
 RESUME_TEXT="(none found — first session on this project for agent-id $AGENT, or no resolver in scripts/)"
@@ -96,14 +97,19 @@ DIRTY=$(sop_tracker_dirty "$ROOT")
 # ── Ship gate (same fact the Stop hook and push gate act on) ──────────────────
 # "Drift: none" and an outstanding gate can both be true of one commit; a real
 # session read the first and was surprised by the second at its next stop
-# (P101). Printed only where ship-sop is configured.
+# (P101). Printed only where ship-sop is configured. A config on a non-code
+# project says so instead of implying a gate that will never fire (P102).
 GATE_LINE=""
 if [ -f "$ROOT/ship-sop.config.json" ]; then
-    GATE=$(sop_shipsop_gate "$ROOT")
-    if [ -n "$GATE" ]; then
-        GATE_LINE="outstanding — $(printf '%s\n' "$GATE" | head -1) The Stop hook will demand the report at your next stop; the push gate refuses until it exists."
+    if [ "$PTYPE" != "code" ]; then
+        GATE_LINE="none — non-code project; ship-sop's automatic gate fires only on code projects (declare \`**Project type:** code\` in CLAUDE.md to opt in)"
     else
-        GATE_LINE="none outstanding (covered, docs-only, below threshold, skipped branch, or mode not auto)"
+        GATE=$(sop_shipsop_gate "$ROOT")
+        if [ -n "$GATE" ]; then
+            GATE_LINE="outstanding — $(printf '%s\n' "$GATE" | head -1) The Stop hook will demand the report at your next stop; the push gate refuses until it exists."
+        else
+            GATE_LINE="none outstanding (covered, no code lines, below threshold, skipped branch, or mode not auto)"
+        fi
     fi
 fi
 
@@ -149,7 +155,7 @@ LEGACY=""
 [ -f "$ROOT/.ship/.pending-auto-fire.md" ] && LEGACY="Legacy ship-sop directive at .ship/.pending-auto-fire.md — superseded by the agent-sop Stop hook, which now emits the gate demand itself. Ignore it and delete the .ship/.pending-auto-fire.* files."
 
 # ── Print ─────────────────────────────────────────────────────────────────────
-printf -- '--- Agent SOP context: %s (branch %s, agent-id %s) ---\n' "$NAME" "${BRANCH:-detached}" "$AGENT"
+printf -- '--- Agent SOP context: %s (branch %s, agent-id %s, %s project) ---\n' "$NAME" "${BRANCH:-detached}" "$AGENT" "$PTYPE"
 printf 'Resume snapshot: %s\n' "$RESUME_TEXT"
 printf 'In-flight (%s):\n%s\n' "$AGENT" "$(printf '%s\n' "$INFLIGHT" | sed 's/^/  /')"
 printf 'Recent sessions:\n%s\n' "$(printf '%s\n' "$RECENT" | sed 's/^/  /')"

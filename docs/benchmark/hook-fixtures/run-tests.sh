@@ -6,7 +6,9 @@
 #   sop-stop-drift.sh        Stop — exit 2 with a reason only when a deterministic drift fact holds
 #   sop-push-gate.sh         PreToolUse(Bash) — refuses `git push` / `gh pr create` when ship-sop
 #                            auto-mode is on and no gate report covers HEAD
-#   ../install-hooks.sh      registers the three in a settings.json idempotently
+#   sop-project-type.sh      prints code|non-code — the one rule the ship gate, the context
+#                            block and the slash commands all read (P102)
+#   ../install-hooks.sh      registers the hooks in a settings.json idempotently
 #
 # Fixtures are real repositories with a bare origin, built in a temp dir, so
 # default-branch detection and merge-base behave as in production. State is
@@ -30,8 +32,9 @@ INSTALLER="${INSTALLER:-$REPO_ROOT/scripts/install-hooks.sh}"
 CTX="$HOOKS_DIR/sop-session-context.sh"
 STOP="$HOOKS_DIR/sop-stop-drift.sh"
 PUSH="$HOOKS_DIR/sop-push-gate.sh"
+PTYPE="$HOOKS_DIR/sop-project-type.sh"
 
-for f in "$CTX" "$STOP" "$PUSH" "$INSTALLER"; do
+for f in "$CTX" "$STOP" "$PUSH" "$PTYPE" "$INSTALLER"; do
     if [ ! -f "$f" ]; then
         echo "Missing: $f" >&2
         exit 2
@@ -57,11 +60,13 @@ bad()  { echo "FAIL: $1 — $2"; fail=$((fail + 1)); failed="$failed $1"; }
 
 # ── Fixture builders ──────────────────────────────────────────────────────────
 
-# make_repo <dir> [with-sop]
+# make_repo <dir> [with-sop|with-code]
 # Creates a bare origin at <dir>.git, clones it to <dir>, makes an initial
 # commit on main and pushes so origin/main exists. With "with-sop", installs
 # the minimal SOP file set the hooks key on, plus the repo's own resolver so
-# agent-id / resume paths follow production rules.
+# agent-id / resume paths follow production rules. That set carries no
+# manifest and no declaration, so by the project-type rule it is a NON-CODE
+# project; "with-code" adds a package.json so the ship gate applies (P102).
 make_repo() {
     local dir="$1" sop="${2:-}"
     $GIT init -q --bare -b main "$dir.git"
@@ -69,7 +74,8 @@ make_repo() {
     (
         cd "$dir" || exit 1
         echo "# app" > README.md
-        if [ "$sop" = "with-sop" ]; then
+        [ "$sop" = "with-code" ] && echo '{ "name": "fixture", "private": true }' > package.json
+        if [ "$sop" = "with-sop" ] || [ "$sop" = "with-code" ]; then
             mkdir -p docs/sop docs/recent-work docs/agent-memory/in-flight docs/reviews scripts
             printf '# Backlog\n\n### P1 — First thing\n`[OPEN] [Feature]`\n\nbody\n\n---\n' > Backlog.md
             echo "# SOP" > docs/sop/claude-agent-sop.md
@@ -117,6 +123,12 @@ run_hook() {
 }
 
 head_of() { git -C "$1" rev-parse HEAD; }
+
+# push_json <command> — the PreToolUse(Bash) fields for a push-gate case.
+# Defined with the other helpers: a case that calls it before its definition
+# feeds the hook a JSON with no command, and the hook is then silent for the
+# wrong reason (found when the first P102 push cases passed vacuously).
+push_json() { printf ',"tool_name":"Bash","tool_input":{"command":"%s"}' "$1"; }
 
 # ── Stop hook ─────────────────────────────────────────────────────────────────
 
@@ -177,7 +189,7 @@ if [ "$HOOK_EXIT" = 0 ]; then ok "stop-dirty-tracker-throttled"; else bad "stop-
 git -C "$SOP" checkout -q -- Backlog.md
 
 # ship-sop fold: gate demanded on a code diff vs origin/main with no covering report
-SHIP="$TMP/ship"; make_repo "$SHIP" with-sop
+SHIP="$TMP/ship"; make_repo "$SHIP" with-code
 commit_record "$SHIP" "first-session"
 git -C "$SHIP" push -q origin main 2>/dev/null
 cat > "$SHIP/ship-sop.config.json" <<'JSON'
@@ -201,7 +213,7 @@ run_hook "$STOP" "$SHIP" ''
 # hook may legitimately fire for that — but it must no longer demand the gates.
 if ! grep -q "@security-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-gate-satisfied-by-covering-report"; else bad "stop-shipsop-gate-satisfied-by-covering-report" "stderr='$(cat "$HOOK_ERR")'"; fi
 
-DOCS="$TMP/docsonly"; make_repo "$DOCS" with-sop
+DOCS="$TMP/docsonly"; make_repo "$DOCS" with-code
 cp "$SHIP/ship-sop.config.json" "$DOCS/"
 (cd "$DOCS" && $GIT add -A >/dev/null && $GIT commit -q -m "chore: config" && $GIT push -q origin main 2>/dev/null)
 git -C "$DOCS" checkout -q -b feat/docs
@@ -210,9 +222,68 @@ commit_record "$DOCS" "recorded"
 run_hook "$STOP" "$DOCS" ''
 if ! grep -q "@security-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-docs-only-no-gate"; else bad "stop-shipsop-docs-only-no-gate" "stderr='$(cat "$HOOK_ERR")'"; fi
 
-# ── Push gate ─────────────────────────────────────────────────────────────────
+# ── Project type (P102) ──────────────────────────────────────────────────────
+# The operator's rule: ship-sop fires for coding and for nothing else. One
+# function decides what "coding" is; these cases pin it.
 
-push_json() { printf ',"tool_name":"Bash","tool_input":{"command":"%s"}' "$1"; }
+ptype() { bash "$PTYPE" "$1" 2>/dev/null; }
+
+if [ "$(ptype "$SOP")" = "non-code" ]; then ok "type-plain-sop-is-non-code"; else bad "type-plain-sop-is-non-code" "got '$(ptype "$SOP")'"; fi
+if [ "$(ptype "$SHIP")" = "code" ]; then ok "type-manifest-is-code"; else bad "type-manifest-is-code" "got '$(ptype "$SHIP")'"; fi
+if [ "$(ptype "$TMP/notrepo")" = "non-code" ]; then ok "type-not-a-repo-is-non-code"; else bad "type-not-a-repo-is-non-code" "got '$(ptype "$TMP/notrepo")'"; fi
+
+TYPED="$TMP/typed"; mkdir -p "$TYPED"
+echo '{}' > "$TYPED/package.json"
+printf '# X\n\n**Project type:** non-code\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "non-code" ]; then ok "type-declaration-overrides-manifest"; else bad "type-declaration-overrides-manifest" "got '$(ptype "$TYPED")'"; fi
+rm -f "$TYPED/package.json"
+printf '# X\n\nProject type: Code\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-declaration-code-without-manifest"; else bad "type-declaration-code-without-manifest" "got '$(ptype "$TYPED")'"; fi
+printf '# X\n\n## Auth\n\nsupabase\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-auth-heading-is-code"; else bad "type-auth-heading-is-code" "got '$(ptype "$TYPED")'"; fi
+printf '# X\n\nStarted from claude-md-template-code.md\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-code-template-reference-is-code"; else bad "type-code-template-reference-is-code" "got '$(ptype "$TYPED")'"; fi
+printf '# X\n\n## Key Commands\n\n```bash\nnpm test\n```\n\n## Other\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-key-commands-test-is-code"; else bad "type-key-commands-test-is-code" "got '$(ptype "$TYPED")'"; fi
+printf '# X\n\n## Key Commands\n\n```bash\npython3 check-invariants.py   # the test suite for the prose\n```\n\n## Other\n\nnpm test is not run here.\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "non-code" ]; then ok "type-test-word-in-prose-is-non-code"; else bad "type-test-word-in-prose-is-non-code" "got '$(ptype "$TYPED")'"; fi
+
+# A prose repo carrying an auto config gets no gate anywhere: not at stop, not
+# at push, and the context block says why. Each of the three fails against the
+# pre-P102 library, which keyed on the config alone.
+PROSE="$TMP/prose"; make_repo "$PROSE" with-sop
+cp "$SHIP/ship-sop.config.json" "$PROSE/"
+(cd "$PROSE" && $GIT add -A >/dev/null && $GIT commit -q -m "chore: config" && $GIT push -q origin main 2>/dev/null)
+git -C "$PROSE" checkout -q -b feat/prose
+commit_code "$PROSE" "feat: a script in a prose repo"
+commit_record "$PROSE" "recorded"
+run_hook "$STOP" "$PROSE" ''
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-shipsop-non-code-project-no-gate"; else bad "stop-shipsop-non-code-project-no-gate" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+run_hook "$PUSH" "$PROSE" "$(push_json 'git push -u origin feat/prose')"
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-shipsop-non-code-project-allowed"; else bad "push-shipsop-non-code-project-allowed" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+SESSION_ID=ctx-prose run_hook "$CTX" "$PROSE" ''
+if grep -q "non-code project) ---" "$HOOK_OUT" && grep -q "^Ship gate: none — non-code project" "$HOOK_OUT"; then ok "ctx-non-code-project-says-why"; else bad "ctx-non-code-project-says-why" "out='$(grep -E 'Agent SOP context|Ship gate' "$HOOK_OUT")'"; fi
+
+# The declaration opts a manifest-less repo in: same tree, one line added.
+printf '\n**Project type:** code\n' >> "$PROSE/CLAUDE.md"
+run_hook "$PUSH" "$PROSE" "$(push_json 'git push -u origin feat/prose')"
+if [ "$HOOK_EXIT" = 2 ] && grep -q "ship-auto.md" "$HOOK_ERR"; then ok "push-shipsop-declared-code-refused"; else bad "push-shipsop-declared-code-refused" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+git -C "$PROSE" checkout -q -- CLAUDE.md
+
+# Code lines only, whatever the config says: a docs-only branch in a code
+# project with skip_docs_only=false still gets no gate. Fails pre-P102.
+LOOSE="$TMP/loose"; make_repo "$LOOSE" with-code
+jq '.trigger.throttle.skip_docs_only = false' "$SHIP/ship-sop.config.json" > "$LOOSE/ship-sop.config.json"
+(cd "$LOOSE" && $GIT add -A >/dev/null && $GIT commit -q -m "chore: config" && $GIT push -q origin main 2>/dev/null)
+git -C "$LOOSE" checkout -q -b feat/prose-in-code
+(cd "$LOOSE" && for i in $(seq 1 20); do echo "para $i" >> notes.md; done && $GIT add -A >/dev/null && $GIT commit -q -m "docs: notes")
+commit_record "$LOOSE" "recorded"
+run_hook "$STOP" "$LOOSE" ''
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-shipsop-skip-docs-false-still-code-only"; else bad "stop-shipsop-skip-docs-false-still-code-only" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+SESSION_ID=ctx-ship run_hook "$CTX" "$SHIP" ''
+if grep -q "code project) ---" "$HOOK_OUT" && ! grep -q "non-code project) ---" "$HOOK_OUT"; then ok "ctx-code-project-named-in-header"; else bad "ctx-code-project-named-in-header" "out='$(head -1 "$HOOK_OUT")'"; fi
+
+# ── Push gate ─────────────────────────────────────────────────────────────────
 
 run_hook "$PUSH" "$SOP" "$(push_json 'ls -la')"
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-non-push-command-silent"; else bad "push-non-push-command-silent" "exit $HOOK_EXIT"; fi
@@ -220,7 +291,7 @@ if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-non-push-command-
 run_hook "$PUSH" "$SOP" "$(push_json 'git push origin main')"
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-no-shipsop-allowed"; else bad "push-no-shipsop-allowed" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
 
-GATED="$TMP/gated"; make_repo "$GATED" with-sop
+GATED="$TMP/gated"; make_repo "$GATED" with-code
 cp "$SHIP/ship-sop.config.json" "$GATED/"
 (cd "$GATED" && $GIT add -A >/dev/null && $GIT commit -q -m "chore: config" && $GIT push -q origin main 2>/dev/null)
 git -C "$GATED" checkout -q -b feat/push
@@ -335,6 +406,7 @@ if [ "$INST1" = 0 ] && [ "$INST2" = 0 ] \
    && [ "$(count PreToolUse 'existing-pre')" = 1 ] \
    && [ "$(jq -r .model "$SETTINGS")" = x ] \
    && [ -x "$DEST/sop-stop-drift.sh" ] \
+   && [ -x "$DEST/sop-project-type.sh" ] \
    && ls "$SETTINGS".bak-* >/dev/null 2>&1; then
     ok "installer-idempotent-and-preserving"
 else

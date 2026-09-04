@@ -66,8 +66,9 @@ These are the files this command keeps in sync. Everything else (CLAUDE.md, Back
 | `~/.claude/scripts/hooks/agent-sop/sop-session-context.sh` | `scripts/hooks/sop-session-context.sh` | user |
 | `~/.claude/scripts/hooks/agent-sop/sop-stop-drift.sh` | `scripts/hooks/sop-stop-drift.sh` | user |
 | `~/.claude/scripts/hooks/agent-sop/sop-push-gate.sh` | `scripts/hooks/sop-push-gate.sh` | user |
+| `~/.claude/scripts/hooks/agent-sop/sop-project-type.sh` | `scripts/hooks/sop-project-type.sh` | user |
 
-The four hook scripts are registered in `~/.claude/settings.json` by `scripts/install-hooks.sh` (run from the agent-sop checkout, or by `setup.sh`). Syncing them here refreshes the installed copies; it does not touch `settings.json`. Preserve the executable bit when writing them.
+The hook scripts are registered in `~/.claude/settings.json` by `scripts/install-hooks.sh` (run from the agent-sop checkout, or by `setup.sh`). Syncing them here refreshes the installed copies; it does not touch `settings.json`. Preserve the executable bit when writing them.
 
 ## Steps
 

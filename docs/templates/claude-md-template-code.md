@@ -4,6 +4,8 @@
 
 ---
 
+**Project type:** code
+
 *This is the code project template — for full-stack web apps and other software projects. It extends the base template (`claude-md-template-base.md`) with Auth, Database, Design System, and code-specific build rules. For non-code projects, use the base template.*
 
 ---

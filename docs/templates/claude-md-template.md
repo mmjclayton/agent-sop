@@ -4,6 +4,8 @@
 
 ---
 
+**Project type:** non-code
+
 *This is the base template — suitable for any project type. For full-stack code projects, use `claude-md-template-code.md` instead, which adds Auth, Database, Design System, and code-specific build rules.*
 
 ---

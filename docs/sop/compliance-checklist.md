@@ -30,11 +30,15 @@ The canonical list of checks used by the SOP Compliance Checker agent. Each chec
 
 ## Code vs Non-Code Detection
 
-Check in order. If any match, treat as a code project:
+One rule, shared with the user-scope hooks, `/update-sop` Step 2, `/finish` and ship-sop's `/ship`: the executable form is `sop_project_type` in `scripts/hooks/sop-lib.sh`, run as `scripts/hooks/sop-project-type.sh` (installed at `~/.claude/scripts/hooks/agent-sop/`). When this prose and the script disagree, the script is the rule (cross-layer-rules Tier A). Since 2026-09-04 (P102) the ship-sop automatic gate fires only on code projects, so the answer here decides whether reviewer agents run at all.
+
+0. `CLAUDE.md` carries a `**Project type:** code` or `**Project type:** non-code` line — that answer wins outright. The templates carry it; a scripts-and-markdown repo with a real test suite declares `code` because no heuristic below would find it.
+
+Otherwise check in order. If any match, treat as a code project:
 
 1. `CLAUDE.md` contains `## Auth`, `## Database`, or `## Design System`
 2. `CLAUDE.md` references `claude-md-template-code.md`
-3. `## Key Commands` section contains test commands (e.g. `test`, `jest`, `pytest`, `cargo test`)
+3. `## Key Commands` section runs a test suite (`npm`/`pnpm`/`yarn`/`bun test`, `pytest`, `jest`, `vitest`, `cargo test`, `go test`, `make test`); the word "test" in prose does not count
 4. Project root contains `package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, or `Gemfile`
 
 If none match: non-code project. Code-only checks are marked below and scored as N/A for non-code projects.
