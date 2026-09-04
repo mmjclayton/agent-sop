@@ -118,3 +118,4 @@ Last updated: 2026-08-03 (P87 trigger (b) enforcement; P95 citation check)
 | P99 | Stop hook skips merge commits when computing drift | `scripts/hooks/sop-lib.sh`, `docs/benchmark/hook-fixtures/` | 2026-09-04 |
 | P100 | Context hook reads only the status line for in-progress items | `scripts/hooks/sop-session-context.sh`, `docs/benchmark/hook-fixtures/` | 2026-09-04 |
 | P101 | Context block shows ship-gate state | `scripts/hooks/sop-session-context.sh`, `docs/benchmark/hook-fixtures/` | 2026-09-04 |
+| P102 | ship-sop gates fire only on code projects; one project-type rule; SOP commands stop outside SOP repos | `scripts/hooks/sop-lib.sh`, `scripts/hooks/sop-project-type.sh`, `.claude/commands/{update-sop,restart-sop,finish}.md`, `docs/benchmark/hook-fixtures/` | 2026-09-04 |

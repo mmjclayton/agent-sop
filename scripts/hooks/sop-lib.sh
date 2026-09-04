@@ -71,6 +71,77 @@ sop_repo_key() {
     printf '%s' "$1" | sop_sha256 | cut -c1-12
 }
 
+# ── Project type ──────────────────────────────────────────────────────────────
+# sop_project_type <root> — prints "code" or "non-code". One rule for every
+# consumer (cross-layer-rules Tier A): the ship gate, the context block,
+# /update-sop's code-only steps, /ship, and the compliance checker's "Code vs
+# Non-Code Detection" all read this. The operator's rule (2026-09-04): ship-sop
+# fires for coding and for nothing else, so a wrong answer here is either a
+# gate nagging a prose repo or unreviewed code going through.
+#
+# Precedence:
+#   1. An explicit declaration in CLAUDE.md — a line `**Project type:** code`
+#      or `**Project type:** non-code` (bold optional, a leading list bullet
+#      tolerated, value case-insensitive; text inside ``` fences is ignored so
+#      an example of the syntax is not read as the declaration). Wins
+#      outright: a scripts-and-markdown repo with a real test suite has no
+#      manifest and is still code (agent-sop itself is the example).
+#   2. The four heuristics from docs/sop/compliance-checklist.md, in order
+#      (all case-insensitive, like the declaration):
+#      a. CLAUDE.md has a `## Auth`, `## Database` or `## Design System` heading
+#      b. CLAUDE.md references claude-md-template-code.md
+#      c. the `## Key Commands` section runs a test suite (npm/pnpm/yarn/bun
+#         test, pytest, jest, vitest, cargo test, go test, make test) — the
+#         word "test" in prose does not count
+#      d. the root carries package.json, Cargo.toml, pyproject.toml, go.mod
+#         or Gemfile
+#   3. Otherwise non-code.
+#
+# A declaration that contradicts the heuristics is honoured, and the context
+# block says so (review finding: a `non-code` line on a repo that has since
+# grown a manifest is a silent switch-off of the gate otherwise).
+
+# sop_claude_prose <file> — the file with fenced code blocks removed.
+sop_claude_prose() { awk '/^[[:space:]]*```/{f=!f; next} !f' "$1" 2>/dev/null; }
+
+# sop_declared_project_type <root> — "code", "non-code", or empty.
+sop_declared_project_type() {
+    local claude="$1/CLAUDE.md"
+    [ -f "$claude" ] || { printf ''; return; }
+    sop_claude_prose "$claude" \
+        | sed -E 's/^[[:space:]]*[-+*][[:space:]]+//' \
+        | grep -Ei '^[*_]*project type' | head -1 | tr 'A-Z' 'a-z' \
+        | sed -nE 's/^[*_]*project type[*_]*:?[*_]*[[:space:]]*(non-code|code)([^a-z].*)?$/\1/p'
+}
+
+# sop_code_signals <root> — one line per heuristic that says "code", in the
+# documented order; empty when none does.
+sop_code_signals() {
+    local root="$1" claude="$1/CLAUDE.md" m
+    if [ -f "$claude" ]; then
+        sop_claude_prose "$claude" | grep -Ei '^## (Auth|Database|Design System)([^A-Za-z]|$)' | head -1 \
+            | sed -E 's/^## ([A-Za-z]+( [A-Za-z]+)?).*/\1 heading/'
+        grep -qi 'claude-md-template-code\.md' "$claude" 2>/dev/null && echo 'code-template reference'
+        awk 'tolower($0) ~ /^## key commands/{f=1; next} /^## /{f=0} f' "$claude" 2>/dev/null \
+            | grep -Eqi '(^|[[:space:]`])((npm|pnpm|yarn|bun)[[:space:]]+(run[[:space:]]+)?test|pytest|jest|vitest|cargo[[:space:]]+test|go[[:space:]]+test|make[[:space:]]+test)([^a-z]|$)' \
+            && echo 'test command under Key Commands'
+    fi
+    for m in package.json Cargo.toml pyproject.toml go.mod Gemfile; do
+        [ -f "$root/$m" ] && echo "$m"
+    done
+    return 0
+}
+
+sop_project_type() {
+    local root="$1" declared
+    [ -n "$root" ] && [ -d "$root" ] || { printf 'non-code'; return; }
+    declared=$(sop_declared_project_type "$root")
+    if [ -n "$declared" ]; then printf '%s' "$declared"; return; fi
+    if [ -n "$(sop_code_signals "$root")" ]; then printf 'code'; else printf 'non-code'; fi
+}
+
+sop_is_code_repo() { [ "$(sop_project_type "$1")" = "code" ]; }
+
 # sop_default_branch <root> — "origin/main" style ref, or empty.
 # Same rule as /update-sop Step 0a and ship-sop's hook.
 sop_default_branch() {
@@ -185,11 +256,21 @@ sop_is_push_command() {
 
 # sop_code_lines <root> <from> <to> <skip-docs> — added+deleted lines in the
 # range, excluding documentation extensions when skip-docs is "true".
-# Binary files report "-" and count 0.
+# Binary files report "-" and count 0. Fields are tab-separated: the path
+# field can carry spaces, and a rename arrives as `old => new` or
+# `dir/{old => new}/rest`. A rename is excluded only when both names are
+# documentation — a doc renamed into a code file with logic added is code
+# (review finding, CRITICAL: whitespace splitting read the old name).
 sop_code_lines() {
-    git -C "$1" diff --numstat "$2..$3" 2>/dev/null | awk -v skip="$4" '
+    git -C "$1" diff --numstat "$2..$3" 2>/dev/null | awk -F'\t' -v skip="$4" '
+        function isdoc(p) { return p ~ /\.(md|markdown|txt|rst)$/ }
         {
-            if (skip == "true" && $3 ~ /\.(md|markdown|txt|rst)$/) next
+            path = $3; old = path; new = path
+            if (path ~ / => /) {
+                new = path; gsub(/\{[^}]* => /, "", new); gsub(/\}/, "", new); sub(/^.* => /, "", new)
+                old = path; gsub(/ => [^}]*\}/, "", old); gsub(/\{/, "", old); sub(/ => .*$/, "", old)
+            }
+            if (skip == "true" && isdoc(old) && isdoc(new)) next
             a = ($1 == "-") ? 0 : $1
             d = ($2 == "-") ? 0 : $2
             t += a + d
@@ -197,14 +278,14 @@ sop_code_lines() {
         END { print t + 0 }'
 }
 
-# sop_shipsop_covered <root> <head> <skip-docs> — true when some
-# docs/reviews/*-ship-auto.md carries `Covers: <sha>` for an ancestor of
-# HEAD with zero code lines between it and HEAD.
+# sop_shipsop_covered <root> <head> — true when some docs/reviews/*-ship-auto.md
+# carries `Covers: <sha>` for an ancestor of HEAD with zero code lines between
+# it and HEAD. Code lines exclude documentation, same as the trigger.
 sop_shipsop_covered() {
-    local root="$1" head="$2" skip="$3" sha
+    local root="$1" head="$2" sha
     for sha in $(cat "$root"/docs/reviews/*-ship-auto.md 2>/dev/null | grep -oE 'Covers: [0-9a-f]{7,40}' | awk '{print $2}' | sort -u); do
         git -C "$root" merge-base --is-ancestor "$sha" "$head" 2>/dev/null || continue
-        [ "$(sop_code_lines "$root" "$sha" "$head" "$skip")" = "0" ] && return 0
+        [ "$(sop_code_lines "$root" "$sha" "$head" true)" = "0" ] && return 0
     done
     return 1
 }
@@ -216,18 +297,26 @@ sop_shipsop_covered() {
 # throttle keys, same agent list. The one behavioural change is how the
 # demand reaches the model — exit 2 on Stop, which Claude Code feeds back,
 # instead of stdout, which it discards for Stop hooks.
+#
+# Code projects only, and code lines only (P102). The operator's rule is that
+# ship-sop fires for coding and for nothing else: a prose repository that
+# carries a config gets no automatic gate, and a documentation-only branch in
+# a code repository gets none either. The config's `skip_docs_only` is read
+# by nothing here any more — documentation extensions are always excluded
+# from the count; the field survives for /ship's manual mode and old configs.
 sop_shipsop_gate() {
-    local root="$1" cfg mode branch pat base head lines min skip_docs report agents
+    local root="$1" cfg mode branch pat base head lines min report agents
     cfg="$root/ship-sop.config.json"
     [ -f "$cfg" ] || { printf ''; return; }
     sop_have_jq || { printf ''; return; }
 
     mode=$(jq -r '.trigger.mode // "manual"' "$cfg" 2>/dev/null)
     [ "$mode" = "auto" ] || { printf ''; return; }
+    sop_is_code_repo "$root" || { printf ''; return; }
 
     branch=$(git -C "$root" branch --show-current 2>/dev/null)
     for pat in $(jq -r '.trigger.throttle.skip_branch_patterns[]? // empty' "$cfg" 2>/dev/null); do
-        if printf '%s' "$branch" | grep -Eq "$pat"; then printf ''; return; fi
+        if printf '%s' "$branch" | grep -Eq -- "$pat"; then printf ''; return; fi
     done
 
     base=$(sop_range_base "$root")
@@ -235,18 +324,17 @@ sop_shipsop_gate() {
     head=$(git -C "$root" rev-parse HEAD 2>/dev/null)
 
     min=$(jq -r '.trigger.throttle.min_diff_lines // 10' "$cfg" 2>/dev/null)
-    skip_docs=$(jq -r '.trigger.throttle.skip_docs_only // true' "$cfg" 2>/dev/null)
 
-    # With skip_docs_only, documentation extensions are excluded from the count
-    # so a docs-heavy branch does not summon reviewers for prose.
-    lines=$(sop_code_lines "$root" "$base" "$head" "$skip_docs")
+    # Documentation extensions are excluded from the count, always, so a
+    # docs-heavy branch never summons reviewers for prose.
+    lines=$(sop_code_lines "$root" "$base" "$head" true)
     [ "${lines:-0}" -ge "${min:-10}" ] 2>/dev/null || { printf ''; return; }
 
     # Coverage is a fact, not a stamp: a report names a commit that is an
     # ancestor of HEAD with no code change since. "No code change" uses the
     # same docs filter as the trigger, so committing the report itself — or
     # any later docs-only commit — does not un-cover the branch.
-    if sop_shipsop_covered "$root" "$head" "$skip_docs"; then
+    if sop_shipsop_covered "$root" "$head"; then
         printf ''
         return
     fi

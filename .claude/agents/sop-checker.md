@@ -32,10 +32,11 @@ The user will provide a target project path (e.g. `~/Projects/my-app`). All chec
 ### Phase 1: Discovery
 
 1. Read the target project's `CLAUDE.md`.
-2. Determine if it is a **code project** or **non-code project**:
+2. Determine if it is a **code project** or **non-code project**. The executable form of this rule is `scripts/hooks/sop-project-type.sh` (installed at `~/.claude/scripts/hooks/agent-sop/`); run it when present and use its answer. When the prose here and the script disagree, the script is the rule. By hand, in order:
+   - Declared: CLAUDE.md carries a `**Project type:** code` or `**Project type:** non-code` line (outside code fences; a leading bullet is fine) — that answer wins outright. A `non-code` declaration on a repository where any heuristic below holds is check X7's FAIL: report it.
    - Code if: CLAUDE.md contains `## Auth`, `## Database`, or `## Design System`
    - Code if: CLAUDE.md references `claude-md-template-code.md`
-   - Code if: Key Commands section contains test commands (`test`, `jest`, `pytest`, `cargo test`, `go test`)
+   - Code if: Key Commands section runs a test suite (`npm test`, `pytest`, `jest`, `vitest`, `cargo test`, `go test`, `make test`); the word "test" in prose does not count
    - Code if: project root contains `package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, or `Gemfile`
    - Otherwise: non-code
 3. Note the project name from the CLAUDE.md title line.

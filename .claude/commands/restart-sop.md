@@ -7,6 +7,25 @@ Start a new session by executing the Agent SOP session start checklist. Read eve
 
 If a block headed `--- Agent SOP context: <project> ---` is already in this session's context, the user-scope `sop-session-context.sh` hook has run Steps 0-4 for this project: do not repeat them. Go straight to Step 5 (read the current work item) and Step 6 (report readiness), citing the hook's drift and sibling-worktree lines.
 
+## Gate: is this an Agent SOP project?
+
+Same gate as `/update-sop`. Prose projects deliberately carry no SOP scaffolding, and their own `.claude/commands/restart-sop.md` does not load when the session was launched from another directory, so this global command is what runs there.
+
+```bash
+root=$(git rev-parse --show-toplevel 2>/dev/null) || root=$PWD
+# One rule: sop_is_sop_repo in the installed hook library. The inline test is
+# the same rule for a machine without the hooks (setup.sh --no-hooks).
+LIB="$HOME/.claude/scripts/hooks/agent-sop/sop-lib.sh"
+if [ -f "$LIB" ]; then . "$LIB"; is_sop() { sop_is_sop_repo "$1"; }
+else is_sop() { [ "$1" != "$HOME" ] && [ -f "$1/Backlog.md" ] && [ -f "$1/docs/sop/claude-agent-sop.md" ]; }; fi
+if ! is_sop "$root"; then
+  echo "not-sop-project"
+  [ -f "$root/.claude/commands/restart-sop.md" ] && echo "project-override: $root/.claude/commands/restart-sop.md"
+fi
+```
+
+If it prints `not-sop-project`: run none of the steps below and install nothing. If it also prints a `project-override` path, read that file and follow it instead. Otherwise say in one line that this is not an Agent SOP project, and stop.
+
 ## Step 0: SOP staleness check
 
 Before running the checklist, check the Agent SOP update cadence. Read `.claude/agent-sop.config.json` (project) or `~/.claude/agent-sop.config.json` (user-global). If neither exists, skip this step.

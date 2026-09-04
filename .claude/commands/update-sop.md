@@ -5,6 +5,25 @@ sop_version: "2026-07-06"
 
 Execute the Agent SOP session end checklist. Complete every step below before the session ends. Do not skip any step. Never delete without a trace: update in place, mark superseded, or archive.
 
+## Gate: is this an Agent SOP project?
+
+The checklist below is for repositories that carry the SOP file set. Prose projects (Imagineers, Heckler X) deliberately carry none, and a session launched from another directory does not load their own `.claude/commands/` overrides — so this global command is what runs there. Check first:
+
+```bash
+root=$(git rev-parse --show-toplevel 2>/dev/null) || root=$PWD
+# One rule: sop_is_sop_repo in the installed hook library. The inline test is
+# the same rule for a machine without the hooks (setup.sh --no-hooks).
+LIB="$HOME/.claude/scripts/hooks/agent-sop/sop-lib.sh"
+if [ -f "$LIB" ]; then . "$LIB"; is_sop() { sop_is_sop_repo "$1"; }
+else is_sop() { [ "$1" != "$HOME" ] && [ -f "$1/Backlog.md" ] && [ -f "$1/docs/sop/claude-agent-sop.md" ]; }; fi
+if ! is_sop "$root"; then
+  echo "not-sop-project"
+  [ -f "$root/.claude/commands/update-sop.md" ] && echo "project-override: $root/.claude/commands/update-sop.md"
+fi
+```
+
+If it prints `not-sop-project`: do not run any step below, do not create `Backlog.md`, and do not install scaffolding. If it also prints a `project-override` path, that file is the project's own session-end checklist — read it and follow it instead of this one. Otherwise say, in one line, that this is not an Agent SOP project, and stop.
+
 ## Pre-flight check: No outstanding background subagents
 
 Subagents run in the background by default from Claude Code 2.1.198 (1 July 2026) — the session keeps working while they run. A checklist executed while subagents are outstanding produces a resume snapshot and Backlog state that omit their work.
@@ -179,6 +198,8 @@ This is what keeps the prose and the validator agreeing. Before P66 was fixed, S
 
 ## Step 2: Run tests (code projects only)
 
+"Code project" is decided by one rule, the same one the hooks and `/ship` use: the context block header says `code project` or `non-code project`; without a block, `bash ~/.claude/scripts/hooks/agent-sop/sop-project-type.sh` prints it (an explicit `**Project type:**` line in CLAUDE.md wins, else the four checks in `docs/sop/compliance-checklist.md` § Code vs Non-Code Detection). If the script is not installed, apply those four checks by hand. Non-code: skip this step.
+
 If this is a code project with a test suite, run the full test suite now. **Fix any failures before proceeding.**
 
 A red suite at session end is a real situation, so there is an exit — but it is a declared one, not a judgement call. You may continue with the remaining steps **only when all three of these hold**:
@@ -193,7 +214,7 @@ This step previously let the agent continue whenever it judged the failures too 
 
 The prior wording is quoted verbatim in P70's `Backlog.md` entry and in git history, not here — check T1 greps this file for that phrase, so reproducing it in the explanation would fail the check on the reference implementation itself. That is not hypothetical: it did fail, and the P66-P73 review caught it.
 
-Skip this step for documentation-only or markdown-only projects.
+Skip this step for non-code projects (by the rule above), which is what documentation-only and markdown-only projects are.
 
 ## Step 2a: Check for P-number collisions with the default branch
 

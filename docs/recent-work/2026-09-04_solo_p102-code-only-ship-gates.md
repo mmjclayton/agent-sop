@@ -1,0 +1,15 @@
+# P102 — ship-sop gates fire only on code projects; one project-type rule; SOP commands stop outside SOP repos
+
+**Date:** 2026-09-04
+**Agent:** solo
+**Commits:** `ffb4380` (file P102), `0324597` (feature), `90075fc` (review fixes), `8903290` (silent-failure fixes), housekeeping commit follows
+
+The operator's instruction: agent-sop must not slow down projects that are not code based (Imagineers, Heckler X named), and ship-sop fires for coding only. Batch 0.40.
+
+**Measured before changing anything.** The three hooks were already silent in Imagineers and Heckler X — no `Backlog.md`, no SOP doc, about 50 ms each, no output. What was exposed: `sop_shipsop_gate` keyed on `ship-sop.config.json` + `trigger.mode: auto` and nothing else; the ship-sop template shipped `skip_docs_only: false` (which the hook's jq `// true` default was silently reading as true anyway); the global `/update-sop` and `/restart-sop` had no "is this an SOP project" check, so a session launched from `~` that moved into Imagineers ran the generic 648-line checklist instead of the project's own override; and "code project" existed only as prose in the compliance checker.
+
+**Change.** `sop_project_type` in `sop-lib.sh` is the one rule: an explicit `**Project type:** code|non-code` line in CLAUDE.md wins, else the four documented heuristics. `sop_shipsop_gate` returns nothing for a non-code project and counts code lines only; the Stop hook, push gate and context block inherit it. `sop-project-type.sh` is the executable form, installed with the hooks. `/update-sop` and `/restart-sop` open with a gate that defers to a project override or stops. Templates declare their type; agent-sop and ship-sop declare `code` (bash with a test suite, no manifest). ship-sop's docs side went as PR #11 (P26).
+
+**Review.** Six gate agents in a detached worktree. Silent-failure-hunter found a CRITICAL that predates P102 — `sop_code_lines` split numstat on whitespace, so a rename `docs/plan.md => src/gen.js` was classified by its old name and its code lines counted as documentation; with the docs filter now unconditional that could keep a branch "covered" while unreviewed code arrived. Security found that a `non-code` declaration over a real manifest switched the gate off silently. Code review found the declaration read inside code fences, a bullet defeating it, and the commands re-implementing `sop_is_sop_repo`. The test review found seven unpinned paths and a false comment of mine. All fixed with fixtures that fail against the commit they fix: 71 cases, 23 failing against the pre-P102 library.
+
+**Live.** Installed and re-probed: Imagineers and Heckler X silent; Resonate, Meaningful, SyncHive non-code (Meaningful still gets the drift notice for one unrecorded commit — session records are not code-only); opportunity-scan, hst-tracker, design-agent, repcanvas-marketing code by manifest; agent-sop and ship-sop code by declaration. The context block for this session's later prompts carried "code project" in its header.

@@ -21,6 +21,8 @@ CHANGED=$(git diff --name-only "$BASE"...HEAD)
 echo "$CHANGED"
 ```
 
+If the project is non-code by the shared rule (the context block header says `non-code project`, or `bash ~/.claude/scripts/hooks/agent-sop/sop-project-type.sh` prints `non-code`), the surface is **Docs-only** and detection stops here.
+
 Detection heuristics (apply in order, multiple may match):
 
 | Surface | Signals |
@@ -195,3 +197,4 @@ If any phase failed and was resolved, note the failure in the summary so the use
 - Mid-task checkpoints — use `/checkpoint` or commit directly.
 - Pure exploration / spike branches that aren't shipping.
 - Hotfixes where the verification surface is a production system you can't safely exercise locally — escalate to the user instead of inventing a verification path.
+- Repositories without the Agent SOP file set (no `Backlog.md`, no `docs/sop/claude-agent-sop.md`) — Phase 3 runs `/update-sop`, whose opening gate stops there; use the project's own close-out instead.
