@@ -1,6 +1,6 @@
 ---
 description: Sync pristine-replica Agent SOP files (SOP docs, guides, slash commands, reference agents) from the upstream agent-sop repo into this project and the user's ~/.claude directory. Three-way diff for locally modified files; never force-overwrites.
-sop_version: "2026-04-29"
+sop_version: "2026-09-04"
 ---
 
 Keep Agent SOP artefacts up to date. Pulls the current pristine-replica files from upstream (local checkout if available, GitHub raw otherwise), diffs them against this project's copies, and applies updates only where safe. Locally modified files are surfaced for reconciliation rather than overwritten.
@@ -62,6 +62,12 @@ These are the files this command keeps in sync. Everything else (CLAUDE.md, Back
 | `~/.claude/agents/security-reviewer.md` | `.claude/agents/security-reviewer.md` | user |
 | `~/.claude/agents/planner.md` | `.claude/agents/planner.md` | user |
 | `~/.claude/agents/e2e-runner.md` | `.claude/agents/e2e-runner.md` | user |
+| `~/.claude/scripts/hooks/agent-sop/sop-lib.sh` | `scripts/hooks/sop-lib.sh` | user |
+| `~/.claude/scripts/hooks/agent-sop/sop-session-context.sh` | `scripts/hooks/sop-session-context.sh` | user |
+| `~/.claude/scripts/hooks/agent-sop/sop-stop-drift.sh` | `scripts/hooks/sop-stop-drift.sh` | user |
+| `~/.claude/scripts/hooks/agent-sop/sop-push-gate.sh` | `scripts/hooks/sop-push-gate.sh` | user |
+
+The four hook scripts are registered in `~/.claude/settings.json` by `scripts/install-hooks.sh` (run from the agent-sop checkout, or by `setup.sh`). Syncing them here refreshes the installed copies; it does not touch `settings.json`. Preserve the executable bit when writing them.
 
 ## Steps
 

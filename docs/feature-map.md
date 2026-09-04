@@ -113,3 +113,5 @@ Last updated: 2026-08-03 (P87 trigger (b) enforcement; P95 citation check)
 | P95 | Sentinel-splice data-loss guard + priorities fixtures | `scripts/refresh-rollup.sh`, `docs/benchmark/priorities-fixtures/` | 2026-08-03 |
 | P87 | Step 1b trigger (b) execution arm, tag-independent | `scripts/validate-state-transitions.sh` | 2026-08-03 |
 | P96 | Unified resume-path resolver (write/read directory parity) | `scripts/resolve-resume-path.sh`, `docs/benchmark/resume-path-fixtures/` | 2026-08-07 |
+| P97 | User-scope hooks: context load, Stop drift gate, push gate; ship-sop auto-mode folded in | `scripts/hooks/`, `scripts/install-hooks.sh`, `docs/benchmark/hook-fixtures/` | 2026-09-04 |
+| P98 | Digest review 10 Aug + 31 Aug: floor 2.1.251, extract-then-execute pattern, branch convention | `README.md`, `setup.sh`, `.claude/agents/security-reviewer.md`, `docs/guides/multi-agent-parallel-sessions.md` | 2026-09-04 |

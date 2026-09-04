@@ -1,4 +1,4 @@
-<!-- SOP-Version: 2026-04-17 -->
+<!-- SOP-Version: 2026-09-04 -->
 # Harness Configuration Reference
 
 Last updated: 2026-08-03
@@ -27,12 +27,13 @@ How to configure Claude Code's runtime — hooks and context primitives — to e
 |------|---------------|---------|
 | `PreToolUse` | Before a tool executes | Blocking gates: secret scanning, lint checks, push review |
 | `PostToolUse` | After a tool executes | Logging, format checks, type checking |
-| `SessionStart` | When a new session begins | Auto-loading context files |
-| `SessionEnd` | When a session terminates | Saving session state, cleanup |
+| `SessionStart` | When a new session begins (`source`: startup, resume, clear, compact) | Auto-loading context files; stdout reaches the model |
+| `UserPromptSubmit` | Before each user prompt is processed | Late context load after a `cd`; stdout reaches the model |
+| `SessionEnd` | When a session terminates | Cleanup only; output never reaches the model |
 | `PreCompact` | Before context compaction | Preserving state before memory is compressed |
 | `Stop` | After the agent produces each response | Pattern extraction, notifications |
 
-`PreToolUse` hooks can block (non-zero exit stops the tool call). `PostToolUse` hooks cannot block but can warn. Hooks receive JSON on stdin.
+`PreToolUse` and `Stop` hooks block on exit 2, with stderr fed back to the model (`Stop` then continues the turn). `PostToolUse` hooks cannot block but can warn. Hooks receive JSON on stdin, including `cwd` (follows the session's `cd`) and `session_id`. Project-scope hooks load only from the directory Claude Code was launched in; anything that must fire for a session launched elsewhere belongs user-scope.
 
 ---
 
@@ -72,50 +73,25 @@ File-backed persistent notes. The API primitive behind `docs/agent-memory.md`. F
 
 ## Reference Implementations
 
-### a. SessionStart — auto-load context
+### a. SessionStart + UserPromptSubmit — context load (shipped: `scripts/hooks/sop-session-context.sh`)
 
-```json
-{
-  "hooks": {
-    "SessionStart": [{
-      "matcher": "*",
-      "hooks": [{
-        "type": "command",
-        "command": "cat CLAUDE.md docs/agent-memory.md 2>/dev/null; r=$(bash scripts/resolve-resume-path.sh --read 2>/dev/null) && cat \"$r\"; echo '--- Context loaded ---'"
-      }]
-    }]
-  }
-}
-```
+Installed user-scope by `scripts/install-hooks.sh`. Prints, once per session and project, the resume snapshot, in-flight lines, recent sessions, `[IN PROGRESS]` Backlog items, commits since the last session record, dirty sibling worktrees, and upstream-sync staleness. Covers Steps 0-4 of the session start checklist; the Backlog item for the task is still a deliberate read.
 
-Automates steps 1-3 of the session start checklist. Agent still runs `git log` and reads the Backlog item manually.
+Registered on both events because Claude Code adds hook stdout to the model's context only for `SessionStart`, `UserPromptSubmit`, `UserPromptExpansion` and `PostModelSwitch`, and because sessions launched outside the project only reach it after a `cd` — the first prompt inside the project is what loads it. `SessionStart` with `source` `compact` or `clear` reprints, since the earlier context is gone.
 
-The resume file is resolved, not globbed. An earlier version of this hook read `~/.claude/projects/*/memory/project_resume.md`, which matches every project's resume file on the machine — including the catch-all directory shared by home-launched sessions — and so could load another project's state as this session's context.
+The resume file is resolved through `scripts/resolve-resume-path.sh`, never globbed. An earlier reference implementation here read `~/.claude/projects/*/memory/project_resume.md`, which matches every project's resume file on the machine — including the catch-all directory shared by home-launched sessions — and so could load another project's state as this session's context.
 
-### b. PreCompact / SessionEnd — checklist reminder
+### b. Stop — session-end drift (shipped: `scripts/hooks/sop-stop-drift.sh`)
 
-```json
-{
-  "hooks": {
-    "PreCompact": [{
-      "matcher": "*",
-      "hooks": [{
-        "type": "command",
-        "command": "echo 'Context compaction imminent. Run session end checklist NOW: Backlog.md, feature-map.md, agent-memory.md, build plan batch log, project_resume.md. Commit docs/ with the work.'"
-      }]
-    }],
-    "SessionEnd": [{
-      "matcher": "*",
-      "hooks": [{
-        "type": "command",
-        "command": "echo 'Session ending. Verify session end checklist completed.'"
-      }]
-    }]
-  }
-}
-```
+Replaces the earlier `PreCompact` / `SessionEnd` echo reminders, which the action-vs-ceremony test rules out: a print the agent can ignore is indistinguishable from no print, and `SessionEnd` output never reaches the model at all. The Stop hook instead exits 2 — which Claude Code feeds back to the model and continues the turn — only when a fact holds: commits after the newest `docs/recent-work/` entry, uncommitted tracker files, or a ship-sop auto-mode diff with no gate report naming an ancestor of HEAD. It fires once per commit state and stays silent otherwise.
 
-PreCompact fires before mid-session compression, giving the agent a chance to persist state before older context is lost.
+Stdout from a `Stop` hook is written to the debug log and never shown to the model. A Stop hook that "injects a directive via stdout" does nothing; this is why ship-sop's project-scope hook produced no gate run in four months even after its wiring was fixed.
+
+### b2. PreToolUse(Bash) — push gate (shipped: `scripts/hooks/sop-push-gate.sh`)
+
+Refuses `git push` and `gh pr create` when ship-sop auto-mode applies and no report covers HEAD — matched on what would execute (simple command, `bash -c` / `sh -c` / `eval` body, command substitution), never on text inside a quoted argument. The only surface among the three that can actually refuse. `SOP_SKIP_GATE=1` in the command bypasses once and is appended to `.ship/bypass.log`.
+
+All three resolve the repository from the hook's `cwd` input, not the launch directory, and stay silent outside SOP projects. Fixture suite: `docs/benchmark/hook-fixtures/run-tests.sh`.
 
 ### c. Pre-commit quality gate
 

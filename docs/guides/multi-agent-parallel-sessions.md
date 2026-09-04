@@ -1,4 +1,4 @@
-<!-- SOP-Version: 2026-04-19 -->
+<!-- SOP-Version: 2026-09-04 -->
 # Multi-Agent Parallel Sessions
 
 Applies when multiple Claude Code terminal instances work on the same repo in separate `git worktree` checkouts, each running `/update-sop` and `/restart-sop` independently without human co-ordination.
@@ -379,7 +379,9 @@ If any sibling has uncommitted edits, the operator should commit or stash in tha
 
 **Recovery if hit:** dangling objects usually survive in the object store. `git fsck --lost-found` enumerates them; `git show <hash>` identifies content; `git checkout <hash> -- <path>` restores. Slow, error-prone, and avoidable — pre-flight cleanly.
 
-The Step 0 advisory in `/restart-sop` is a soft warning, not a hard block. The decision to proceed with dirty siblings is the operator's; the SOP just makes the state visible.
+The Step 0 advisory in `/restart-sop` is a soft warning, not a hard block. The decision to proceed with dirty siblings is the operator's; the SOP just makes the state visible. The user-scope `sop-session-context.sh` hook prints the same advisory on the first prompt inside the project, so it reaches sessions that never type `/restart-sop`.
+
+**Branch naming.** Prefix branches with the agent-id: `<agent-id>/<slug>`, and run `git branch -a --list "<slug>*"` before creating one. Anthropic's Frontier Red Team measured 18 of 30 parallel agents independently choosing the identical branch name for the same task (`anthropic.com/research/multiagent-systems`, 2026-08-13); the P-number collision check in `/update-sop` Step 2a catches Backlog collisions but nothing catches two agents pushing to one branch name. If you observe another agent reverting or overwriting your work, stop, record the observation in your own in-flight file, and surface it to the operator — Rule 6 applied to a peer rather than a request. Do not escalate, lock out, or work around the other agent.
 
 See `docs/agent-memory/gotchas/2026-05-02_solo_worktree-uncommitted-wipe.md` for the source incident.
 
