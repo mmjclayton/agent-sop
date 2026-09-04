@@ -2058,6 +2058,22 @@ First live run of `sop-session-context.sh` (the operator's first prompt after `i
 
 ---
 
+### P103 — Stop hook's session-record and tracker demands fire only on code projects
+`[IN PROGRESS] [Iteration]`
+
+Follow-on to P102, operator decision 2026-09-04: the drift half of `sop-stop-drift.sh` (commits with no `docs/recent-work/` entry, uncommitted tracker files) is code-only too, like the ship gate. A prose project with SOP scaffolding (Meaningful, Resonate, SyncHive) gets no Stop notice at all; `/update-sop` stays the deliberate close there. The context block still prints the drift facts on every SOP project — it is read once and is not a nag — and its closing line says whether the Stop hook enforces anything here.
+
+**Acceptance criteria:**
+- Non-code SOP repo: unrecorded commit and dirty tracker both leave the Stop hook silent
+- Code repo: unchanged behaviour
+- Context block on a non-code repo still shows drift facts and says session-end is not enforced
+- Fixtures discriminate against the P102 library
+- Installed copy refreshed
+
+**Source:** operator reply to the P102 report, 2026-09-04.
+
+---
+
 ### P102 — ship-sop gates fire only on code projects; SOP commands stop early outside SOP repos
 `[SHIPPED - 2026-09-04] [Feature]`
 

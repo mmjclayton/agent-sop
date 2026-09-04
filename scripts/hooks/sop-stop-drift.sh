@@ -16,6 +16,12 @@
 # facts change, so a session that ignores it pays one extra turn per commit
 # state, never a loop.
 #
+# Code projects only (P102 for the gate, P103 for the drift half): the
+# operator's rule is that agent-sop must not slow down prose projects, so a
+# non-code repository with SOP scaffolding gets no Stop notice at all and
+# /update-sop stays its deliberate close. The context block still shows the
+# drift facts there; it is read once and demands nothing.
+#
 # This replaces the need to type /update-sop for the minimum record. The full
 # checklist remains available and is still what a deliberate session end runs.
 #
@@ -34,6 +40,7 @@ CWD=$(sop_field '.cwd')
 [ -n "$CWD" ] || CWD="$PWD"
 ROOT=$(sop_repo_root "$CWD")
 sop_is_sop_repo "$ROOT" || exit 0
+sop_is_code_repo "$ROOT" || exit 0
 
 HEAD=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null) || exit 0
 [ -n "$HEAD" ] || exit 0

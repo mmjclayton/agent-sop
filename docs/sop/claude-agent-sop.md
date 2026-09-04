@@ -461,7 +461,7 @@ Skip agent-memory.md, build plans, and MEMORY.md/project_resume.md. The lightwei
 
 ## 6. Session End Checklist
 
-**Run `/update-sop` at the end of every session.** This slash command (installed via `.claude/commands/update-sop.md`) automates the full checklist below. If the command is not available, execute the steps manually. Never-delete-without-a-trace applies to every step. With the user-scope hooks installed, `sop-stop-drift.sh` enforces the minimum of steps 2, 7, 8 and 9 whenever the agent stops with unrecorded commits or uncommitted trackers: it exits 2 naming the gap, and the agent closes it before finishing. The full checklist stays the deliberate session close.
+**Run `/update-sop` at the end of every session.** This slash command (installed via `.claude/commands/update-sop.md`) automates the full checklist below. If the command is not available, execute the steps manually. Never-delete-without-a-trace applies to every step. With the user-scope hooks installed, `sop-stop-drift.sh` enforces the minimum of steps 2, 7, 8 and 9 on code projects whenever the agent stops with unrecorded commits or uncommitted trackers (non-code projects get no notice; this checklist is their deliberate close): it exits 2 naming the gap, and the agent closes it before finishing. The full checklist stays the deliberate session close.
 
 ```
 1. Run tests (code projects, by the project-type rule) — fix failures before proceeding. Continuing with a red suite requires all three: the failure filed as a [Bug] this session, named in the resume snapshot's Blockers, and nothing tagged [Feature]/[Refactor] shipping. Otherwise the suite is the gate (P70 — the exit is declared, never self-judged)

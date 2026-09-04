@@ -83,7 +83,7 @@ The resume file is resolved through `scripts/resolve-resume-path.sh`, never glob
 
 ### b. Stop — session-end drift (shipped: `scripts/hooks/sop-stop-drift.sh`)
 
-Replaces the earlier `PreCompact` / `SessionEnd` echo reminders, which the action-vs-ceremony test rules out: a print the agent can ignore is indistinguishable from no print, and `SessionEnd` output never reaches the model at all. The Stop hook instead exits 2 — which Claude Code feeds back to the model and continues the turn — only when a fact holds: commits after the newest `docs/recent-work/` entry, uncommitted tracker files, or — on a code project only — a ship-sop auto-mode diff with code lines and no gate report naming an ancestor of HEAD. It fires once per commit state and stays silent otherwise.
+Replaces the earlier `PreCompact` / `SessionEnd` echo reminders, which the action-vs-ceremony test rules out: a print the agent can ignore is indistinguishable from no print, and `SessionEnd` output never reaches the model at all. The Stop hook instead exits 2 — which Claude Code feeds back to the model and continues the turn — only on a code project (P103) and only when a fact holds: commits after the newest `docs/recent-work/` entry, uncommitted tracker files, or a ship-sop auto-mode diff with code lines and no gate report naming an ancestor of HEAD. It fires once per commit state and stays silent otherwise.
 
 Stdout from a `Stop` hook is written to the debug log and never shown to the model. A Stop hook that "injects a directive via stdout" does nothing; this is why ship-sop's project-scope hook produced no gate run in four months even after its wiring was fixed.
 

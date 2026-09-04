@@ -170,6 +170,10 @@ printf 'Uncommitted tracker files: %s\n' "$DIRTY_LINE"
 printf 'Worktrees: %s\n' "$SIBLINGS"
 [ -n "$SYNC" ] && printf 'SOP sync: %s\n' "$SYNC"
 [ -n "$LEGACY" ] && printf '%s\n' "$LEGACY"
-printf 'This replaces /restart-sop Steps 0-4. Read the Backlog.md item for the task before starting it. Session-end is enforced by the Stop hook: when you stop with unrecorded commits or uncommitted trackers it tells you exactly what is missing.\n'
+if [ "$PTYPE" = "code" ]; then
+    printf 'This replaces /restart-sop Steps 0-4. Read the Backlog.md item for the task before starting it. Session-end is enforced by the Stop hook: when you stop with unrecorded commits or uncommitted trackers it tells you exactly what is missing.\n'
+else
+    printf 'This replaces /restart-sop Steps 0-4. Read the Backlog.md item for the task before starting it. Non-code project: the Stop hook enforces nothing here (P103); /update-sop is the deliberate close, and the drift facts above are for you to act on.\n'
+fi
 printf -- '--- end Agent SOP context ---\n'
 exit 0

@@ -141,7 +141,9 @@ commit_code "$PLAIN" "feat: something"
 run_hook "$STOP" "$PLAIN" ''
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-repo-without-sop-silent"; else bad "stop-repo-without-sop-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
 
-SOP="$TMP/sop"; make_repo "$SOP" with-sop
+# The drift fixtures run on a code repo: since P103 the Stop hook is silent on
+# non-code projects entirely, and that silence has its own cases below.
+SOP="$TMP/sop"; make_repo "$SOP" with-code
 commit_record "$SOP" "first-session"
 run_hook "$STOP" "$SOP" ''
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-no-drift-silent"; else bad "stop-no-drift-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
@@ -228,7 +230,8 @@ if ! grep -q "@security-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-docs-only-n
 
 ptype() { bash "$PTYPE" "$1" 2>/dev/null; }
 
-if [ "$(ptype "$SOP")" = "non-code" ]; then ok "type-plain-sop-is-non-code"; else bad "type-plain-sop-is-non-code" "got '$(ptype "$SOP")'"; fi
+PLAINSOP="$TMP/plainsop"; make_repo "$PLAINSOP" with-sop
+if [ "$(ptype "$PLAINSOP")" = "non-code" ]; then ok "type-plain-sop-is-non-code"; else bad "type-plain-sop-is-non-code" "got '$(ptype "$PLAINSOP")'"; fi
 if [ "$(ptype "$SHIP")" = "code" ]; then ok "type-manifest-is-code"; else bad "type-manifest-is-code" "got '$(ptype "$SHIP")'"; fi
 if [ "$(ptype "$TMP/notrepo")" = "non-code" ]; then ok "type-not-a-repo-is-non-code"; else bad "type-not-a-repo-is-non-code" "got '$(ptype "$TMP/notrepo")'"; fi
 
@@ -263,6 +266,23 @@ run_hook "$PUSH" "$PROSE" "$(push_json 'git push -u origin feat/prose')"
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-shipsop-non-code-project-allowed"; else bad "push-shipsop-non-code-project-allowed" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
 SESSION_ID=ctx-prose run_hook "$CTX" "$PROSE" ''
 if grep -q "non-code project) ---" "$HOOK_OUT" && grep -q "^Ship gate: none — non-code project" "$HOOK_OUT"; then ok "ctx-non-code-project-says-why"; else bad "ctx-non-code-project-says-why" "out='$(grep -E 'Agent SOP context|Ship gate' "$HOOK_OUT")'"; fi
+
+# P103: the drift half is code-only too. Unrecorded commit and dirty tracker
+# on a non-code SOP repo leave the Stop hook silent; the context block still
+# shows the facts and says nothing is enforced. Both fail against the P102
+# library, which demanded the record.
+run_hook "$STOP" "$PLAINSOP" ''
+commit_code "$PLAINSOP" "feat: unrecorded work in a prose repo"
+run_hook "$STOP" "$PLAINSOP" ''
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-non-code-unrecorded-commit-silent"; else bad "stop-non-code-unrecorded-commit-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+echo "### P9 — Prose item" >> "$PLAINSOP/Backlog.md"
+run_hook "$STOP" "$PLAINSOP" ''
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-non-code-dirty-tracker-silent"; else bad "stop-non-code-dirty-tracker-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+SESSION_ID=ctx-plainsop run_hook "$CTX" "$PLAINSOP" ''
+if grep -Eq "^Drift: [0-9]+ commit\(s\) since the last session record" "$HOOK_OUT" && grep -q "^Uncommitted tracker files: Backlog.md" "$HOOK_OUT" && grep -q "Non-code project: the Stop hook enforces nothing here" "$HOOK_OUT"; then ok "ctx-non-code-shows-drift-says-not-enforced"; else bad "ctx-non-code-shows-drift-says-not-enforced" "out='$(grep -E '^(Drift|Uncommitted|This replaces|Non-code)' "$HOOK_OUT")'"; fi
+git -C "$PLAINSOP" checkout -q -- Backlog.md
+SESSION_ID=ctx-sopcode run_hook "$CTX" "$SOP" ''
+if grep -q "Session-end is enforced by the Stop hook" "$HOOK_OUT"; then ok "ctx-code-says-enforced"; else bad "ctx-code-says-enforced" "out='$(tail -2 "$HOOK_OUT")'"; fi
 
 # The declaration opts a manifest-less repo in: same tree, one line added.
 printf '\n**Project type:** code\n' >> "$PROSE/CLAUDE.md"
