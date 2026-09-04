@@ -153,6 +153,22 @@ commit_record "$SOP" "second-session"
 run_hook "$STOP" "$SOP" ''
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-housekeeping-commit-clears"; else bad "stop-housekeeping-commit-clears" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
 
+# A PR merge commit after the branch's own housekeeping commit is not drift:
+# the merge introduces no work, and the record already covers the branch (P99,
+# found on the hook's first live firing).
+(
+    cd "$SOP" || exit 1
+    git checkout -q -b feat/merged
+    for i in $(seq 1 12); do echo "merged $i" >> merged.js; done
+    $GIT add -A >/dev/null && $GIT commit -q -m "feat: work on branch"
+    printf '# merged\n\n**Date:** 2026-09-04\n**Agent:** solo\n' > docs/recent-work/2026-09-04_solo_merged.md
+    $GIT add -A >/dev/null && $GIT commit -q -m "docs: session end housekeeping — merged"
+    git checkout -q main
+    $GIT merge -q --no-ff -m "Merge pull request #1 from feat/merged" feat/merged
+)
+run_hook "$STOP" "$SOP" ''
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-merge-commit-after-record-silent"; else bad "stop-merge-commit-after-record-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+
 echo "### P2 — Second thing" >> "$SOP/Backlog.md"
 run_hook "$STOP" "$SOP" ''
 if [ "$HOOK_EXIT" = 2 ] && grep -qi "uncommitted" "$HOOK_ERR" && grep -q "Backlog.md" "$HOOK_ERR"; then ok "stop-dirty-tracker-fires"; else bad "stop-dirty-tracker-fires" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
