@@ -2059,7 +2059,9 @@ First live run of `sop-session-context.sh` (the operator's first prompt after `i
 ---
 
 ### P102 — ship-sop gates fire only on code projects; SOP commands stop early outside SOP repos
-`[IN PROGRESS] [Feature]`
+`[SHIPPED - 2026-09-04] [Feature]`
+
+review: docs/reviews/2026-09-04_solo_P102.md (six gate agents in an isolated worktree; one CRITICAL — numstat renames classified by their old name, pre-existing on main — one HIGH, four MEDIUM, three LOW, all fixed with discriminating fixtures; gate report `docs/reviews/*-ship-auto.md` covers 8903290)
 
 Operator rule, 2026-09-04: "I only want ship-sop stuff to fire for CODING, not for anything else", and agent-sop must not slow down prose projects (Imagineers, Heckler X named; Opportunity Scan is the code case).
 
@@ -2067,19 +2069,20 @@ Operator rule, 2026-09-04: "I only want ship-sop stuff to fire for CODING, not f
 
 **Change.**
 - `sop_project_type <root>` in `scripts/hooks/sop-lib.sh` — one rule, every consumer. An explicit `**Project type:** code|non-code` line in CLAUDE.md wins; otherwise the four heuristics from `compliance-checklist.md` § Code vs Non-Code Detection (`## Auth`/`## Database`/`## Design System` heading, code-template reference, a test command under `## Key Commands`, a manifest at the root). `scripts/hooks/sop-project-type.sh` is the executable form, installed user-scope with the hooks.
-- `sop_shipsop_gate` returns nothing for a non-code project, and always counts code lines only (documentation extensions excluded regardless of `skip_docs_only`). The Stop hook, the push gate and the context block inherit it.
-- Context block header names the type; `Ship gate:` says "none — non-code project" where a config exists on a prose repo.
+- `sop_shipsop_gate` returns nothing for a non-code project, and always counts code lines only (documentation extensions excluded regardless of `skip_docs_only` — which the old jq `// true` default had already been swallowing when set to `false`). The Stop hook, the push gate and the context block inherit it. The count is rename-aware: numstat's `old => new` is classified by both names, not the old one (review CRITICAL, pre-existing).
+- Context block header names the type; `Ship gate:` says "none — non-code project" where a config exists on a prose repo, and names the contradiction when a `non-code` declaration overrides real code signals (review HIGH). Declarations are read outside code fences, with a leading bullet tolerated, case-insensitively like the heuristics.
 - `/update-sop` and `/restart-sop` open with a gate: no SOP file set → follow the project's own `.claude/commands/<same>.md` if present, else stop in one line. `/update-sop` Step 2 and `/finish` Phase 1 define "code project" by the shared rule.
-- Templates declare their type; `sop-checker` and the checklist gain the declaration as step 0 and point at the script as the rule.
+- Templates declare their type; `sop-checker` and the checklist gain the declaration as step 0 and point at the script as the rule; new Recommended check X7 fails a `non-code` declaration that contradicts the heuristics (totals 86 non-code / 95 code).
 - ship-sop: `/ship` and `/ship-on` stop on a non-code project; template default `skip_docs_only` flips to true and the README says the automatic gate is code-only.
 
 **Acceptance criteria:**
-- Non-code SOP repo with an auto config: Stop hook silent on the gate, push allowed, context block says why
-- Code repo docs-only branch: no gate even with `skip_docs_only: false`
-- Declaration overrides the heuristics both ways
-- `/update-sop` and `/restart-sop` stop outside SOP repos and defer to a project override
-- Fixtures discriminate against the pre-fix library
-- Installed copies and command replicas refreshed
+- Non-code SOP repo with an auto config: Stop hook silent on the gate, push allowed, context block says why - DONE
+- Code repo docs-only branch: no gate even with `skip_docs_only: false` - DONE
+- Declaration overrides the heuristics both ways, and the context block names a contradicting `non-code` one - DONE
+- `/update-sop` and `/restart-sop` stop outside SOP repos and defer to a project override - DONE (prose, not fixture-tested)
+- Fixtures discriminate against the pre-fix library - DONE (71 cases; 23 fail against main's library, 26 with main's installer)
+- Installed copies and command replicas refreshed - DONE (`install-hooks.sh`; `/update-sop`, `/restart-sop`, `/finish`, `/update-agent-sop`, `sop-checker`; ship-sop's `/ship`, `/ship-on`, `/ship-off` from its PR #11)
+- Live check on this machine: Imagineers and Heckler X silent; Resonate, Meaningful, SyncHive non-code; opportunity-scan, hst-tracker, design-agent, repcanvas-marketing code by manifest; agent-sop and ship-sop code by declaration - DONE
 
 **Source:** operator instruction, 2026-09-04 session.
 
