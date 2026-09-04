@@ -271,7 +271,9 @@ if [ "$HOOK_EXIT" = 2 ] && grep -q "ship-auto.md" "$HOOK_ERR"; then ok "push-shi
 git -C "$PROSE" checkout -q -- CLAUDE.md
 
 # Code lines only, whatever the config says: a docs-only branch in a code
-# project with skip_docs_only=false still gets no gate. Fails pre-P102.
+# project with skip_docs_only=false still gets no gate. Does not fail against
+# the pre-P102 library — its `jq // true` default already swallowed an
+# explicit false — so this pins the rule rather than the fix.
 LOOSE="$TMP/loose"; make_repo "$LOOSE" with-code
 jq '.trigger.throttle.skip_docs_only = false' "$SHIP/ship-sop.config.json" > "$LOOSE/ship-sop.config.json"
 (cd "$LOOSE" && $GIT add -A >/dev/null && $GIT commit -q -m "chore: config" && $GIT push -q origin main 2>/dev/null)
@@ -282,6 +284,53 @@ run_hook "$STOP" "$LOOSE" ''
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-shipsop-skip-docs-false-still-code-only"; else bad "stop-shipsop-skip-docs-false-still-code-only" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
 SESSION_ID=ctx-ship run_hook "$CTX" "$SHIP" ''
 if grep -q "code project) ---" "$HOOK_OUT" && ! grep -q "non-code project) ---" "$HOOK_OUT"; then ok "ctx-code-project-named-in-header"; else bad "ctx-code-project-named-in-header" "out='$(head -1 "$HOOK_OUT")'"; fi
+
+# Review fixes (P102, reviewer turn). Declaration parsing: a fenced example is
+# not a declaration; a bulleted declaration is. A `non-code` declaration over
+# real code signals is honoured and named in the context block; the old block
+# printed the plain non-code line (security HIGH).
+printf '# X\n\nHow to declare:\n\n```\n**Project type:** code\n```\n\nProse only here.\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "non-code" ]; then ok "type-fenced-example-is-not-a-declaration"; else bad "type-fenced-example-is-not-a-declaration" "got '$(ptype "$TYPED")'"; fi
+printf '# X\n\n- **Project type:** code\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-bulleted-declaration-counts"; else bad "type-bulleted-declaration-counts" "got '$(ptype "$TYPED")'"; fi
+printf '# X\n\n**Project type:** code\r\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-crlf-declaration-counts"; else bad "type-crlf-declaration-counts" "got '$(ptype "$TYPED")'"; fi
+printf '# X\n\n## Key Commands\n\n```bash\nnpm test\n```\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-key-commands-last-section-counts"; else bad "type-key-commands-last-section-counts" "got '$(ptype "$TYPED")'"; fi
+rm -f "$TYPED/CLAUDE.md"; mkdir -p "$TYPED/packages/app" && echo '{}' > "$TYPED/packages/app/package.json"
+if [ "$(ptype "$TYPED")" = "non-code" ]; then ok "type-manifest-in-subdirectory-only-is-non-code"; else bad "type-manifest-in-subdirectory-only-is-non-code" "got '$(ptype "$TYPED")'"; fi
+rm -rf "$TYPED/packages"
+# The real templates carry the declaration; feed the actual files through.
+cp "$REPO_ROOT/docs/templates/claude-md-template.md" "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "non-code" ]; then ok "type-base-template-is-non-code"; else bad "type-base-template-is-non-code" "got '$(ptype "$TYPED")'"; fi
+cp "$REPO_ROOT/docs/templates/claude-md-template-code.md" "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-code-template-is-code"; else bad "type-code-template-is-code" "got '$(ptype "$TYPED")'"; fi
+
+CONTRA="$TMP/contra"; make_repo "$CONTRA" with-code
+cp "$SHIP/ship-sop.config.json" "$CONTRA/"
+printf '# CLAUDE\n\n**Project type:** non-code\n' > "$CONTRA/CLAUDE.md"
+(cd "$CONTRA" && $GIT add -A >/dev/null && $GIT commit -q -m "chore: declare non-code" && $GIT push -q origin main 2>/dev/null)
+SESSION_ID=ctx-contra run_hook "$CTX" "$CONTRA" ''
+if grep -q "non-code project) ---" "$HOOK_OUT" && grep -q "^Ship gate: none — CLAUDE.md declares non-code, but package.json say code" "$HOOK_OUT"; then ok "ctx-declared-non-code-over-manifest-named"; else bad "ctx-declared-non-code-over-manifest-named" "out='$(grep -E 'Agent SOP context|Ship gate' "$HOOK_OUT")'"; fi
+git -C "$CONTRA" checkout -q -b feat/c
+commit_code "$CONTRA" "feat: code under a non-code declaration"
+commit_record "$CONTRA" "recorded"
+run_hook "$STOP" "$CONTRA" ''
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-declared-non-code-honoured"; else bad "stop-declared-non-code-honoured" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+
+# Coverage uses the same code-only count as the trigger: a covered code
+# branch stays covered through a later docs-only commit even with
+# skip_docs_only=false in the config (the dropped parameter's only branch).
+git -C "$LOOSE" checkout -q main && git -C "$LOOSE" checkout -q -b feat/covered
+commit_code "$LOOSE" "feat: code to cover"
+commit_record "$LOOSE" "recorded"
+printf '# report\n\nCovers: %s\n' "$(head_of "$LOOSE")" > "$LOOSE/docs/reviews/20260904-120000-ship-auto.md"
+(cd "$LOOSE" && $GIT add -A >/dev/null && $GIT commit -q -m "docs: ship report")
+(cd "$LOOSE" && for i in $(seq 1 20); do echo "more $i" >> notes.md; done && $GIT add -A >/dev/null && $GIT commit -q -m "docs: more notes")
+run_hook "$PUSH" "$LOOSE" "$(push_json 'git push -u origin feat/covered')"
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-covered-survives-docs-commit-skip-docs-false"; else bad "push-covered-survives-docs-commit-skip-docs-false" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+SESSION_ID=ctx-loose run_hook "$CTX" "$LOOSE" ''
+if grep -q "^Ship gate: none outstanding (covered, no code lines" "$HOOK_OUT"; then ok "ctx-none-outstanding-reason-text"; else bad "ctx-none-outstanding-reason-text" "out='$(grep 'Ship gate' "$HOOK_OUT")'"; fi
 
 # ── Push gate ─────────────────────────────────────────────────────────────────
 
@@ -412,6 +461,13 @@ if [ "$INST1" = 0 ] && [ "$INST2" = 0 ] \
 else
     bad "installer-idempotent-and-preserving" "exits $INST1/$INST2; stop=$(count Stop 'sop-stop-drift') ss=$(count SessionStart 'sop-session-context') ups=$(count UserPromptSubmit 'sop-session-context') pre=$(count PreToolUse 'sop-push-gate') keep=$(count Stop 'existing-stop')/$(count PreToolUse 'existing-pre'); err='$(cat "$TMP/inst-err")'"
 fi
+
+# Upgrading an install that predates sop-project-type.sh copies it in (review finding, P102).
+OLDDEST="$TMP/olddest"; mkdir -p "$OLDDEST"
+for f in sop-lib.sh sop-session-context.sh sop-stop-drift.sh sop-push-gate.sh; do echo "# old" > "$OLDDEST/$f"; done
+echo '{}' > "$TMP/settings-upgrade.json"
+bash "$INSTALLER" --settings "$TMP/settings-upgrade.json" --dest "$OLDDEST" >/dev/null 2>&1
+if [ -x "$OLDDEST/sop-project-type.sh" ] && ! grep -q '^# old$' "$OLDDEST/sop-lib.sh"; then ok "installer-upgrade-adds-project-type-script"; else bad "installer-upgrade-adds-project-type-script" "$(ls "$OLDDEST")"; fi
 
 # A user's unrelated hook that merely shares a filename must survive uninstall (review finding, LOW).
 jq '.hooks.Stop += [ { "matcher": "*", "hooks": [ { "type": "command", "command": "node /other-tool/sop-stop-drift.sh" } ] } ]' "$SETTINGS" > "$SETTINGS.tmp" && mv "$SETTINGS.tmp" "$SETTINGS"

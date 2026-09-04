@@ -11,7 +11,12 @@ The checklist below is for repositories that carry the SOP file set. Prose proje
 
 ```bash
 root=$(git rev-parse --show-toplevel 2>/dev/null) || root=$PWD
-if [ ! -f "$root/Backlog.md" ] || [ ! -f "$root/docs/sop/claude-agent-sop.md" ]; then
+# One rule: sop_is_sop_repo in the installed hook library. The inline test is
+# the same rule for a machine without the hooks (setup.sh --no-hooks).
+LIB="$HOME/.claude/scripts/hooks/agent-sop/sop-lib.sh"
+if [ -f "$LIB" ]; then . "$LIB"; is_sop() { sop_is_sop_repo "$1"; }
+else is_sop() { [ "$1" != "$HOME" ] && [ -f "$1/Backlog.md" ] && [ -f "$1/docs/sop/claude-agent-sop.md" ]; }; fi
+if ! is_sop "$root"; then
   echo "not-sop-project"
   [ -f "$root/.claude/commands/update-sop.md" ] && echo "project-override: $root/.claude/commands/update-sop.md"
 fi

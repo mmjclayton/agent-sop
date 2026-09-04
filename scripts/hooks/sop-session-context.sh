@@ -43,6 +43,8 @@ NAME=$(basename "$ROOT")
 BRANCH=$(git -C "$ROOT" branch --show-current 2>/dev/null)
 AGENT=$(sop_agent_id "$ROOT")
 PTYPE=$(sop_project_type "$ROOT")
+DECLARED=$(sop_declared_project_type "$ROOT")
+SIGNALS=$(sop_code_signals "$ROOT" | paste -sd, - | sed 's/,/, /g')
 
 # ── Resume snapshot ───────────────────────────────────────────────────────────
 RESUME_TEXT="(none found — first session on this project for agent-id $AGENT, or no resolver in scripts/)"
@@ -101,7 +103,9 @@ DIRTY=$(sop_tracker_dirty "$ROOT")
 # project says so instead of implying a gate that will never fire (P102).
 GATE_LINE=""
 if [ -f "$ROOT/ship-sop.config.json" ]; then
-    if [ "$PTYPE" != "code" ]; then
+    if [ "$PTYPE" != "code" ] && [ "$DECLARED" = "non-code" ] && [ -n "$SIGNALS" ]; then
+        GATE_LINE="none — CLAUDE.md declares non-code, but $SIGNALS say code; the declaration wins and the reviewer gate is off here. Remove the line if that is not intended."
+    elif [ "$PTYPE" != "code" ]; then
         GATE_LINE="none — non-code project; ship-sop's automatic gate fires only on code projects (declare \`**Project type:** code\` in CLAUDE.md to opt in)"
     else
         GATE=$(sop_shipsop_gate "$ROOT")

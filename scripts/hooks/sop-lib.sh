@@ -81,8 +81,10 @@ sop_repo_key() {
 #
 # Precedence:
 #   1. An explicit declaration in CLAUDE.md — a line `**Project type:** code`
-#      or `**Project type:** non-code` (bold optional, value case-insensitive).
-#      Wins outright: a scripts-and-markdown repo with a real test suite has no
+#      or `**Project type:** non-code` (bold optional, a leading list bullet
+#      tolerated, value case-insensitive; text inside ``` fences is ignored so
+#      an example of the syntax is not read as the declaration). Wins
+#      outright: a scripts-and-markdown repo with a real test suite has no
 #      manifest and is still code (agent-sop itself is the example).
 #   2. The four heuristics from docs/sop/compliance-checklist.md, in order:
 #      a. CLAUDE.md has a `## Auth`, `## Database` or `## Design System` heading
@@ -93,25 +95,48 @@ sop_repo_key() {
 #      d. the root carries package.json, Cargo.toml, pyproject.toml, go.mod
 #         or Gemfile
 #   3. Otherwise non-code.
-sop_project_type() {
-    local root="$1" claude m declared
-    [ -n "$root" ] && [ -d "$root" ] || { printf 'non-code'; return; }
-    claude="$root/CLAUDE.md"
+#
+# A declaration that contradicts the heuristics is honoured, and the context
+# block says so (review finding: a `non-code` line on a repo that has since
+# grown a manifest is a silent switch-off of the gate otherwise).
+
+# sop_claude_prose <file> — the file with fenced code blocks removed.
+sop_claude_prose() { awk '/^[[:space:]]*```/{f=!f; next} !f' "$1" 2>/dev/null; }
+
+# sop_declared_project_type <root> — "code", "non-code", or empty.
+sop_declared_project_type() {
+    local claude="$1/CLAUDE.md"
+    [ -f "$claude" ] || { printf ''; return; }
+    sop_claude_prose "$claude" \
+        | sed -E 's/^[[:space:]]*[-+*][[:space:]]+//' \
+        | grep -Ei '^[*_]*project type' | head -1 | tr 'A-Z' 'a-z' \
+        | sed -nE 's/^[*_]*project type[*_]*:?[*_]*[[:space:]]*(non-code|code)([^a-z-].*)?$/\1/p'
+}
+
+# sop_code_signals <root> — one line per heuristic that says "code", in the
+# documented order; empty when none does.
+sop_code_signals() {
+    local root="$1" claude="$1/CLAUDE.md" m
     if [ -f "$claude" ]; then
-        declared=$(grep -Ei '^[*_]*project type' "$claude" 2>/dev/null | head -1 | tr 'A-Z' 'a-z' \
-            | sed -nE 's/^[*_]*project type[*_]*:?[*_]*[[:space:]]*(non-code|code)([^a-z-].*)?$/\1/p')
-        if [ -n "$declared" ]; then printf '%s' "$declared"; return; fi
-        if grep -Eq '^## (Auth|Database|Design System)([^A-Za-z]|$)' "$claude" 2>/dev/null; then printf 'code'; return; fi
-        if grep -q 'claude-md-template-code\.md' "$claude" 2>/dev/null; then printf 'code'; return; fi
-        if awk '/^## Key Commands/{f=1; next} /^## /{f=0} f' "$claude" 2>/dev/null \
-            | grep -Eq '(^|[[:space:]`])((npm|pnpm|yarn|bun)[[:space:]]+(run[[:space:]]+)?test|pytest|jest|vitest|cargo[[:space:]]+test|go[[:space:]]+test|make[[:space:]]+test)([^a-z]|$)'; then
-            printf 'code'; return
-        fi
+        sop_claude_prose "$claude" | grep -E '^## (Auth|Database|Design System)([^A-Za-z]|$)' | head -1 \
+            | sed -E 's/^## (Auth|Database|Design System).*/\1 heading/'
+        grep -q 'claude-md-template-code\.md' "$claude" 2>/dev/null && echo 'code-template reference'
+        awk '/^## Key Commands/{f=1; next} /^## /{f=0} f' "$claude" 2>/dev/null \
+            | grep -Eq '(^|[[:space:]`])((npm|pnpm|yarn|bun)[[:space:]]+(run[[:space:]]+)?test|pytest|jest|vitest|cargo[[:space:]]+test|go[[:space:]]+test|make[[:space:]]+test)([^a-z]|$)' \
+            && echo 'test command under Key Commands'
     fi
     for m in package.json Cargo.toml pyproject.toml go.mod Gemfile; do
-        [ -f "$root/$m" ] && { printf 'code'; return; }
+        [ -f "$root/$m" ] && echo "$m"
     done
-    printf 'non-code'
+    return 0
+}
+
+sop_project_type() {
+    local root="$1" declared
+    [ -n "$root" ] && [ -d "$root" ] || { printf 'non-code'; return; }
+    declared=$(sop_declared_project_type "$root")
+    if [ -n "$declared" ]; then printf '%s' "$declared"; return; fi
+    if [ -n "$(sop_code_signals "$root")" ]; then printf 'code'; else printf 'non-code'; fi
 }
 
 sop_is_code_repo() { [ "$(sop_project_type "$1")" = "code" ]; }
@@ -280,7 +305,7 @@ sop_shipsop_gate() {
 
     branch=$(git -C "$root" branch --show-current 2>/dev/null)
     for pat in $(jq -r '.trigger.throttle.skip_branch_patterns[]? // empty' "$cfg" 2>/dev/null); do
-        if printf '%s' "$branch" | grep -Eq "$pat"; then printf ''; return; fi
+        if printf '%s' "$branch" | grep -Eq -- "$pat"; then printf ''; return; fi
     done
 
     base=$(sop_range_base "$root")

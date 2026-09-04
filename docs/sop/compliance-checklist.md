@@ -239,6 +239,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | X4 | Recent Work has PR/commit refs | CLAUDE.md Recent Work entries contain references to PRs or commits |
 | X5 | Build plan Batch Log references PRs | Batch Log entries contain PR numbers or commit hashes |
 | X6 | Secondary trackers reconciled with commit history | For every `.md` file in CLAUDE.md Key Documents that uses heading-level `[OPEN]`/`[SHIPPED]` tags (excluding `Backlog.md`): extract finding IDs from the last 20 commit messages (pattern `\b[A-Z]+-?[0-9]+\b`), then verify any matching entries in the tracker are not still `[OPEN]`. A still-`[OPEN]` entry whose ID was referenced in a shipped commit indicates drift from a skipped `/update-sop` Step 3b. |
+| X7 | Declared project type does not contradict the heuristics | Recommended. If CLAUDE.md declares `**Project type:** non-code` while any code heuristic holds (an `## Auth`/`## Database`/`## Design System` heading, a `claude-md-template-code.md` reference, a test command under `## Key Commands`, or a manifest at the root), FAIL: the declaration wins and ship-sop's reviewer gate is off for what the repository says is code — remove the line or record why in the same sentence. The reverse (declared `code` with no heuristic hit) is the documented opt-in for scripts-and-markdown repos and PASSES. `bash ~/.claude/scripts/hooks/agent-sop/sop-project-type.sh` gives the declared answer; the same library's `sop_code_signals` lists the hits (P102). |
 
 ---
 
@@ -337,8 +338,8 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | Security, Hooks, Quality, Agents | 2 | 5 (+2 code) | 5 | 12 (+2) |
 | Benchmark-Proven Practices | 0 | 0 (+2 code) | 2 | 2 (+2) |
 | Multi-Agent Parallel Sessions | 1 | 3 | 2 | 6 |
-| **Total (non-code)** | **16** | **49** | **20** | **85** |
-| **Total (code)** | **16** | **58** | **20** | **94** |
+| **Total (non-code)** | **16** | **49** | **21** | **86** |
+| **Total (code)** | **16** | **58** | **21** | **95** |
 
 **Maximum deductions:**
 - Non-code: 16 x 10 + 49 x 5 + 20 x 2 = 160 + 245 + 40 = 445
