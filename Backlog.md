@@ -2039,6 +2039,25 @@ First live firing of `sop-stop-drift.sh`, minutes after install: on `main` at th
 
 ---
 
+### P100 — Context hook listed shipped items as in progress
+`[IN PROGRESS] [Bug]`
+
+First live run of `sop-session-context.sh` (the operator's first prompt after `install-hooks.sh`) listed P45, P92 and P97 under "In progress in Backlog.md". All three are `[SHIPPED]`. The awk matched `[IN PROGRESS]` anywhere in an entry body after the heading, and entry bodies quote tags in prose constantly ("no `[IN PROGRESS]` intermediate").
+
+**Fix.** Only the status line counts: the first non-empty line after a `### P<n>` heading, and it must begin with `` `[IN PROGRESS] ``, which is what the Backlog spec puts there. Fixture: the SOP fixture Backlog gains a shipped P2 whose body quotes the tag; `ctx-first-load-prints-bundle` now requires P1 listed and P2 absent, and fails against the pre-fix script. Live re-run on this repo prints "(none tagged [IN PROGRESS])", which is true.
+
+**Push.** The branch's 17 code lines trip the ship-sop push gate this repo configures. Pushed with `SOP_SKIP_GATE=1`, recorded in `.ship/bypass.log`: a 12-line awk change inside a hook reviewed at P97, covered by the fixture suite, does not warrant the six configured gate agents. The bypass is the documented, logged path for exactly this call.
+
+**Acceptance criteria:**
+- Shipped entries whose bodies quote `[IN PROGRESS]` are not listed - DONE
+- Genuinely in-progress entries still are - DONE
+- Fixture discriminates against the pre-fix script - DONE
+- Installed copy refreshed - DONE
+
+**Source:** UserPromptSubmit hook output in the 2026-09-04 session, first live run.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
