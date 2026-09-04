@@ -2058,6 +2058,33 @@ First live run of `sop-session-context.sh` (the operator's first prompt after `i
 
 ---
 
+### P102 — ship-sop gates fire only on code projects; SOP commands stop early outside SOP repos
+`[IN PROGRESS] [Feature]`
+
+Operator rule, 2026-09-04: "I only want ship-sop stuff to fire for CODING, not for anything else", and agent-sop must not slow down prose projects (Imagineers, Heckler X named; Opportunity Scan is the code case).
+
+**Measured before the change.** The three user-scope hooks were already silent in Imagineers and Heckler X (no `Backlog.md`, no SOP doc: ~50 ms each, no output). The exposure was elsewhere: (1) `sop_shipsop_gate` keyed on `ship-sop.config.json` + `trigger.mode: auto` and nothing else, so a prose repo carrying a config would be gated, and with the template default `skip_docs_only: false` it would be gated on prose lines; (2) the global `/update-sop` and `/restart-sop` have no "is this an SOP project" check, so a session launched from `~` that moves into Imagineers runs the 648-line generic checklist instead of the project's own override (recorded in memory as a past incident); (3) "code project" was defined only in the compliance checker's prose, never in anything executable, so the hooks, the commands and the checker could disagree.
+
+**Change.**
+- `sop_project_type <root>` in `scripts/hooks/sop-lib.sh` — one rule, every consumer. An explicit `**Project type:** code|non-code` line in CLAUDE.md wins; otherwise the four heuristics from `compliance-checklist.md` § Code vs Non-Code Detection (`## Auth`/`## Database`/`## Design System` heading, code-template reference, a test command under `## Key Commands`, a manifest at the root). `scripts/hooks/sop-project-type.sh` is the executable form, installed user-scope with the hooks.
+- `sop_shipsop_gate` returns nothing for a non-code project, and always counts code lines only (documentation extensions excluded regardless of `skip_docs_only`). The Stop hook, the push gate and the context block inherit it.
+- Context block header names the type; `Ship gate:` says "none — non-code project" where a config exists on a prose repo.
+- `/update-sop` and `/restart-sop` open with a gate: no SOP file set → follow the project's own `.claude/commands/<same>.md` if present, else stop in one line. `/update-sop` Step 2 and `/finish` Phase 1 define "code project" by the shared rule.
+- Templates declare their type; `sop-checker` and the checklist gain the declaration as step 0 and point at the script as the rule.
+- ship-sop: `/ship` and `/ship-on` stop on a non-code project; template default `skip_docs_only` flips to true and the README says the automatic gate is code-only.
+
+**Acceptance criteria:**
+- Non-code SOP repo with an auto config: Stop hook silent on the gate, push allowed, context block says why
+- Code repo docs-only branch: no gate even with `skip_docs_only: false`
+- Declaration overrides the heuristics both ways
+- `/update-sop` and `/restart-sop` stop outside SOP repos and defer to a project override
+- Fixtures discriminate against the pre-fix library
+- Installed copies and command replicas refreshed
+
+**Source:** operator instruction, 2026-09-04 session.
+
+---
+
 ### P101 — Context block did not show an outstanding ship gate
 `[SHIPPED - 2026-09-04] [Bug]`
 
