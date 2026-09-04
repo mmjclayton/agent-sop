@@ -2040,7 +2040,7 @@ First live firing of `sop-stop-drift.sh`, minutes after install: on `main` at th
 ---
 
 ### P100 — Context hook listed shipped items as in progress
-`[IN PROGRESS] [Bug]`
+`[SHIPPED - 2026-09-04] [Bug]`
 
 First live run of `sop-session-context.sh` (the operator's first prompt after `install-hooks.sh`) listed P45, P92 and P97 under "In progress in Backlog.md". All three are `[SHIPPED]`. The awk matched `[IN PROGRESS]` anywhere in an entry body after the heading, and entry bodies quote tags in prose constantly ("no `[IN PROGRESS]` intermediate").
 

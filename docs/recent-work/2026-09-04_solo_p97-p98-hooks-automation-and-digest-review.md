@@ -15,3 +15,5 @@ The session opened as a review ("is agent-sop still adding value? how can it run
 **ship-sop.** PR #9 reconciles its docs: P16 `[WON'T]`, P20 annotated, P25 filed to retire the project-scope wiring.
 
 **P99 (same session, after install).** The hooks went live on this machine once the operator ran `install-hooks.sh`. The first Stop notice flagged the P97 merge commit as unrecorded work; merge nodes are now skipped (`--no-merges`), with a fixture that fails against the pre-fix library. Batch 0.37.
+
+**Live test + P100.** Operator asked for a test. UserPromptSubmit delivered the context block on the next prompt; the Stop hook demanded the ship-sop gates on a throwaway code branch; the push gate refused an uncovered dry-run push, allowed the logged bypass, and allowed a dry-run push once a report named HEAD. The context block listed three shipped items as in progress (tag matched in prose); fixed as P100 with a discriminating fixture. Batch 0.38.

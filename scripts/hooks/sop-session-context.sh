@@ -71,9 +71,14 @@ fi
 [ -n "$RECENT" ] || RECENT="(no session records yet)"
 
 # ── In-progress Backlog items ─────────────────────────────────────────────────
+# Only the status line counts: the first non-empty line after a `### P<n>`
+# heading, which by the Backlog spec carries the tags. Entry bodies quote tags
+# in prose all the time ("no [IN PROGRESS] intermediate"), and matching those
+# listed three shipped items as in progress on the hook's first live run (P100).
 INPROG=$(awk '
-    /^### P[0-9]+/ { title = $0; sub(/^### /, "", title); next }
-    /\[IN PROGRESS\]/ && title != "" { print "  " title; title = "" }
+    /^### P[0-9]+/ { title = $0; sub(/^### /, "", title); want = 1; next }
+    want && /^[[:space:]]*$/ { next }
+    want { if ($0 ~ /^`\[IN PROGRESS\]/) print "  " title; want = 0 }
 ' "$ROOT/Backlog.md" 2>/dev/null | head -8)
 [ -n "$INPROG" ] || INPROG="  (none tagged [IN PROGRESS])"
 
