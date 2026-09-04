@@ -86,7 +86,8 @@ sop_repo_key() {
 #      an example of the syntax is not read as the declaration). Wins
 #      outright: a scripts-and-markdown repo with a real test suite has no
 #      manifest and is still code (agent-sop itself is the example).
-#   2. The four heuristics from docs/sop/compliance-checklist.md, in order:
+#   2. The four heuristics from docs/sop/compliance-checklist.md, in order
+#      (all case-insensitive, like the declaration):
 #      a. CLAUDE.md has a `## Auth`, `## Database` or `## Design System` heading
 #      b. CLAUDE.md references claude-md-template-code.md
 #      c. the `## Key Commands` section runs a test suite (npm/pnpm/yarn/bun
@@ -110,7 +111,7 @@ sop_declared_project_type() {
     sop_claude_prose "$claude" \
         | sed -E 's/^[[:space:]]*[-+*][[:space:]]+//' \
         | grep -Ei '^[*_]*project type' | head -1 | tr 'A-Z' 'a-z' \
-        | sed -nE 's/^[*_]*project type[*_]*:?[*_]*[[:space:]]*(non-code|code)([^a-z-].*)?$/\1/p'
+        | sed -nE 's/^[*_]*project type[*_]*:?[*_]*[[:space:]]*(non-code|code)([^a-z].*)?$/\1/p'
 }
 
 # sop_code_signals <root> — one line per heuristic that says "code", in the
@@ -118,11 +119,11 @@ sop_declared_project_type() {
 sop_code_signals() {
     local root="$1" claude="$1/CLAUDE.md" m
     if [ -f "$claude" ]; then
-        sop_claude_prose "$claude" | grep -E '^## (Auth|Database|Design System)([^A-Za-z]|$)' | head -1 \
-            | sed -E 's/^## (Auth|Database|Design System).*/\1 heading/'
-        grep -q 'claude-md-template-code\.md' "$claude" 2>/dev/null && echo 'code-template reference'
-        awk '/^## Key Commands/{f=1; next} /^## /{f=0} f' "$claude" 2>/dev/null \
-            | grep -Eq '(^|[[:space:]`])((npm|pnpm|yarn|bun)[[:space:]]+(run[[:space:]]+)?test|pytest|jest|vitest|cargo[[:space:]]+test|go[[:space:]]+test|make[[:space:]]+test)([^a-z]|$)' \
+        sop_claude_prose "$claude" | grep -Ei '^## (Auth|Database|Design System)([^A-Za-z]|$)' | head -1 \
+            | sed -E 's/^## ([A-Za-z]+( [A-Za-z]+)?).*/\1 heading/'
+        grep -qi 'claude-md-template-code\.md' "$claude" 2>/dev/null && echo 'code-template reference'
+        awk 'tolower($0) ~ /^## key commands/{f=1; next} /^## /{f=0} f' "$claude" 2>/dev/null \
+            | grep -Eqi '(^|[[:space:]`])((npm|pnpm|yarn|bun)[[:space:]]+(run[[:space:]]+)?test|pytest|jest|vitest|cargo[[:space:]]+test|go[[:space:]]+test|make[[:space:]]+test)([^a-z]|$)' \
             && echo 'test command under Key Commands'
     fi
     for m in package.json Cargo.toml pyproject.toml go.mod Gemfile; do
@@ -255,11 +256,21 @@ sop_is_push_command() {
 
 # sop_code_lines <root> <from> <to> <skip-docs> — added+deleted lines in the
 # range, excluding documentation extensions when skip-docs is "true".
-# Binary files report "-" and count 0.
+# Binary files report "-" and count 0. Fields are tab-separated: the path
+# field can carry spaces, and a rename arrives as `old => new` or
+# `dir/{old => new}/rest`. A rename is excluded only when both names are
+# documentation — a doc renamed into a code file with logic added is code
+# (review finding, CRITICAL: whitespace splitting read the old name).
 sop_code_lines() {
-    git -C "$1" diff --numstat "$2..$3" 2>/dev/null | awk -v skip="$4" '
+    git -C "$1" diff --numstat "$2..$3" 2>/dev/null | awk -F'\t' -v skip="$4" '
+        function isdoc(p) { return p ~ /\.(md|markdown|txt|rst)$/ }
         {
-            if (skip == "true" && $3 ~ /\.(md|markdown|txt|rst)$/) next
+            path = $3; old = path; new = path
+            if (path ~ / => /) {
+                new = path; gsub(/\{[^}]* => /, "", new); gsub(/\}/, "", new); sub(/^.* => /, "", new)
+                old = path; gsub(/ => [^}]*\}/, "", old); gsub(/\{/, "", old); sub(/ => .*$/, "", old)
+            }
+            if (skip == "true" && isdoc(old) && isdoc(new)) next
             a = ($1 == "-") ? 0 : $1
             d = ($2 == "-") ? 0 : $2
             t += a + d

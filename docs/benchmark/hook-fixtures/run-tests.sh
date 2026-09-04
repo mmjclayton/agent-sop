@@ -306,6 +306,28 @@ if [ "$(ptype "$TYPED")" = "non-code" ]; then ok "type-base-template-is-non-code
 cp "$REPO_ROOT/docs/templates/claude-md-template-code.md" "$TYPED/CLAUDE.md"
 if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-code-template-is-code"; else bad "type-code-template-is-code" "got '$(ptype "$TYPED")'"; fi
 
+# Silent-failure review: heuristics are case-insensitive like the declaration;
+# a hyphen after the declared value is not part of the value.
+printf '# X\n\n## AUTH\n\nx\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-heading-case-insensitive"; else bad "type-heading-case-insensitive" "got '$(ptype "$TYPED")'"; fi
+printf '# X\n\n## Key commands\n\n```\nNPM TEST\n```\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-key-commands-case-insensitive"; else bad "type-key-commands-case-insensitive" "got '$(ptype "$TYPED")'"; fi
+printf '# X\n\n**Project type:** code-focused rewrite\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-declaration-followed-by-hyphen"; else bad "type-declaration-followed-by-hyphen" "got '$(ptype "$TYPED")'"; fi
+
+# A documentation file renamed into a code file, with logic added, is code:
+# numstat reports `old => new` and whitespace splitting read the old name
+# (silent-failure review, CRITICAL). Trigger and coverage both use the count.
+RENAME="$TMP/rename"; make_repo "$RENAME" with-code
+cp "$SHIP/ship-sop.config.json" "$RENAME/"
+(cd "$RENAME" && for i in $(seq 1 30); do echo "prose line $i" >> notes.md; done && $GIT add -A >/dev/null && $GIT commit -q -m "chore: config + notes" && $GIT push -q origin main 2>/dev/null)
+git -C "$RENAME" checkout -q -b feat/rename
+(cd "$RENAME" && git mv notes.md gen.js && for i in $(seq 1 12); do echo "code($i);" >> gen.js; done && $GIT add -A >/dev/null && $GIT commit -q -m "feat: notes become code")
+commit_record "$RENAME" "recorded"
+NUMSTAT=$(git -C "$RENAME" diff --numstat origin/main..HEAD | grep -c '=>')
+run_hook "$STOP" "$RENAME" ''
+if [ "$NUMSTAT" -ge 1 ] && [ "$HOOK_EXIT" = 2 ] && grep -q "@security-reviewer" "$HOOK_ERR"; then ok "stop-rename-doc-to-code-counts"; else bad "stop-rename-doc-to-code-counts" "renames=$NUMSTAT exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+
 CONTRA="$TMP/contra"; make_repo "$CONTRA" with-code
 cp "$SHIP/ship-sop.config.json" "$CONTRA/"
 printf '# CLAUDE\n\n**Project type:** non-code\n' > "$CONTRA/CLAUDE.md"

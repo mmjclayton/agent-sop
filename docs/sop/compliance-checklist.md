@@ -34,7 +34,7 @@ One rule, shared with the user-scope hooks, `/update-sop` Step 2, `/finish` and 
 
 0. `CLAUDE.md` carries a `**Project type:** code` or `**Project type:** non-code` line — that answer wins outright. The templates carry it; a scripts-and-markdown repo with a real test suite declares `code` because no heuristic below would find it.
 
-Otherwise check in order. If any match, treat as a code project:
+Otherwise check in order, case-insensitively. If any match, treat as a code project:
 
 1. `CLAUDE.md` contains `## Auth`, `## Database`, or `## Design System`
 2. `CLAUDE.md` references `claude-md-template-code.md`
