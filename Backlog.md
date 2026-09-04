@@ -2023,7 +2023,7 @@ Both digests unreviewed until now (the 2026-08-03 batch covered 2026-07-30). Eve
 ---
 
 ### P99 — Stop hook counted a PR merge commit as unrecorded work
-`[IN PROGRESS] [Bug]`
+`[SHIPPED - 2026-09-04] [Bug]`
 
 First live firing of `sop-stop-drift.sh`, minutes after install: on `main` at the P97 merge commit it reported "1 commit(s) with no session record ... 914a735 Merge pull request #17". The branch's own housekeeping commit `b6136d4` carried the session record, and `git log -1 -- docs/recent-work` correctly returned it; but `rev-list b6136d4..HEAD` contains the merge commit, which introduces no work. Every PR merged with a merge commit would fire once after landing.
 

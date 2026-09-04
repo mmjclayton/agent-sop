@@ -13,3 +13,5 @@ The session opened as a review ("is agent-sop still adding value? how can it run
 **Incident.** The first reviewer subagent wrote fixture stubs over `Backlog.md`, `CLAUDE.md` and the core SOP in the live tree; caught by a dry run of the new Stop hook, stopped, restored from git, edits re-applied, gotcha filed, review re-run in an isolated worktree.
 
 **ship-sop.** PR #9 reconciles its docs: P16 `[WON'T]`, P20 annotated, P25 filed to retire the project-scope wiring.
+
+**P99 (same session, after install).** The hooks went live on this machine once the operator ran `install-hooks.sh`. The first Stop notice flagged the P97 merge commit as unrecorded work; merge nodes are now skipped (`--no-merges`), with a fixture that fails against the pre-fix library. Batch 0.37.

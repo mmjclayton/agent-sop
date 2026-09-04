@@ -120,15 +120,18 @@ sop_last_record_commit() {
     git -C "$1" log -1 --format=%H -- 'docs/recent-work' ':(exclude)docs/recent-work/README.md' 2>/dev/null || printf ''
 }
 
-# sop_drift_commits <root> — one line per commit since the last session
-# record (or since the beginning when none), newest first. Empty = no drift.
+# sop_drift_commits <root> — one line per non-merge commit since the last
+# session record (or since the beginning when none), newest first. Empty = no
+# drift. Merge commits are skipped: a PR merge whose branch already carries
+# the housekeeping commit introduces no work of its own, and the first live
+# firing of the Stop hook flagged exactly that (P99).
 sop_drift_commits() {
     local root="$1" last
     last=$(sop_last_record_commit "$root")
     if [ -n "$last" ]; then
-        git -C "$root" log --format='%h %s' "$last..HEAD" 2>/dev/null
+        git -C "$root" log --no-merges --format='%h %s' "$last..HEAD" 2>/dev/null
     else
-        git -C "$root" log --format='%h %s' HEAD 2>/dev/null
+        git -C "$root" log --no-merges --format='%h %s' HEAD 2>/dev/null
     fi
 }
 
