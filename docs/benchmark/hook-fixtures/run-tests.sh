@@ -296,6 +296,17 @@ echo "wip" >> "$TMP/sop-sibling/README.md"
 SESSION_ID=ctx-3 run_hook "$CTX" "$SOP" ''
 if grep -qi "sibling" "$HOOK_OUT" && grep -q "sop-sibling" "$HOOK_OUT"; then ok "ctx-dirty-sibling-worktree-surfaced"; else bad "ctx-dirty-sibling-worktree-surfaced" "out='$(cat "$HOOK_OUT")'"; fi
 
+# Ship gate state is shown at prompt time, not only at stop (P101). GATED has
+# a config and a report covering its current HEAD; one more code commit leaves
+# the gate outstanding. SOP has no config, so no line at all.
+SESSION_ID=ctx-gate-1 run_hook "$CTX" "$GATED" ''
+if grep -q "^Ship gate: none outstanding" "$HOOK_OUT"; then ok "ctx-ship-gate-covered-shown"; else bad "ctx-ship-gate-covered-shown" "out='$(grep -i 'ship gate' "$HOOK_OUT")'"; fi
+commit_code "$GATED" "feat: uncovered again"
+SESSION_ID=ctx-gate-2 run_hook "$CTX" "$GATED" ''
+if grep -q "^Ship gate: outstanding" "$HOOK_OUT" && grep -q "code lines" "$HOOK_OUT"; then ok "ctx-ship-gate-outstanding-shown"; else bad "ctx-ship-gate-outstanding-shown" "out='$(grep -i 'ship gate' "$HOOK_OUT")'"; fi
+SESSION_ID=ctx-gate-3 run_hook "$CTX" "$SOP" ''
+if ! grep -q "^Ship gate:" "$HOOK_OUT"; then ok "ctx-ship-gate-absent-without-config"; else bad "ctx-ship-gate-absent-without-config" "out='$(grep -i 'ship gate' "$HOOK_OUT")'"; fi
+
 # Legacy ship-sop directive is called out as superseded.
 mkdir -p "$SOP/.ship" && echo "# stale" > "$SOP/.ship/.pending-auto-fire.md"
 SESSION_ID=ctx-4 run_hook "$CTX" "$SOP" ''

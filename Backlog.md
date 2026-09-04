@@ -2059,7 +2059,7 @@ First live run of `sop-session-context.sh` (the operator's first prompt after `i
 ---
 
 ### P101 — Context block did not show an outstanding ship gate
-`[IN PROGRESS] [Bug]`
+`[SHIPPED - 2026-09-04] [Bug]`
 
 Reported by a peer session (opportunity-scan, launched from `~`, first real consumer run of the hooks): the prompt-time block said "Drift: none — last session record covers HEAD" and the Stop hook then demanded the ship-sop gate on the same commit. Both true, different facts, and the block gave no hint that a gate was outstanding, so the session met it only at its first stop.
 

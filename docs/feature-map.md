@@ -117,3 +117,4 @@ Last updated: 2026-08-03 (P87 trigger (b) enforcement; P95 citation check)
 | P98 | Digest review 10 Aug + 31 Aug: floor 2.1.251, extract-then-execute pattern, branch convention | `README.md`, `setup.sh`, `.claude/agents/security-reviewer.md`, `docs/guides/multi-agent-parallel-sessions.md` | 2026-09-04 |
 | P99 | Stop hook skips merge commits when computing drift | `scripts/hooks/sop-lib.sh`, `docs/benchmark/hook-fixtures/` | 2026-09-04 |
 | P100 | Context hook reads only the status line for in-progress items | `scripts/hooks/sop-session-context.sh`, `docs/benchmark/hook-fixtures/` | 2026-09-04 |
+| P101 | Context block shows ship-gate state | `scripts/hooks/sop-session-context.sh`, `docs/benchmark/hook-fixtures/` | 2026-09-04 |

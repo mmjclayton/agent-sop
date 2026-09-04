@@ -93,6 +93,20 @@ fi
 DIRTY=$(sop_tracker_dirty "$ROOT")
 [ -n "$DIRTY" ] && DIRTY_LINE="$(printf '%s\n' "$DIRTY" | tr '\n' ' ')" || DIRTY_LINE="none"
 
+# ── Ship gate (same fact the Stop hook and push gate act on) ──────────────────
+# "Drift: none" and an outstanding gate can both be true of one commit; a real
+# session read the first and was surprised by the second at its next stop
+# (P101). Printed only where ship-sop is configured.
+GATE_LINE=""
+if [ -f "$ROOT/ship-sop.config.json" ]; then
+    GATE=$(sop_shipsop_gate "$ROOT")
+    if [ -n "$GATE" ]; then
+        GATE_LINE="outstanding — $(printf '%s\n' "$GATE" | head -1) The Stop hook will demand the report at your next stop; the push gate refuses until it exists."
+    else
+        GATE_LINE="none outstanding (covered, docs-only, below threshold, skipped branch, or mode not auto)"
+    fi
+fi
+
 # ── Sibling worktrees ─────────────────────────────────────────────────────────
 SIBLINGS="(single worktree)"
 WT_COUNT=$(git -C "$ROOT" worktree list 2>/dev/null | wc -l | tr -d ' ')
@@ -142,6 +156,7 @@ printf 'Recent sessions:\n%s\n' "$(printf '%s\n' "$RECENT" | sed 's/^/  /')"
 printf 'In progress in Backlog.md:\n%s\n' "$INPROG"
 printf 'Drift: %s\n' "$DRIFT_LINE"
 printf 'Uncommitted tracker files: %s\n' "$DIRTY_LINE"
+[ -n "$GATE_LINE" ] && printf 'Ship gate: %s\n' "$GATE_LINE"
 printf 'Worktrees: %s\n' "$SIBLINGS"
 [ -n "$SYNC" ] && printf 'SOP sync: %s\n' "$SYNC"
 [ -n "$LEGACY" ] && printf '%s\n' "$LEGACY"
