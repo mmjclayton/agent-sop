@@ -2022,6 +2022,23 @@ Both digests unreviewed until now (the 2026-08-03 batch covered 2026-07-30). Eve
 
 ---
 
+### P99 — Stop hook counted a PR merge commit as unrecorded work
+`[IN PROGRESS] [Bug]`
+
+First live firing of `sop-stop-drift.sh`, minutes after install: on `main` at the P97 merge commit it reported "1 commit(s) with no session record ... 914a735 Merge pull request #17". The branch's own housekeeping commit `b6136d4` carried the session record, and `git log -1 -- docs/recent-work` correctly returned it; but `rev-list b6136d4..HEAD` contains the merge commit, which introduces no work. Every PR merged with a merge commit would fire once after landing.
+
+**Fix.** `sop_drift_commits` in `scripts/hooks/sop-lib.sh` passes `--no-merges`. A merge that brings in sibling commits still counts them (they are non-merge commits in the range); only the merge node itself is skipped. Fixture `stop-merge-commit-after-record-silent` reproduces the shape (branch with work + record, `--no-ff` merge into main) and fails against the pre-fix library, per the `run-tests.sh` standard.
+
+**Acceptance criteria:**
+- Merge commit after a recorded branch: silent - DONE
+- Non-merge commits after the record still fire (existing fixtures) - DONE
+- Fixture proven to discriminate against the pre-fix `sop-lib.sh` - DONE
+- Installed copy refreshed via `install-hooks.sh` - DONE
+
+**Source:** Stop hook feedback in the 2026-09-04 session, first live firing after `install-hooks.sh`.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
