@@ -2058,6 +2058,23 @@ First live run of `sop-session-context.sh` (the operator's first prompt after `i
 
 ---
 
+### P101 — Context block did not show an outstanding ship gate
+`[IN PROGRESS] [Bug]`
+
+Reported by a peer session (opportunity-scan, launched from `~`, first real consumer run of the hooks): the prompt-time block said "Drift: none — last session record covers HEAD" and the Stop hook then demanded the ship-sop gate on the same commit. Both true, different facts, and the block gave no hint that a gate was outstanding, so the session met it only at its first stop.
+
+**Fix.** `sop-session-context.sh` prints a `Ship gate:` line wherever `ship-sop.config.json` exists: "outstanding — <first line of the demand>" plus what will happen at the next stop and push, or "none outstanding" with the reasons that can make it so. Computed by `sop_shipsop_gate`, the same function the Stop hook and push gate use, so the three cannot disagree. Three fixtures: covered shown, outstanding shown after one more code commit, no line without a config; the two positives fail against the pre-fix script.
+
+**Acceptance criteria:**
+- Gate state visible at prompt time where ship-sop is configured - DONE
+- Same rule as the Stop hook and push gate (no second implementation) - DONE
+- Fixtures discriminate - DONE
+- Installed copy refreshed - DONE
+
+**Source:** cross-session report from `matt-clayton-f9`, 2026-09-04, after the first live run in a consumer project.
+
+---
+
 ## Shipped Archive
 
 *Items below are shipped or verified. Never removed.*
