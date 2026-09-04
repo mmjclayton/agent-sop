@@ -1,12 +1,1 @@
-{
-  "hooks": {
-    "Stop": [
-      {
-        "matcher": "*",
-        "hooks": [
-          { "type": "command", "command": "scripts/auto-ship-hook.sh" }
-        ]
-      }
-    ]
-  }
-}
+{}

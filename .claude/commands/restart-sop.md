@@ -1,9 +1,11 @@
 ---
 description: Run the Agent SOP session start checklist. Reads all context files, checks git history, flags inconsistencies, and reports readiness before coding begins.
-sop_version: "2026-07-06"
+sop_version: "2026-09-04"
 ---
 
 Start a new session by executing the Agent SOP session start checklist. Read every file listed below, in order. Do not skip any step.
+
+If a block headed `--- Agent SOP context: <project> ---` is already in this session's context, the user-scope `sop-session-context.sh` hook has run Steps 0-4 for this project: do not repeat them. Go straight to Step 5 (read the current work item) and Step 6 (report readiness), citing the hook's drift and sibling-worktree lines.
 
 ## Step 0: SOP staleness check
 

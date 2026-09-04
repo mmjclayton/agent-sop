@@ -1956,7 +1956,7 @@ That near-miss is the argument for unifying: three copies of one rule, one of wh
 ---
 
 ### P97 — User-scope hooks run the SOP without a command typed; ship-sop auto-mode folded in
-`[IN PROGRESS] [Feature]`
+`[SHIPPED - 2026-09-04] [Feature]`
 
 **Why.** The manual trigger was the failure point. Of six projects with the SOP installed, three ran it; agent-sop's own repo ended two sessions (2026-07-27, 2026-08-18) without `/update-sop`; repcanvas-marketing went 111 days and Meaningful never ran it once; intelligent-studio removed the whole layer on 2026-08-19. ship-sop's auto-mode had produced one gate report in four and a half months, its own dogfood on 2026-04-25, and no state file after 2026-07-27 even after its P14 wiring fix. Run by hand in a throwaway clone of a live consumer repo the hook fired correctly, so the silence had two causes outside the script: project-scope hooks in `<repo>/.claude/settings.json` load only from the directory Claude Code was launched in, and the maintainer launches from `~` and `cd`s into projects (three of this week's transcripts, each with thousands of consumer-repo references, sit in the home-directory project folder); and Claude Code discards `Stop` hook stdout — only `SessionStart`, `UserPromptSubmit`, `UserPromptExpansion` and `PostModelSwitch` stdout reaches the model — so the directive the hook printed was never seen even when it ran. See `docs/agent-memory/gotchas/2026-09-04_solo_project-scope-hooks-never-load-from-a-home-launched-session.md`.
 
@@ -1966,7 +1966,7 @@ That near-miss is the argument for unifying: three copies of one rule, one of wh
 - `scripts/hooks/sop-stop-drift.sh` — `Stop`. Exit 2 with the exact gap when commits exist after the newest `docs/recent-work/` entry, tracker files are uncommitted, or ship-sop auto-mode has no report covering HEAD. Throttled once per (HEAD, dirty set, gate state). Honours `stop_hook_active`.
 - `scripts/hooks/sop-push-gate.sh` — `PreToolUse(Bash)`. Refuses `git push` / `gh pr create` only under ship-sop auto-mode with an uncovered code diff; `SOP_SKIP_GATE=1` bypasses once and is logged to `.ship/bypass.log`. Session-record drift is deliberately not push-gated: pushing early is the protection against sibling-worktree wipes.
 - `scripts/install-hooks.sh` — copies the four to `~/.claude/scripts/hooks/agent-sop/` and registers them in `~/.claude/settings.json` via jq, idempotent, backup written first, `--uninstall` removes only its own entries. `setup.sh` calls it (`--no-hooks` opts out) and warns below Claude Code 2.1.251.
-- `docs/benchmark/hook-fixtures/run-tests.sh` — 28 cases over real temp repos with a bare origin; 13 fail against exit-0 stubs, the other 15 are the silent-by-design cases.
+- `docs/benchmark/hook-fixtures/run-tests.sh` — 36 cases over real temp repos with a bare origin; 19 fail against exit-0 stubs, the other 17 are the silent-by-design cases.
 - Docs: README "Automatic mode via hooks" section and ship-sop paragraph; `harness-configuration.md` reference implementations (a) and (b) replaced by the shipped scripts and a `UserPromptSubmit` row; core SOP §5 and §6 one sentence each; `/restart-sop` told to skip Steps 0-4 when the context block is present; `/update-agent-sop` file table carries the four scripts user-scope; agent-sop's own project-scope Stop hook removed from `.claude/settings.json`.
 
 **Coverage is a fact, not a stamp.** The first cut required a report naming HEAD; committing the report moves HEAD, so a branch could never be covered once the report was in git. A report now covers HEAD when it names an ancestor with zero code lines between it and HEAD, using the same docs filter as the trigger. Caught by the fixture `stop-shipsop-gate-satisfied-by-covering-report`.
@@ -1978,7 +1978,8 @@ That near-miss is the argument for unifying: three copies of one rule, one of wh
 - Push gate refuses only under ship-sop auto with an uncovered code diff; bypass logged; fixture-proven - DONE
 - Context hook prints once per (session, repo) and reprints after compact/clear; fixture-proven - DONE
 - Installer idempotent, preserves existing hooks, backs up, uninstalls only its own entries; fixture-proven - DONE
-- Suite discriminates: 13 of 28 cases fail against exit-0 stubs - DONE
+- Suite discriminates: 19 of 36 cases fail against exit-0 stubs - DONE
+- Step 1b review run in an isolated worktree; all findings fixed with a fixture each - DONE (HIGH: push gate missed `bash -c 'git push'`; MEDIUM: gate matched prose inside quotes; MEDIUM: installer replaced a symlinked settings.json; LOW: dirty-path listing broke on spaces; LOW: uninstall matched by filename rather than install path)
 - Installed on the maintainer's machine - **NOT DONE**: the `install-hooks.sh` run against `~/.claude/settings.json` was denied by the permission classifier in this session. Run `bash scripts/install-hooks.sh` from the agent-sop checkout; it backs up `settings.json` first.
 
 **Relation to P77 / P89 / P90.** The Stop hook enforces the minimum session-end (Backlog tag, session record, resume snapshot, commit) regardless of what the 22-step command says, which is the trim P77 asked for applied at the trigger rather than in the text. The command and SOP text trim remain open under P77/P89 with P90's anchor-conversion ordering; nothing was renumbered here.
@@ -1992,7 +1993,7 @@ That near-miss is the argument for unifying: three copies of one rule, one of wh
 ---
 
 ### P98 — Research digest review 2026-08-10 + 2026-08-31: version floor, extract-then-execute pattern, branch convention; skip record
-`[IN PROGRESS] [Iteration]`
+`[SHIPPED - 2026-09-04] [Iteration]`
 
 Both digests unreviewed until now (the 2026-08-03 batch covered 2026-07-30). Every 31 August claim was verified against its primary source before acting: the Claude Code changelog (2.1.247-2.1.251 entries quoted verbatim; newest 2.1.260), the Anthropic multiagent post (2026-08-13), the LangChain OpenWiki post (2026-08-25), Willison on Rehberger's auto-mode break (2026-08-27), Willison on auto mode default (2026-08-08), and the 2.1.222 release. Filter applied per the 2026-04-13 decision: remove or sharpen before adding; an addition must change what happens, not what the agent reads.
 

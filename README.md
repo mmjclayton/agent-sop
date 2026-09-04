@@ -1,12 +1,12 @@
 # Agent SOP
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Claude Code](https://img.shields.io/badge/Claude_Code-v2.1.101+-orange.svg)](https://code.claude.com/docs/en/changelog)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-v2.1.251+-orange.svg)](https://code.claude.com/docs/en/changelog)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 
 Standard operating procedures and product-management discipline for Claude Code sessions. A defined file set, six non-negotiable rules, session start/end checklists, a Backlog with status tags and P-numbers, build plans with phases and batch logs, and a feature map — together they give every session a consistent place to read context from at the start and write state to at the end.
 
-Plain markdown plus five slash commands. No daemon, no database, no MCP server, no background process.
+Plain markdown, five slash commands, and three user-scope hook scripts that run the mechanical parts without anything typed. No daemon, no database, no MCP server.
 
 ## Why this exists
 
@@ -44,7 +44,7 @@ cd ~/Projects/agent-sop
 ./setup.sh /path/to/your/project --code
 ```
 
-This installs the SOP files into your project, the slash commands into `~/.claude/commands/` (`/restart-sop`, `/update-sop`, `/update-agent-sop`, `/migrate-to-multi-agent`, `/finish`), five reference agents into `~/.claude/agents/`, and the helper scripts (`scripts/migrate-to-multi-agent.py`, `scripts/refresh-rollup.sh`, `scripts/refresh-in-flight.sh`, `scripts/validate-state-transitions.sh`) into the project. Existing files are not overwritten unless you pass `--force`.
+This installs the SOP files into your project, the slash commands into `~/.claude/commands/` (`/restart-sop`, `/update-sop`, `/update-agent-sop`, `/migrate-to-multi-agent`, `/finish`), five reference agents into `~/.claude/agents/`, and the helper scripts (`scripts/migrate-to-multi-agent.py`, `scripts/refresh-rollup.sh`, `scripts/refresh-in-flight.sh`, `scripts/validate-state-transitions.sh`) into the project. It also registers three user-scope hooks in `~/.claude/settings.json` (see [Automatic mode via hooks](#automatic-mode-via-hooks); skip with `--no-hooks`). Existing files are not overwritten unless you pass `--force`.
 
 Open the new files, replace `[bracket placeholders]` with your project content, then validate:
 
@@ -139,6 +139,22 @@ python3 scripts/migrate-to-multi-agent.py
 ```
 
 After the script runs, manually remove the legacy narrative sections from `CLAUDE.md` and `docs/agent-memory.md` (the script leaves them for review), then run `/update-sop` to refresh the rollup and commit. Full mechanics in [`docs/guides/multi-agent-parallel-sessions.md`](docs/guides/multi-agent-parallel-sessions.md).
+
+### Automatic mode via hooks
+
+Three user-scope hook scripts make the mechanical half of the SOP run without a command being typed. `setup.sh` installs them; `bash scripts/install-hooks.sh` installs or refreshes them on their own, and `--uninstall` removes them. They live in `~/.claude/scripts/hooks/agent-sop/` and are registered in `~/.claude/settings.json`.
+
+| Hook | Event | What it does |
+|------|-------|--------------|
+| `sop-session-context.sh` | `SessionStart`, `UserPromptSubmit` | Once per session and project, prints the resume snapshot, in-flight lines, recent sessions, `[IN PROGRESS]` Backlog items, commits since the last session record, dirty sibling worktrees, and upstream-sync staleness. Replaces `/restart-sop` Steps 0-4. Reprints after `/compact` or `/clear`. |
+| `sop-stop-drift.sh` | `Stop` | When the agent stops with commits that no `docs/recent-work/` entry covers, uncommitted tracker files, or a ship-sop auto-mode diff with no gate report, it exits 2 with exactly what is missing, and the agent does the minimum session-end (Backlog tag, session record, resume snapshot, commit) before finishing. Fires once per commit state, so it never loops. |
+| `sop-push-gate.sh` | `PreToolUse` on `Bash` | Refuses `git push` and `gh pr create` (as a simple command, inside a `bash -c` / `sh -c` / `eval` wrapper, or in a command substitution; text inside quoted arguments is ignored) when `ship-sop.config.json` has `trigger.mode: auto`, the code diff against the default branch is over `min_diff_lines`, and no `docs/reviews/*-ship-auto.md` names an ancestor of HEAD with no code change since. `SOP_SKIP_GATE=1 git push ...` bypasses once and is logged to `.ship/bypass.log`. |
+
+They are user-scope on purpose. A project's own `.claude/settings.json` is only read from the directory Claude Code was launched in, so a session started in `~` that then changes into the project never loads project hooks. These resolve the repository from the hook's `cwd` input and stay silent anywhere that is not an SOP project (no `Backlog.md` plus `docs/sop/claude-agent-sop.md`).
+
+Every fact the hooks act on is one a script can check: a commit range, a file's presence, a line in a report. Judgement stays with the agent and the full checklists. `/restart-sop` and `/update-sop` still work and remain the deliberate way to open and close a session; the hooks are what happens when nobody types them.
+
+Fixture suite: `bash docs/benchmark/hook-fixtures/run-tests.sh`.
 
 ## Six non-negotiable rules
 
@@ -248,11 +264,11 @@ Do not maintain parallel copies — duplicated context drifts, and drift is exac
 
 ## Companion projects
 
-[**ship-sop**](https://github.com/mmjclayton/ship-sop) — pre-merge quality gates (tests, security, compliance, diagrams + API catalog) that fire automatically on session-end via a SessionStop hook, or manually via `/ship`. Independent of Agent SOP but composes with it: ship-sop auto-files findings as `[OPEN][Bug][needs-triage]` Backlog entries using the Agent SOP tag taxonomy when both are installed. Different decision point (per-ship gate, not per-session discipline), separate install, separate release cycle.
+[**ship-sop**](https://github.com/mmjclayton/ship-sop) — pre-merge quality gates (tests, security, compliance, diagrams + API catalog) run manually via `/ship`. Its automatic trigger now lives in Agent SOP: when a project carries `ship-sop.config.json` with `trigger.mode: auto`, the `sop-stop-drift.sh` Stop hook emits the gate demand and `sop-push-gate.sh` refuses a push until a report covers HEAD (see [Automatic mode via hooks](#automatic-mode-via-hooks)). ship-sop's own project-scope Stop hook is superseded. Findings still file as `[OPEN][Bug][needs-triage]` Backlog entries using the Agent SOP tag taxonomy. Different decision point (per-ship gate, not per-session discipline), separate install, separate release cycle.
 
 ## Requirements
 
-Claude Code **v2.1.101 or later**. Earlier versions have a long-session memory leak, permission rule bypasses, and `--resume` chain recovery bugs that affect SOP workflows. Check with `claude --version`.
+Claude Code **v2.1.251 or later**. Check with `claude --version`. The floor moved from v2.1.101 on 2026-09-04 for three fixes the SOP's containment model depends on: 2.1.222 stopped worktree-isolated sessions and their subagents running destructive git commands against the main checkout (the parallel-session workflow ran on a broken isolation guarantee before it); 2.1.251 closed file tools following a symlink swapped after the permission check and Grep/Glob ignoring `Read(...)` deny rules through symlinked paths; 2.1.251 also delivers the `SessionStart` staleness fields the hooks read. The original v2.1.101 reasons (long-session memory leak, permission rule bypasses, `--resume` chain recovery) still apply below that version.
 
 Other dependencies:
 - `bash` (the helper scripts use `#!/usr/bin/env bash`; some of zsh's scoping rules break the refresh snippet, hence the explicit shebang)

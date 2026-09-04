@@ -37,14 +37,17 @@ months after the file itself said Shipped.
 | Templates | `docs/templates/claude-md-template.md` | Base template for new projects |
 | SOP Checker | `.claude/agents/sop-checker.md` | Compliance audit agent |
 | `/finish` command | `.claude/commands/finish.md` | End-to-end verify + `/simplify` + ship (Backlog, `/update-sop`, PR) |
+| Hooks | `scripts/hooks/`, `scripts/install-hooks.sh` | User-scope context load, Stop drift gate, push gate (P97); fixtures in `docs/benchmark/hook-fixtures/` |
 
 ---
 
-## Current Priority Items (as of 2026-08-03)
+## Current Priority Items (as of 2026-09-04)
 
 **Next:**
-- *(none — P74 shipped 2026-07-27; Batch 0.29 reconciled tracker drift 2026-08-03. Only decision-blocked items remain.)*
-- **Owed:** first lite benchmark run. The rule is MANDATORY as of Batch 0.27; both 2026-07-26 sessions took a recorded exemption, and Batches 0.28-0.29 did not trigger it (no agent-facing instruction text changed). Next session editing agent-facing instruction text runs `bash docs/benchmark/run-multi-round.sh setup <r> --lite -k 3`.
+- **Owed (maintainer, one command):** `bash scripts/install-hooks.sh` from this checkout — registers the P97 user-scope hooks in `~/.claude/settings.json`. The run in the 2026-09-04 session was denied by the permission classifier; nothing else in P97 is blocked on it.
+- **Owed (consumer repos):** drop the superseded project-scope ship-sop Stop hook from `.claude/settings.json` in hst-tracker, opportunity-scan, os-carry and ship-sop on each project's next session (ship-sop P25).
+- P77 / P89 instruction-budget trim — the Stop hook now enforces the minimum session-end at the trigger, so the text trim carries no record-loss risk; follow P90's anchor-conversion ordering.
+- **Owed:** first lite benchmark run. The rule is MANDATORY as of Batch 0.27; both 2026-07-26 sessions took a recorded exemption, and Batches 0.28-0.29 did not trigger it (no agent-facing instruction text changed). Batch 0.36 changed agent-facing text and took the same recorded exemption: P81 records the framework as unable to run (April `BASE_COMMIT`, no model pinning). Resolve P81 before this can be discharged.
 
 **Decision-blocked:**
 - P8 — Web app domain variant `[has-open-questions]`
@@ -80,7 +83,8 @@ months after the file itself said Shipped.
 ## Stack
 
 - Format: mostly Markdown, plus bash and Python tooling in `scripts/`
-  (`setup.sh`, `validate-state-transitions.sh`, `migrate-to-multi-agent.py`)
+  (`setup.sh`, `validate-state-transitions.sh`, `migrate-to-multi-agent.py`,
+  `install-hooks.sh`, the user-scope hooks under `scripts/hooks/`)
 - Hosting: GitHub, `mmjclayton/agent-sop`, public
 - No build step, but there ARE tests: the fixture suites under
   `docs/benchmark/*-fixtures/run-tests.sh`. Run them when touching the validator

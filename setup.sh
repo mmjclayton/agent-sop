@@ -46,6 +46,7 @@ TEMPLATE_DIR="$SCRIPT_DIR/docs/templates"
 
 USE_CODE_TEMPLATE=false
 FORCE=false
+INSTALL_HOOKS=true
 TARGET=""
 
 # ── Parse arguments ───────────────────────────────────────────────────────────
@@ -54,8 +55,9 @@ usage() {
     echo "Usage: $(basename "$0") /path/to/project [--code] [--force]"
     echo ""
     echo "Options:"
-    echo "  --code    Use the code project template (Auth, DB, Design System)"
-    echo "  --force   Overwrite existing files"
+    echo "  --code       Use the code project template (Auth, DB, Design System)"
+    echo "  --force      Overwrite existing files"
+    echo "  --no-hooks   Do not register the user-scope hooks in ~/.claude/settings.json"
     echo ""
     echo "Run this from the agent-sop repo directory."
     exit 1
@@ -65,6 +67,7 @@ for arg in "$@"; do
     case "$arg" in
         --code)  USE_CODE_TEMPLATE=true ;;
         --force) FORCE=true ;;
+        --no-hooks) INSTALL_HOOKS=false ;;
         --help|-h) usage ;;
         -*)
             echo "Unknown option: $arg"
@@ -194,16 +197,22 @@ echo "Agent SOP Setup"
 echo "==============="
 echo ""
 
-# ── Check Claude Code version (recommend 2.1.101+) ────────────────────────────
+# ── Check Claude Code version (recommend 2.1.251+) ────────────────────────────
+#
+# Floor raised from 2.1.101 on 2026-09-04: 2.1.222 fixed worktree-isolated
+# sessions running destructive git against the main checkout; 2.1.251 fixed
+# post-permission-check symlink escapes in the file tools and Grep/Glob deny-
+# rule bypass through symlinked paths. Both are containment fixes the parallel
+# worktree workflow depends on. Warn, do not block.
 
 if command -v claude >/dev/null 2>&1; then
     CLAUDE_VERSION="$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || true)"
     if [ -n "$CLAUDE_VERSION" ]; then
-        REQUIRED="2.1.101"
+        REQUIRED="2.1.251"
         LOWEST="$(printf '%s\n%s\n' "$CLAUDE_VERSION" "$REQUIRED" | sort -V | head -n1)"
         if [ "$LOWEST" != "$REQUIRED" ]; then
             echo "Warning: Claude Code $CLAUDE_VERSION detected. Agent SOP recommends $REQUIRED+"
-            echo "         (memory leak, permission, and --resume fixes)."
+            echo "         (worktree isolation fix in 2.1.222; symlink and deny-rule fixes in 2.1.251)."
             echo ""
         fi
     fi
@@ -361,7 +370,8 @@ if [ ! -f "$CONFIG_PATH" ] || [ "$FORCE" = true ]; then
             "docs/sop/"*.md \
             "docs/guides/"*.md \
             ".claude/commands/"*.md \
-            ".claude/agents/"*.md
+            ".claude/agents/"*.md \
+            "scripts/hooks/"*.sh
         do
             src="$SCRIPT_DIR/$path_pattern"
             [ -f "$src" ] || continue
@@ -382,6 +392,18 @@ if [ ! -f "$CONFIG_PATH" ] || [ "$FORCE" = true ]; then
     echo "  create  ~/.claude/agent-sop.config.json"
 else
     echo "  skip  ~/.claude/agent-sop.config.json (already exists, use --force)"
+fi
+
+# ── Install user-scope hooks (P97) ────────────────────────────────────────────
+#
+# User-scope, not project-scope: a project's .claude/settings.json is only
+# read from the launch directory, so hooks placed there never fire for a
+# session launched elsewhere. install-hooks.sh is idempotent and backs up
+# settings.json before writing. Non-fatal: a missing jq prints a message.
+
+if [ "$INSTALL_HOOKS" = true ]; then
+    echo ""
+    bash "$SCRIPT_DIR/scripts/install-hooks.sh" || echo "  (hooks not installed — see message above; re-run: bash $SCRIPT_DIR/scripts/install-hooks.sh)"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────

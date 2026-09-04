@@ -1,5 +1,5 @@
 ---
-sop_version: 2026-04-17
+sop_version: 2026-09-04
 name: security-reviewer
 description: Scans for OWASP Top 10 vulnerabilities, secret leaks, injection flaws, and auth issues. Read-only. Reports findings with severity and remediation steps.
 tools: ["Read", "Grep", "Glob", "Bash"]
@@ -62,6 +62,7 @@ Flag these patterns immediately:
 | No auth check on route | CRITICAL | Add authentication middleware |
 | No rate limiting on public endpoint | HIGH | Add rate limiting |
 | Logging passwords or secrets | MEDIUM | Sanitise log output |
+| Archive extracted into a directory that is later on an interpreter's import or executable path (a planted `struct.py` beside the script, a `bin/` on `PATH`) | CRITICAL | Extract into a dedicated directory outside the working tree; never run an interpreter with its cwd or `sys.path` inside an extraction. No injected instruction is needed for this to execute, so a prompt-injection classifier does not see it (Rehberger, 2026-08-27) |
 
 ## Output Format
 
