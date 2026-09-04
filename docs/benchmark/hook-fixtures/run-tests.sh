@@ -273,10 +273,13 @@ mkdir -p "$(dirname "$RESUME_PATH")"
 printf '# Session Resume — sop — Agent solo\n\n## What is next\n- finish P1\n' > "$RESUME_PATH"
 printf '(2026-09-04): P1 half done\n' > "$SOP/docs/agent-memory/in-flight/solo.md"
 sed -i.bak 's/\[OPEN\] \[Feature\]/[IN PROGRESS] [Feature]/' "$SOP/Backlog.md" && rm -f "$SOP/Backlog.md.bak"
+# A shipped entry whose body quotes the tag in prose must not be listed (P100,
+# found on the context hook's first live run).
+printf '\n### P2 — Shipped thing\n`[SHIPPED - 2026-09-04] [Feature]`\n\nThe validator rejects `[OPEN]` -> `[SHIPPED]` with no `[IN PROGRESS]` intermediate.\n\n---\n' >> "$SOP/Backlog.md"
 commit_code "$SOP" "feat: drift for ctx"
 
 SESSION_ID=ctx-1 run_hook "$CTX" "$SOP" ',"source":"startup"'
-if [ "$HOOK_EXIT" = 0 ] && grep -q "Agent SOP context" "$HOOK_OUT" && grep -q "finish P1" "$HOOK_OUT" && grep -q "P1 half done" "$HOOK_OUT" && grep -q "P1" "$HOOK_OUT" && grep -qi "session record" "$HOOK_OUT"; then ok "ctx-first-load-prints-bundle"; else bad "ctx-first-load-prints-bundle" "exit $HOOK_EXIT out='$(cat "$HOOK_OUT")'"; fi
+if [ "$HOOK_EXIT" = 0 ] && grep -q "Agent SOP context" "$HOOK_OUT" && grep -q "finish P1" "$HOOK_OUT" && grep -q "P1 half done" "$HOOK_OUT" && grep -q "P1 — First thing" "$HOOK_OUT" && ! grep -q "P2 — Shipped thing" "$HOOK_OUT" && grep -qi "session record" "$HOOK_OUT"; then ok "ctx-first-load-prints-bundle"; else bad "ctx-first-load-prints-bundle" "exit $HOOK_EXIT out='$(cat "$HOOK_OUT")'"; fi
 
 SESSION_ID=ctx-1 run_hook "$CTX" "$SOP" ''
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_OUT" ]; then ok "ctx-same-session-silent"; else bad "ctx-same-session-silent" "out='$(head -c 200 "$HOOK_OUT")'"; fi
