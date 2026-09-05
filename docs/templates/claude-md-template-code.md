@@ -6,86 +6,56 @@
 
 **Project type:** code
 
-*This is the code project template — for full-stack web apps and other software projects. It extends the base template (`claude-md-template-base.md`) with Auth, Database, Design System, and code-specific build rules. For non-code projects, use the base template.*
+*Code project template: the base template plus Auth, Database, Design System and code-specific rules. Keep the per-session sections (everything except Auth, Database and Design System) under 300 lines. General coding rules load from the user's `~/.claude/rules/`; do not repeat them here.*
 
 ---
 
 ## Agent SOP
 
-All agents working on this project follow the Claude Code Agent SOP (`docs/sop/claude-agent-sop.md`). The SOP defines the standard file structure, never-delete-without-a-trace policy, session checklists, and update triggers. This file (CLAUDE.md) is the authority on project-specific conventions. The SOP is the authority on process.
-
----
-
-## Build Plans — READ FIRST
-
-Always check `docs/build-plans/` at the start of any session to see what has shipped, what is in flight, and what is next.
-
-Current phase files:
-- `docs/build-plans/phase-0-foundation.md` — [status emoji] [status description]
+Sessions follow `docs/sop/claude-agent-sop.md`; this file is the authority on project-specific conventions, the SOP on process. Start: the context hook prints project state on the first prompt, then `/restart-sop` reads the work item. End: `/update-sop`; the Stop hook enforces the minimum record and the ship-sop gate on this code project. Never delete without a trace; when files disagree, code and git win, then this file, then `Backlog.md`.
 
 ---
 
 ## Key Documents & Dispatch
 
-*Minimum 5 entries. Use intent-based descriptions ("when you need to..."). Update at the start of each phase.*
+*At least five entry points with paths. Name a stable anchor (a symbol, a block, a grep target) for large files, never a line range.*
 
 | When you need to... | Start at | Notes |
 |---------------------|----------|-------|
-| Read cross-session context | `docs/agent-memory.md` | Decisions, gotchas, invariants |
-| Check or update work items | `Backlog.md` | Single source of truth for all items |
-| Check shipped features or roadmap | `docs/feature-map.md` | Shipped inventory + priority tiers |
-| Read phase architecture | `docs/build-plans/*.md` | Batch logs, locked decisions |
-| Check copy/tone rules | `.claude/brand-voice.md` | Brand voice, terminology |
-| Run more than one agent on this repo | `docs/sop/multi-agent.md` (deep mechanics in `docs/guides/multi-agent-parallel-sessions.md`) | Decision tree, optimisation rules, Common Mistakes |
-| Change the data model | `[path/to/schema]` | Always create a migration. Follow schema change protocol. |
-| Change colours, spacing, layout | `[path/to/styles]` | CSS tokens live in the `[:root]` block. Never hardcode hex values. |
-| [Change X] | `[path]` | [what to know when you arrive — name related components, gotchas] |
-| [Change Y] | `[path]` | [include context the file path alone does not convey] |
+| Check or update work items | `Backlog.md` | Grep the P-number, read only that range |
+| Read why something was decided, or what bites | `docs/agent-memory/decisions/`, `docs/agent-memory/gotchas/` | Newest first; gotchas before touching the area they name |
+| Read phase architecture | `docs/build-plans/*.md` | Locked decisions, open questions |
+| Change the data model | `[schema path]` | Follow the schema change protocol below |
+| Change auth or session handling | `[auth middleware path]` | [key rule, e.g. verify with getUser(), never getSession() alone] |
+| Change styling | `[css tokens file]`, in the `:root` block | Tokens only, never hardcoded hex |
+| Run more than one agent on this repo | `docs/sop/multi-agent.md` | Worktrees, agent-ids, merge discipline |
+| [Change X] | `[path]` | [what to know when you arrive] |
 
 Test: `[test command]`
-After shipping: update Backlog.md + docs/feature-map.md
 
 ### Current priority items
 
-<!-- Derived from Backlog.md by scripts/refresh-priorities.sh (/update-sop Step 3). Do not edit by hand — Backlog.md is the single source of truth for status, and a hand-maintained copy here drifts. -->
+<!-- Derived from Backlog.md by scripts/refresh-priorities.sh at every /update-sop. Do not edit by hand. -->
 
 <!-- priority-items:start -->
 *Not yet generated. The first `/update-sop` run will populate this from `Backlog.md`.*
 <!-- priority-items:end -->
 
-**Medium:**
-- [P-number] — [item description]
-
 ---
 
 ## Backlog Management
 
-`Backlog.md` is the single source of truth. If it disagrees with build plans, `Backlog.md` wins. Issues are lazy-created: only when work moves to `[IN PROGRESS]`.
-
-### Tag taxonomy
-
-- Status (first): `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[DEFERRED]`, `[SHIPPED - YYYY-MM-DD]`, `[VERIFIED - YYYY-MM-DD]`, `[WON'T]`
-- Type (second): `[Feature]`, `[Iteration]`, `[Bug]`, `[Refactor]`
-- Optional: `[has-open-questions]`, `[ok-for-automation]`
-- `[BLOCKED]` = waiting on external action. `[DEFERRED]` = intentionally postponed, no external blocker, and must state a reopen trigger (`**Reopens when:** <condition>`; "no trigger identified" is legal and flags it for `[WON'T]` review). Use `[DEFERRED]` instead of leaving stale `[OPEN]` items that were consciously pushed back.
-- `[WON'T]` format: `[WON'T] [Type] — Reason: [explanation or superseding P-number]`
-- `[VERIFIED]` means: tested in production on the live URL
-
-### Rules
-
-- Never delete items from Backlog.md.
-- Never mark `[SHIPPED]` without CI green and merge to main.
-- Never mark `[VERIFIED]` without testing in a running app.
-- Status first, type second. Never reverse.
+`Backlog.md` is the single source of truth for work items. Status first, type second, never reversed: `[OPEN]` `[IN PROGRESS]` `[BLOCKED]` `[DEFERRED]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T]`, then `[Feature]` `[Iteration]` `[Bug]` `[Refactor]`. `[DEFERRED]` states `**Reopens when:**`; `[WON'T]` states `Reason:`. A shipped `[Feature]` or `[Refactor]` carries a `review:` line or a `review skipped (P<n>): <reason>` token. `[VERIFIED]` means tested where it runs. Never delete an item. Closed items older than 90 days move to `docs/backlog-archive.md` via `scripts/archive-backlog.sh`.
 
 ---
 
 ## Stack
 
-- **Frontend:** [framework, libraries] — `client/`
-- **Backend:** [framework, ORM, database] — `server/`
+- **Frontend:** [framework, language, build tool]
+- **Backend:** [runtime, framework, language]
+- **Database:** [engine, ORM]
 - **Hosting:** [platform]
-- **CI:** [CI tool and what it runs]
+- **CI:** [tool and what it runs]
 - **Live:** [URL]
 
 ---
@@ -94,13 +64,10 @@ After shipping: update Backlog.md + docs/feature-map.md
 
 ```bash
 # Development
-[dev server command]            # e.g. npm run dev:server
-[dev client command]            # e.g. npm run dev:client
+[dev server]                    # e.g. npm run dev
 
 # Testing
 [run all tests]                 # e.g. npm test
-[run server tests only]         # e.g. npm run test:server
-[run client tests only]         # e.g. npm run test:client
 [run single test file]          # e.g. npx vitest run path/to/file.test.ts
 
 # Database
@@ -119,233 +86,70 @@ After shipping: update Backlog.md + docs/feature-map.md
 
 ## Auth
 
-- **Identity provider:** [provider, e.g. Supabase Auth, Auth0, NextAuth, Clerk]
+- **Identity provider:** [e.g. Supabase Auth, Auth0, NextAuth, Clerk]
 - **Token type:** [JWT / session cookie / API key]
-- **Session handling:** [approach, e.g. httpOnly cookies, bearer tokens, middleware refresh]
-- **Auth middleware:** [file path, e.g. `src/middleware.ts` or `server/middleware/auth.js`]
-- **Protected routes pattern:** [how routes are guarded, e.g. middleware check, wrapper component, RLS]
-- **Public routes:** [list routes that do not require authentication]
-- **Database:** [where user and session data lives, e.g. `users` table, Supabase auth.users]
-- **Key rule:** [the most important auth rule for this project, e.g. "never trust getSession() alone, always verify with getUser()"]
+- **Session handling:** [e.g. httpOnly cookies, bearer tokens, middleware refresh]
+- **Auth middleware:** [file path]
+- **Protected routes pattern:** [middleware check, wrapper component, RLS]
+- **Public routes:** [list]
+- **Key rule:** [the one auth rule that bites, e.g. "never trust getSession() alone, always verify with getUser()"]
 
 ---
 
 ## Database
 
-- **ORM:** [e.g. Prisma, Drizzle, Sequelize, SQLAlchemy, raw SQL]
-- **Migration tool:** [e.g. Prisma Migrate, Knex, Alembic, manual SQL files]
-- **Schema location:** [file path, e.g. `prisma/schema.prisma`, `server/models/`]
-- **Models:** [list model names and brief purpose, e.g. "User, Program, Exercise, WorkSet"]
-- **Naming conventions:** [table naming, e.g. snake_case plural; column naming, e.g. camelCase]
-- **Query patterns:** [e.g. "always use ORM, never raw SQL" or "use query builder for complex joins"]
-- **Key constraints:** [anything non-obvious about relationships, cascades, or data integrity]
-- **Schema change protocol:** edit schema -> create migration -> update server routes -> update client code -> add tests -> verify test suite passes
+- **ORM:** [e.g. Prisma, Drizzle, SQLAlchemy]
+- **Migration tool:** [e.g. Prisma Migrate, Alembic]
+- **Schema location:** [file path]
+- **Models:** [names and one-line purposes]
+- **Naming conventions:** [tables, columns]
+- **Key constraints:** [non-obvious relationships, cascades, integrity rules]
+- **Schema change protocol:** edit schema -> create migration -> update server routes -> update client code -> add tests -> verify the suite passes
 
 ---
 
 ## Design System
 
-- **Component library:** [e.g. Shadcn/ui, Radix, custom components, Material UI]
-- **Palette:** [key colour values, e.g. primary: #1a1a2e, surface: #16213e]
-- **Accent colours:** [values for interactive elements, status indicators]
-- **Typography scale:** [font stack, heading sizes, body size, line heights]
-- **Spacing scale:** [base unit and scale, e.g. "4px base: 4, 8, 12, 16, 24, 32, 48"]
-- **Responsive breakpoint:** [value, e.g. 768px single breakpoint]
-- **Responsive strategy:** [e.g. mobile-first, desktop-first, single breakpoint with fluid scaling]
-- **Touch targets:** [minimum size, e.g. 44x44px]
-- **Icon system:** [e.g. Lucide, Heroicons, custom SVGs]
-- **CSS tokens location:** [file + a stable anchor, e.g. `client/src/index.css`, in the `:root` block. Never a line range — ranges rot on the next edit.]
-
----
-
-## Code Quality Rules
-
-*Language-agnostic defaults. Add language-specific rules below or in a separate `.claude/rules/` file.*
-
-### File size
-
-- 200-400 lines typical, 800 lines maximum
-- If a file exceeds 800 lines, split it by responsibility before adding more code
-- Organise by feature or domain, not by type (e.g. `features/auth/` not `controllers/`)
-
-### Immutability
-
-- Prefer `const` over `let`. Never use `var`
-- Create new objects rather than mutating existing ones (spread operator, `map`, `filter`)
-- Rationale: immutable data prevents hidden side effects and makes debugging easier
-
-### Error handling
-
-- Handle errors explicitly at every level. No silent catches, no empty catch blocks
-- Provide user-friendly messages in UI-facing code, detailed context in server logs
-- Never swallow errors. If you catch, log and re-throw or return an error result
-
-### Import ordering
-
-- Standard library / built-in modules first
-- External packages second
-- Internal project modules third
-- Relative imports last
-- Blank line between each group
-
-### Test coverage
-
-- 80% minimum coverage for new code
-- Every new API endpoint must have integration tests
-- Every new component with logic must have unit tests
-- Run the full test suite before opening a PR
-
-### Linting and type checking
-
-- Lint and type-check are non-negotiable pre-commit gates
-- Fix lint errors in your code. Never weaken linter config to make errors go away
-- Type checking (e.g. `tsc --noEmit`, `mypy`, `cargo check`) must pass before commit
-
-### No debug artifacts
-
-- No `console.log` or `debugger` statements in committed code
-- No `TODO` or `FIXME` comments without a corresponding issue or P-number
-- No commented-out code blocks. Delete dead code; git has the history
-
-### Function size
-
-- Functions should do one thing. Prefer small, focused functions over large monolithic ones
-- Split at 50 lines. If a function exceeds 50 lines, extract helpers
-- Prefer early returns over deep nesting (max 4 levels)
+- **Component library:** [e.g. Shadcn/ui, Radix, custom]
+- **Palette and accents:** [key values]
+- **Typography and spacing scale:** [font stack, sizes, base unit]
+- **Responsive strategy:** [breakpoints, mobile-first or not, touch target minimum]
+- **Icon system:** [e.g. Lucide]
+- **CSS tokens location:** [file, in the `:root` block; never a line range]
 
 ---
 
 ## Common Mistakes — Read Before Coding
 
-*Project-specific gotchas. This section directly prevents production bugs (benchmark-proven, SOP Section 15). Update as new gotchas are discovered.*
+*Project-specific. Each entry names the file, model, component or token, says what is wrong and what is correct, and the consequence. No general best practice, no derived fact that goes stale.*
 
 ### Data Model
-- [e.g. "[SharedModel] is GLOBAL. Never filter by userId. [ScopedModel] is user-scoped."]
-- [e.g. "[Field] is derived at read time, not stored. Never add a column for it."]
-- [e.g. "[Table.column] is scoped to [constraint], not globally unique. Use findFirst with both fields."]
+- [Model X] is GLOBAL. Never filter by userId. [Model Y] is user-scoped.
+- [Field] is derived, not stored. Compute it with [function]; never add a column for it.
 
 ### Client
-- [e.g. "[ComponentA] is its own file at [path], not inside [ComponentB]. Extracted on [date]."]
-- [e.g. "The default view is [key]. When referring to 'home' in code, use [key]."]
-- [e.g. "[Pill/Button/Card] component exists at [path]. Check before creating similar components."]
-- [e.g. "[N]px minimum touch targets on all interactive elements."]
-
-### Naming Conventions (CRITICAL — prevents production bugs)
-*List any naming convention an agent might guess wrong. Benchmark data shows guessed token/class names cause production breakage.*
-- [e.g. "CSS token prefix is `--color-bg-*` for backgrounds, `--color-text-*` for text. NOT `--color-surface-*`."]
-- [e.g. "CSS class pattern: `.workout-status-*` for status badges, `.set-log-*` for set-level styles."]
-- [e.g. "API routes: `/api/logger/*` for workout, `/api/builder/*` for program builder. No `/api/workout/*`."]
-- [e.g. "Component files: PascalCase.jsx. Utility files: camelCase.js. Test files: *.test.jsx."]
+- [Component A] is its own file, not inside [Component B].
+- Colours use [token prefix] tokens only. Never hardcode hex.
 
 ### Server
-- [e.g. "Every query filters by [req.userId] via [relation]. Never query without it."]
-- [e.g. "[utilityFunction()] does [thing]. Use it for [purpose], do not create your own."]
-- [e.g. "All async route handlers have try-catch. New routes must follow the same pattern."]
+- Every query filters by [user field] via [relation]. Never query without it.
+- [Utility function] does [thing]. Use it, do not create your own.
 
 ### Testing
-- [e.g. "Integration tests use a real database, not mocks. Test DB is [name]."]
-- [e.g. "Test mode uses [auth bypass]. Auth is tested separately."]
-
-### Brand Voice
-- [e.g. "Direct, dry, precise. No exclamation marks in UI copy. See [path] for full guide."]
-
----
-
-## Definition of Done
-
-*Self-evaluate against the relevant rubric before committing. If any criterion is not met, iterate before shipping. Compatible with Claude Managed Agents' `user.define_outcome` API.*
-
-### Bug fix
-- Root cause identified from reading the actual code — do not infer root cause from documentation alone
-- Fix is minimal: change the broken logic, do not remove working mechanisms
-- Fix applied to ALL instances of the pattern (grep for similar occurrences)
-- No regressions — full test suite passes
-- New test covers the specific bug scenario
-
-### Feature
-- All acceptance criteria from the Backlog item are met
-- Server endpoint has integration tests (real DB, not mocks)
-- Client component has unit tests for logic
-- UI follows design system (CSS tokens, touch targets, responsive breakpoints)
-- Brand voice followed in all user-facing copy (check `.claude/brand-voice.md`)
-- No console.log or debug artifacts
-- Backlog.md and feature-map.md updated in the same commit
-
-### Refactor
-- Behaviour is unchanged — all existing tests pass without modification
-- If tests needed updating, the change was in assertions matching new implementation (not weakening tests)
-- No unrelated files modified
-- New pattern is consistent with existing codebase conventions
-- Dead code from the old pattern is removed (not commented out)
-
-### Test writing
-- Tests cover actual behaviour, not just the happy path
-- Edge cases: null/undefined, empty collections, boundary values
-- Test names describe behaviour under test (not implementation)
-- Tests follow existing patterns (describe blocks, naming, helpers)
-- No production code modified
-- All tests pass
+- Tests use [real DB / mocks]. Test DB is [name].
 
 ---
 
 ## Rules for Automated Builds
 
-1. Read this file first. Then read the Backlog item. Then look at existing code.
+1. Read the Backlog item, then the existing code, before changing anything.
 2. Do not modify files unrelated to the current Backlog item.
-3. Never delete without a trace: update in place, mark superseded, or archive. Never silently remove content.
-4. Every new API endpoint must have integration tests.
-5. Every new component with logic must have a unit test.
-6. Run the full test suite and fix failures before opening a PR.
-7. Use the ORM for all database operations. Never write raw SQL.
-8. Never modify the schema file without creating a migration.
-9. Schema changes must follow this sequence: edit schema → create/run migration → update server routes → update client code → add/update tests → verify test suite passes.
-10. PR descriptions must include: what was built, why key decisions were made, and how to test manually.
-11. Update `Backlog.md` and `docs/feature-map.md` when work ships.
-
----
-
-## Session & Memory Hygiene
-
-Memory files live in the directory `bash scripts/resolve-resume-path.sh --dir` returns. Resolve it rather than hand-building a `~/.claude/projects/...` path — the directory is derived from the git repo root, and a path built by hand lands in whichever one the session happens to own.
-
-### Session start: run `/restart-sop`
-
-**Every session, no exceptions.** The `/restart-sop` command automates this checklist. If the command is not available, execute manually:
-
-1. Read CLAUDE.md.
-2. Read `MEMORY.md` + `project_resume.md`.
-3. Read `docs/agent-memory.md`.
-4. Run `git log --oneline -10`, cross-check memory against current file state.
-5. Read the specific Backlog.md item(s) for this session.
-
-If In-Flight Work is populated or `project_resume.md` has no What's Next — previous session was interrupted. Read the build plan Batch Log before starting new work.
-
-### Session end: run `/update-sop`
-
-**Every session, no exceptions.** The `/update-sop` command automates this checklist. If the command is not available, execute manually. Never delete without a trace. Update in place, mark superseded, or archive.
-
-0. Pre-flight: collect or terminate any outstanding background subagents (background-by-default since Claude Code 2.1.198).
-1. Run tests — run the full test suite. Fix failures before proceeding.
-2. `Backlog.md` — update status tags in place, append new items. Step 2a hard-blocks P-number collisions with the default branch.
-3. Secondary trackers — reconcile any project-specific finding files (audit-backlog, security-findings, migration-checklist, etc.) that use heading-level `[OPEN]`/`[SHIPPED]` tags. Commit-range partitioned via `git merge-base`. Hard block on unreconciled finding IDs.
-4. `docs/feature-map.md` — append shipped items.
-5. `docs/agent-memory.md` narrative + decisions/gotchas directories — new decisions → `docs/agent-memory/decisions/YYYY-MM-DD_<agent-id>_<slug>.md`, new gotchas → `docs/agent-memory/gotchas/`; update In-Flight/Completed lines in `agent-memory.md` by agent-id.
-6. `docs/build-plans/phase-N.md` — append to Batch Log.
-7. `project_resume_<agent-id>.md` — overwrite with current state (per-agent snapshot). Resolve the path with `bash scripts/resolve-resume-path.sh`; never hand-construct it or write into whichever memory directory the session happens to own.
-8. Write session entry to `docs/recent-work/`, then refresh the rollup with `bash scripts/refresh-rollup.sh` (writes `docs/RECENT-WORK.md`).
-9. Commit `docs/` changes with the work.
+3. Use the ORM for all database operations; never modify the schema without a migration, and follow the schema change protocol above.
+4. Every new endpoint has an integration test; every new component with logic has a unit test.
+5. [Project-specific rule]
 
 ---
 
 ## Where the history lives
 
-Session history is in `docs/RECENT-WORK.md` (a rollup of `docs/recent-work/*.md`,
-regenerated by `/update-sop` Step 8b). It is deliberately not inlined here: this
-file is read in full at every session start, and the rollup grows by one line per
-session forever.
-
----
-
-## Deprioritised
-
-*Items moved here from priority lists above. Never removed.*
+Session history: `docs/RECENT-WORK.md`, a rollup of `docs/recent-work/*.md` regenerated at every `/update-sop`. Status: `Backlog.md`. Neither is duplicated here.

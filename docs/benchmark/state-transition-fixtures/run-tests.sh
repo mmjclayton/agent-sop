@@ -44,54 +44,19 @@ for before in "$SCRIPT_DIR"/*.before.md; do
     *) echo "SKIP: $name has no legal-/illegal- prefix"; continue ;;
   esac
 
-  # Run the validator in fixture mode — no git, no phase files. The
-  # Batch-Log-reference check needs real phase files; fixtures that test
-  # [SHIPPED] transitions must work around this by including a phase file
-  # path grep will match, OR we accept that fixture-mode [SHIPPED] tests
-  # only cover the transition graph, not the batch-log requirement.
-  #
-  # For these v1 fixtures, run from a scratch temp dir so the validator's
-  # glob `docs/build-plans/phase-*.md` either matches a stub or gracefully
-  # no-ops. We create a minimal phase stub in temp for legal-*.
+  # Run the validator in fixture mode — no git. Legal ships of a Feature or
+  # Refactor cite docs/reviews/fixture_P<n>.md on the entry (P105 moved the
+  # citation from the Batch Log to the Backlog entry); the harness creates
+  # those files so the P95 existence check has something real to find.
   tmp=$(mktemp -d)
-  mkdir -p "$tmp/docs/build-plans"
-  # Phase stub: a fixture-specific `<base>.phase-stub.md` wins if present;
-  # otherwise default to a stub that names every possible fixture P-number
-  # with a docs/reviews/ citation so legal [Feature]/[Refactor] ships pass.
-  # Illegal fixtures that need a phase file (e.g. to isolate the new P44
-  # review-path check from the prior no-batch-log check) ship their own stub.
-  if [ -f "${base}.phase-stub.md" ]; then
-    cp "${base}.phase-stub.md" "$tmp/docs/build-plans/phase-test.md"
-  elif [ "$expected" = "0" ]; then
-    cat > "$tmp/docs/build-plans/phase-test.md" <<EOF
-# Test phase
-## Batch Log
-- 2026-04-19 P100 docs/reviews/fixture_P100.md
-- 2026-04-19 P101 docs/reviews/fixture_P101.md
-- 2026-04-19 P102 docs/reviews/fixture_P102.md
-- 2026-04-19 P103 docs/reviews/fixture_P103.md
-- 2026-04-19 P104 docs/reviews/fixture_P104.md
-- 2026-04-19 P105 docs/reviews/fixture_P105.md
-- 2026-04-19 P106 docs/reviews/fixture_P106.md
-- 2026-04-19 P107 docs/reviews/fixture_P107.md
-- 2026-04-19 P108 docs/reviews/fixture_P108.md
-- 2026-04-19 P109 docs/reviews/fixture_P109.md
-EOF
-    # Create the artifacts the stub cites. Before P95 the validator checked only
-    # that the string "docs/reviews/" appeared, so these paths never had to
-    # exist — which is precisely the fail-open P95 closed. The harness must now
-    # produce a real file, which also makes the legal-* fixtures honest: they
-    # assert "a review exists", not "a review is mentioned".
-    mkdir -p "$tmp/docs/reviews"
-    for n in 100 101 102 103 104 105 106 107 108 109; do
-      cat > "$tmp/docs/reviews/fixture_P${n}.md" <<REVIEW
+  mkdir -p "$tmp/docs/reviews"
+  for n in 100 101 102 103 104 105 106 107 108 109; do
+    cat > "$tmp/docs/reviews/fixture_P${n}.md" <<REVIEW
 # Review — fixture P${n}
-
 ## Findings
 - \`fixture.sh:1\` synthetic anchor so --assert-review has something concrete
 REVIEW
-    done
-  fi
+  done
   # Copy fixtures into place so relative paths resolve
   cp "$before" "$tmp/before.md"
   cp "$after" "$tmp/after.md"

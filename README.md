@@ -20,13 +20,13 @@ Single-task A/B benchmarks in [`docs/benchmark/`](docs/benchmark/) also show a +
 
 ## What it gives every project
 
-- **A standard file set.** `CLAUDE.md` (per-session entry point with a derived Recent Work rollup), `Backlog.md` (work items with status/type tags + P-numbers), `docs/feature-map.md` (shipped + roadmap), `docs/agent-memory.md` narrative + `docs/agent-memory/decisions/` and `/gotchas/` directories (one file per entry), `docs/recent-work/` per-session entry files, `docs/build-plans/phase-N.md` (scope, architecture, batch log), per-agent `project_resume_<agent-id>.md` snapshots.
-- **A session workflow.** `/restart-sop` reads the standard files and cross-checks against git. `/update-sop` runs the session-end checklist (tests, Backlog, feature-map, agent-memory narrative + decisions/gotchas directories, batch log, resume snapshot, recent-work entry, rollup refresh, commit) with commit-range reconciliation via `git merge-base`. `/update-agent-sop` syncs upstream SOP changes into your project via three-way diff. `/migrate-to-multi-agent` is a one-shot for projects moving from legacy narrative sections to the Phase 1 directory structure.
-- **Machine-checkable enforcement gates.** Three hard-blocks at `/update-sop` keep the SOP enforced, not just documented. Step 1b requires a substantive reviewer-agent findings artifact at `docs/reviews/` for `[Feature]`/`[Refactor]` ships over threshold (diff count, not prose). Step 3c runs `scripts/validate-state-transitions.sh` against the Backlog diff and rejects illegal status-tag transitions (`<absent>` → `[SHIPPED]`, terminal revivals, `[SHIPPED]` without a Batch Log reference). Step 3d detects session drift by comparing P-numbers in commit messages against the declared in-flight item in `project_resume_<agent-id>.md`; `## Scope Change` in the resume is the explicit-redirect escape hatch. All three are agent-to-agent — no human approval gate. Thresholds configurable in `agent-sop.config.json`.
+- **A standard file set.** `CLAUDE.md` (per-session entry point: project type, intent-based dispatch table, a derived priority block, Common Mistakes), `Backlog.md` (work items with status/type tags and P-numbers; closed items older than 90 days archived to `docs/backlog-archive.md`), `docs/agent-memory/decisions/` and `/gotchas/` (one file per entry), `docs/recent-work/` (one file per session, rolled up into `docs/RECENT-WORK.md`), `docs/reviews/` (review artefacts and gate reports), `docs/build-plans/` (planning notes), and a per-agent resume snapshot in machine-local memory.
+- **A session workflow.** The context hook prints project state on the first prompt; `/restart-sop` lists the newest decisions and gotchas and reads the work item. `/update-sop` runs the seven-step close: tests, one review run, Backlog tags, the validators, memory entries, snapshot and session record, commit. Trimmed on 2026-09-05 (P105) from 669 to under 120 lines after a measured review found most of the old text duplicated the hooks or produced artefacts nothing read.
+- **Machine-checkable enforcement gates.** A shipped `[Feature]`/`[Refactor]` must cite a substantive reviewer artefact on its Backlog entry (`review: docs/reviews/...`, path checked, substance asserted) or declare an enumerated skip; `scripts/validate-state-transitions.sh` enforces tag transitions, the citation, session drift against the resume snapshot, and replication of pristine files to the installed copy. On code projects the user-scope Stop hook and push gate enforce the minimum record and the ship-sop gate without a command being typed.
 - **Parallel multi-agent support.** Run three to five Claude Code instances concurrently on the same codebase. Each session works in its own git worktree, runs `/update-sop` independently, and merges to main sequentially without tripping over the other agents' tracking-file changes. Agent-id resolution (`CLAUDE_AGENT_ID` env var > `.sop-agent-id` file > `solo` default > 6-char hash of worktree path) keys per-agent resume files and per-entry filenames. See [`docs/guides/multi-agent-parallel-sessions.md`](docs/guides/multi-agent-parallel-sessions.md).
-- **Six non-negotiable rules** in Section 0 of the core SOP — never delete without a trace; one source of truth; state facts not opinions; back-and-forth before plans; instruction budget ≤150/200; surface interpretations before acting.
+- **Two rules** in Section 0 of the core SOP: never delete without a trace; one source of truth with a stated precedence. (Four further rules were moved to the user-scope rules or dropped on 2026-09-05; models keep them by default.)
 - **Five reference agents** — `sop-checker` (compliance audit), `code-reviewer`, `security-reviewer`, `planner`, `e2e-runner`.
-- **A compliance checker** that scores any project 0-100 across 95 checks for code projects (86 for non-code), three-tier weighted scoring with a critical-failure cap, including M1-M6 checks for multi-agent parallel-session readiness, S4-S7 for memory-poisoning, CI hardening, and gate integrity, B11/B12/R1/D1/T1 for the enforcement gates and their escape hatches.
+- **A compliance checker** that scores any project 0-100 across 79 checks for code projects (73 for non-code), three-tier weighted scoring with a critical-failure cap, including M1-M6 checks for multi-agent parallel-session readiness, S4-S7 for memory-poisoning, CI hardening, and gate integrity, B11/B12/R1/D1/T1 for the enforcement gates and their escape hatches.
 - **Templates** for every standard file, plus `setup.sh` that installs them into a target project.
 - **A/B benchmark framework** with eight task specs, blind scoring, runner script, and five rounds of recorded results.
 - **Low session-start cost.** Typical read on a mature project stays well under 2% of a 1M context window. Measure per project via Claude Code's context usage indicator.
@@ -66,14 +66,8 @@ Run this as the first thing in every new Claude Code session. It takes no argume
 /restart-sop
 ```
 
-The command reads the standard context files in order (`CLAUDE.md`, the local memory index and per-agent resume file, `docs/agent-memory.md` plus recent entries under `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/`, the current build plan), runs `git log --oneline -10`, and cross-checks that memory agrees with git state. It reads the Backlog item(s) flagged as current priority and reports:
+With the hooks installed the context block has already supplied project state; `/restart-sop` lists the ten newest decisions and gotchas, locates the Backlog item by grep and reads only its range, then reports in one paragraph. Without hooks it reads the resume snapshot and `git log --oneline -10` first.
 
-- What the current priority is and what you're ready to work on
-- Whether the previous session ended cleanly or was interrupted
-- Any inconsistencies between files that need reconciling
-- Which Definition of Done rubric applies to this task type
-
-Typical runtime: ~30 seconds. A lightweight variant kicks in automatically when the task is tagged `[ok-for-automation]` and reads fewer files.
 
 ### `/update-sop` — at the end of every session
 
@@ -83,19 +77,15 @@ Run this before closing every session. It takes no arguments.
 /update-sop
 ```
 
-Runs the session-end checklist (9 canonical steps; the pre-flight and self-evaluation are shown separately here):
+Runs the seven-step close:
 
-0. Pre-flight: collect results from (or explicitly terminate) any outstanding background subagents — they run in the background by default since Claude Code 2.1.198, and a checklist run with work still in flight produces an incomplete snapshot
-1. Self-evaluate the work against the Definition of Done rubric for the task type (bug fix, feature, refactor, test writing)
-2. Run the full test suite (code projects only)
-3. Update `Backlog.md` status tags — Step 2a hard-blocks if a P-number collides with one already on the default branch
-4. Reconcile any project-specific secondary trackers (audit findings, security scans, compliance lists) against this session's commits, partitioned per-agent via `git merge-base`
-5. Update `docs/feature-map.md` with shipped items
-6. Write any new decisions to `docs/agent-memory/decisions/` and new gotchas to `docs/agent-memory/gotchas/` as individual files; update the narrative sections of `docs/agent-memory.md` by your agent-id
-7. Append to the current build plan's Batch Log
-8. Overwrite `project_resume_<agent-id>.md` with a fresh snapshot, at the path `scripts/resolve-resume-path.sh` returns
-9. Write the session summary to `docs/recent-work/YYYY-MM-DD_<agent-id>_<slug>.md`, refresh the Recent Work rollup in `CLAUDE.md` via `bash scripts/refresh-rollup.sh`
-10. Commit the docs changes together with the feature work
+1. Tests (code projects); a red suite ships nothing tagged `[Feature]`/`[Refactor]` unless the failure is filed and named in the snapshot
+2. Review: one reviewer run per shipping `[Feature]`/`[Refactor]` over threshold, on SOP-executed paths, or on security paths; on code projects under ship-sop auto-mode the gate run is that turn; the entry cites the artefact or a skip token
+3. Backlog tags in place; `scripts/refresh-priorities.sh`
+4. Validators: `scripts/detect-trackers.sh`, `scripts/validate-state-transitions.sh` (transitions and citations, `--check-drift`, `--check-replication`)
+5. Decision and gotcha files that pass the substance gate; `scripts/refresh-in-flight.sh`
+6. Resume snapshot at the resolver path; session record; `scripts/refresh-rollup.sh`
+7. Commit `docs/` with the work
 
 On a parallel multi-agent worktree, each agent's `/update-sop` only touches its own branch — the commit-range partitioning via `git merge-base` ensures agents don't step on each other's reconciliation.
 
@@ -187,11 +177,11 @@ Build plans (`docs/build-plans/phase-N.md`) define scope, architecture, key lock
 
 ## Cross-session memory
 
-`docs/agent-memory.md` holds the narrative: In-Flight Work, Completed Work, Preferences, Archived. Decisions and gotchas live as one file per entry in `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/` with filenames `YYYY-MM-DD_<agent-id>_<slug>.md`. Per-entry files eliminate the merge-conflict surface when multiple agents end sessions in the same window — each agent writes a distinct file.
+`docs/agent-memory.md` holds a pointer to CLAUDE.md's Key Documents, the Key Source Files for current work, project preferences, and the script-generated In-Flight block. Decisions and gotchas live as one file per entry in `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/`; a superseded entry gets a trailing `*Superseded by:*` line and moves to `archive/`. The Completed Work narrative was dropped on 2026-09-05: it duplicated the session records and nothing read it.
 
 The In-Flight Work section is itself derived: each agent owns a file at `docs/agent-memory/in-flight/<agent-id>.md`, and the section in `agent-memory.md` is regenerated between sentinel markers by `bash scripts/refresh-in-flight.sh`. Two parallel agents only ever edit their own file, so the section converges on merge with no shared-line conflicts. See `docs/agent-memory/in-flight/README.md` for the file format.
 
-`docs/recent-work/` holds one file per session summary. The `## Recent Work (rollup)` section of `CLAUDE.md` is auto-generated from this directory via `/update-sop` Step 8b — derived, idempotent, regenerates deterministically.
+`docs/recent-work/` holds one file per session summary; `docs/RECENT-WORK.md` is regenerated from it by `bash scripts/refresh-rollup.sh` at every `/update-sop`. The context hook shows the three newest titles; keep titles specific.
 
 `project_resume_<agent-id>.md` is a point-in-time snapshot per agent — overwritten each session, not appended to. Records what was done, what is next, any blockers. Lives in machine-local memory, not in the repo. Single-agent projects use id `solo`.
 

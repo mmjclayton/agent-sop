@@ -58,29 +58,7 @@ For each file that exists, run the structure checks from the checklist (Sections
 
 **Important check-specific guidance:**
 
-**C3 — Session start checklist has 5 steps:**
-The canonical checklist (as of 2026-04-08) has 5 numbered steps:
-1. Read CLAUDE.md
-2. Read MEMORY.md + project_resume.md
-3. Read docs/agent-memory.md
-4. Run git log, cross-check memory
-5. Read the Backlog item(s)
-
-Plus an unnumbered interrupt-recovery bullet. Count only the numbered steps. Projects using the older 7-step or 8-step format should be marked WARN (not FAIL) with a note to update.
-
-**C4 — Session end checklist has 9 steps:**
-The canonical checklist has 9 numbered steps as of 2026-04-19 (Phase 1 parallel sessions). An optional `0. Pre-flight` line (collect/terminate background subagents, P62 2026-07-06) may precede step 1 — it does not count toward the 9:
-1. Run tests
-2. Backlog.md (Step 2a: P-number collision pre-check)
-3. Secondary trackers
-4. feature-map.md
-5. agent-memory.md narrative + decisions/gotchas directories
-6. build plan Batch Log
-7. project_resume_<agent-id>.md (per-agent)
-8. Write to docs/recent-work/ + refresh CLAUDE.md rollup
-9. Commit docs/ with the work
-
-Sub-steps (2a P-number collision, 3b secondary-tracker reconciliation, 8b rollup refresh) are part of the canonical numbered-step structure. Projects using the older 7-step (pre-P42) or 8-step (pre-P43) format should be marked WARN (not FAIL) with a note to update via `/update-agent-sop`.
+**C1 — Agent SOP section:** a `## Agent SOP` header that points at `docs/sop/claude-agent-sop.md` and names `/restart-sop` and `/update-sop`. The session checklists themselves live in the SOP, not in CLAUDE.md (P105 removed the copies), so do not count steps here.
 
 **C5 — Dispatch reference with 5+ files:**
 Accept either format:
@@ -156,12 +134,12 @@ git diff --name-only <ship-commit>^..<ship-commit> -- 'scripts/validate-*.sh' '.
 **The range must be `<ship-commit>^..<ship-commit>`.** A shipped commit is an ancestor of the default branch, so `git merge-base <default> <ship-commit>` returns the ship commit itself and `<merge-base>..<ship-commit>` is always empty — that form passes unconditionally and detects nothing. Substitute `^1` for `^` where the project uses true merge commits instead of squashes.
 
 No output → PASS. Output → read the corresponding Backlog entry:
-- **PASS** if the entry is a declared item that carries a `docs/reviews/` artifact, or whose Batch Log line declares the Step 1b skip with the token `review skipped (P<n>): <docs-only|test-only|dep-bump|below-threshold>`, naming its own P-number. Either way the change was declared and accounted for. The token is the same one `scripts/validate-state-transitions.sh` matches (P66) — if you find yourself accepting a free-text skip reason, that is a FAIL, not a judgement call.
-- **FAIL** if a watched file changed and nothing declares it — no matching Backlog entry, no artifact, no Batch Log note.
+- **PASS** if the entry is a declared item that carries a `docs/reviews/` artifact, or whose entry declares the skip with the token `review skipped (P<n>): <docs-only|test-only|dep-bump|below-threshold>`, naming its own P-number. Either way the change was declared and accounted for. The token is the same one `scripts/validate-state-transitions.sh` matches (P66) — if you find yourself accepting a free-text skip reason, that is a FAIL, not a judgement call.
+- **FAIL** if a watched file changed and nothing declares it — no matching Backlog entry, no artifact, no skip token on the entry.
 
 Do not condition PASS on the tag alone. Step 1b exempts `[Bug]` and `[Iteration]` from the reviewer turn, so requiring an artifact from a tag that cannot produce one leaves the common case in an undefined state.
 
-FAIL fix: "Declare the validator change as its own Backlog item and either run the reviewer turn on it or record the Step 1b exemption in its Batch Log line — a gate that moves inside the range it is gating cannot be trusted to have gated it. See `docs/sop/security.md` rule 11." Ship commits before 2026-07-26 are exempt — note the exemption rather than failing. The exemption is commit-scoped, not project-scoped: every project alive today predates P69, so a project-scoped exemption would make this check inert everywhere and permanently.
+FAIL fix: "Declare the validator change as its own Backlog item and either run the reviewer turn on it or record the skip token on its Backlog entry — a gate that moves inside the range it is gating cannot be trusted to have gated it. See `docs/sop/security.md` rule 11." Ship commits before 2026-07-26 are exempt — note the exemption rather than failing. The exemption is commit-scoped, not project-scoped: every project alive today predates P69, so a project-scoped exemption would make this check inert everywhere and permanently.
 
 **Q1 — File size limits specified (Important, code projects only):**
 Search `CLAUDE.md` for mentions of file line limits. Look for patterns like:
@@ -218,7 +196,6 @@ Grep `.claude/commands/update-sop.md` for the pattern `background`. The pre-flig
 
 Run the checks from checklist Section 8. These require reading multiple files and comparing:
 
-- Extract all `[SHIPPED]` P-numbers from Backlog.md, verify each appears in feature-map.md
 - Extract In-Flight Work lines from agent-memory.md (per-agent `- <agent-id> (YYYY-MM-DD): ...`), verify each has a matching `[IN PROGRESS]` entry in Backlog.md
 - Verify agent-memory.md Key Documents section references CLAUDE.md rather than duplicating
 
@@ -291,7 +268,7 @@ Date: [YYYY-MM-DD] | Project type: [Code / Non-code] | Score: [N]/100
 
 ## Report Guidelines
 
-- Every FAIL must have a specific, actionable fix in the "Fix needed" column. Not "add this section" but "add a `## Deprioritised` section to CLAUDE.md after the `## Recent Work` section".
+- Every FAIL must have a specific, actionable fix in the "Fix needed" column. Not "add this section" but "add the `<!-- priority-items:start -->` / `<!-- priority-items:end -->` sentinels under `## Key Documents & Dispatch` and run `scripts/refresh-priorities.sh`".
 - Group code-project-only checks together in the Important table with a "(code)" suffix so it is clear why they apply.
 - If the score is 49 or below due to the critical cap, the Summary should lead with which critical checks failed and what to fix first.
 - The "Path to 100%" section should include every remaining fix, not just the top recommendations. Group by effort so the user can batch their work.

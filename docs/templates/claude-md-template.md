@@ -6,82 +6,53 @@
 
 **Project type:** non-code
 
-*This is the base template — suitable for any project type. For full-stack code projects, use `claude-md-template-code.md` instead, which adds Auth, Database, Design System, and code-specific build rules.*
+*Base template for any project type. Code projects use `claude-md-template-code.md`, which adds Auth, Database, Design System and code-specific rules. Keep the per-session sections of this file under 200 lines (300 for code projects with a Common Mistakes section).*
 
 ---
 
 ## Agent SOP
 
-All agents working on this project follow the Claude Code Agent SOP (`claude-agent-sop.md`). The SOP defines the standard file structure, never-delete-without-a-trace policy, session checklists, and update triggers. This file (CLAUDE.md) is the authority on project-specific conventions. The SOP is the authority on process.
-
----
-
-## Build Plans — READ FIRST
-
-Always check `docs/build-plans/` at the start of any session to see what has shipped, what is in flight, and what is next.
-
-Current phase files:
-- `docs/build-plans/phase-0-foundation.md` — [status emoji] [status description]
+Sessions follow `docs/sop/claude-agent-sop.md`; this file is the authority on project-specific conventions, the SOP on process. Start: the context hook prints project state on the first prompt, then `/restart-sop` reads the work item. End: `/update-sop` (on code projects the Stop hook enforces the minimum record). Never delete without a trace; when files disagree, code and git win, then this file, then `Backlog.md`.
 
 ---
 
 ## Key Documents & Dispatch
 
-*Minimum 5 entries. Use intent-based descriptions. Update at the start of each phase.*
+*At least five entry points with paths. Name a stable anchor (a symbol, a block, a grep target) for large files, never a line range.*
 
 | When you need to... | Start at | Notes |
 |---------------------|----------|-------|
-| Read cross-session context | `docs/agent-memory.md` | Decisions, gotchas, invariants |
-| Check shipped features or roadmap | `docs/feature-map.md` | Shipped inventory + priority tiers |
-| Check or update work items | `Backlog.md` | Single source of truth for all items |
-| Read phase architecture | `docs/build-plans/*.md` | Batch logs, locked decisions |
+| Check or update work items | `Backlog.md` | Grep the P-number, read only that range |
+| Read why something was decided, or what bites | `docs/agent-memory/decisions/`, `docs/agent-memory/gotchas/` | Newest first; gotchas before touching the area they name |
+| Read phase architecture | `docs/build-plans/*.md` | Locked decisions, open questions |
 | Check copy/tone rules | `.claude/brand-voice.md` | Brand voice, terminology |
-| Run more than one agent on this repo | `docs/sop/multi-agent.md` (deep mechanics in `docs/guides/multi-agent-parallel-sessions.md`) | Decision tree, optimisation rules, Common Mistakes |
+| Run more than one agent on this repo | `docs/sop/multi-agent.md` | Worktrees, agent-ids, merge discipline |
 | [Change X] | `[path]` | [what to know when you arrive] |
-| [Change Y] | `[path]` | [for large files, name a stable anchor — a symbol, block, or grep target. Never a line range.] |
+| [Change Y] | `[path]` | [related component, constraint, gotcha] |
 
-Test: `[test command]`
-After shipping: update Backlog.md + docs/feature-map.md
+Test: `[test command, or "none" for a prose project]`
 
 ### Current priority items
 
-<!-- Derived from Backlog.md by scripts/refresh-priorities.sh (/update-sop Step 3). Do not edit by hand — Backlog.md is the single source of truth for status, and a hand-maintained copy here drifts. -->
+<!-- Derived from Backlog.md by scripts/refresh-priorities.sh at every /update-sop. Do not edit by hand. -->
 
 <!-- priority-items:start -->
 *Not yet generated. The first `/update-sop` run will populate this from `Backlog.md`.*
 <!-- priority-items:end -->
 
-**Medium:**
-- [P-number] — [item description]
-
 ---
 
 ## Backlog Management
 
-`Backlog.md` is the single source of truth. If it disagrees with build plans, `Backlog.md` wins. Issues are lazy-created: only when work moves to `[IN PROGRESS]`.
-
-### Tag taxonomy
-
-- Status (first): `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[DEFERRED]`, `[SHIPPED - YYYY-MM-DD]`, `[VERIFIED - YYYY-MM-DD]`, `[WON'T]`
-- Type (second): `[Feature]`, `[Iteration]`, `[Bug]`, `[Refactor]`
-- Optional: `[has-open-questions]`, `[ok-for-automation]`
-
-### Rules
-
-- Never delete items from Backlog.md.
-- Never mark `[SHIPPED]` without merge to main.
-- Never mark `[VERIFIED]` without testing in a running app.
-- Status first, type second. Never reverse.
-- `[BLOCKED]` = waiting on external action. `[DEFERRED]` = intentionally postponed, and must state a reopen trigger (`**Reopens when:** <condition>`; "no trigger identified" is legal and flags it for `[WON'T]` review). Use `[DEFERRED]` instead of leaving stale `[OPEN]` items sitting around.
+`Backlog.md` is the single source of truth for work items. Status first, type second, never reversed: `[OPEN]` `[IN PROGRESS]` `[BLOCKED]` `[DEFERRED]` `[SHIPPED - YYYY-MM-DD]` `[VERIFIED - YYYY-MM-DD]` `[WON'T]`, then `[Feature]` `[Iteration]` `[Bug]` `[Refactor]`. `[DEFERRED]` states `**Reopens when:**`; `[WON'T]` states `Reason:`. A shipped `[Feature]` or `[Refactor]` carries a `review:` line or a `review skipped (P<n>): <reason>` token. Never delete an item. Closed items older than 90 days move to `docs/backlog-archive.md` via `scripts/archive-backlog.sh`.
 
 ---
 
 ## Stack
 
-- **Type:** [e.g. full-stack web app / markdown library / data pipeline / mobile app]
+- **Type:** [e.g. markdown library / data pipeline / research corpus]
 - **Key technologies:** [list]
 - **Hosting:** [platform or n/a]
-- **CI:** [CI tool and what it runs, or n/a]
 - **Live:** [URL or n/a]
 
 ---
@@ -89,106 +60,30 @@ After shipping: update Backlog.md + docs/feature-map.md
 ## Key Commands
 
 ```bash
-# Add the most commonly needed commands for this project type
 [command] — [what it does]
 [command] — [what it does]
 ```
-
-*For code projects: see `claude-md-template-code.md` for dev, test, and migration command patterns.*
 
 ---
 
 ## Common Mistakes — Read Before Working
 
-*Project-specific gotchas that prevent wrong turns. Update as new gotchas are discovered.*
+*Project-specific. Each entry names the file, model or convention, says what is wrong and what is correct, and the consequence. No general best practice, no derived fact that goes stale.*
 
-- [State what NOT to do and why. Name specific files, components, or conventions.]
 - [Example: "[File X] is separate from [File Y]. Do not look for X inside Y."]
-- [Example: "The default view is [key]. 'Home' means [key], not [other key]."]
-- [Example: "[Thing] is derived, not stored. Never add a column for it."]
-
-*See SOP Section 15 for full guidance on writing effective gotcha callouts.*
-
----
-
-## Definition of Done
-
-*Self-evaluate against the relevant rubric before committing. If any criterion is not met, iterate before shipping.*
-
-### Bug fix
-- Root cause identified from reading the actual code — do not infer from documentation alone
-- Fix is minimal: change the broken logic, do not remove working mechanisms
-- Fix applied to ALL instances (grep for similar occurrences)
-- No regressions — existing tests pass
-
-### Feature
-- All acceptance criteria from the Backlog item are met
-- No debug artifacts (console.log, TODO without P-number)
-- Backlog.md and feature-map.md updated in the same commit
-
-### Refactor
-- Behaviour unchanged — all existing tests pass without modification
-- No unrelated files modified
-- Dead code from old pattern removed
-
-*For code projects: see `claude-md-template-code.md` for expanded rubrics with test and design system criteria.*
+- [Example: "[Thing] is derived, not stored. Never add a column for it; compute it with [function]."]
 
 ---
 
 ## Rules for Automated Builds
 
-1. Read this file first. Then read the Backlog item. Then look at existing work.
+1. Read the Backlog item, then the existing work, before changing anything.
 2. Do not modify files unrelated to the current Backlog item.
-3. Never delete without a trace: update in place, mark superseded, or archive. Never silently remove content.
-4. Update `Backlog.md` and `docs/feature-map.md` when work ships.
-5. Commit docs/ changes in the same commit as the work that prompted them.
-
-*For code projects: see `claude-md-template-code.md` for additional build rules (tests, ORM, migrations, PR descriptions).*
-
----
-
-## Session & Memory Hygiene
-
-Memory files live in the directory `bash scripts/resolve-resume-path.sh --dir` returns. Resolve it rather than hand-building a `~/.claude/projects/...` path — the directory is derived from the git repo root, and a path built by hand lands in whichever one the session happens to own.
-
-### Session start: run `/restart-sop`
-
-**Every session, no exceptions.** The `/restart-sop` command automates this checklist. If the command is not available, execute manually:
-
-1. Read CLAUDE.md.
-2. Read `MEMORY.md` + `project_resume.md`.
-3. Read `docs/agent-memory.md`.
-4. Run `git log --oneline -10`, cross-check memory against current file state.
-5. Read the specific Backlog.md item(s) for this session.
-
-If In-Flight Work is populated or `project_resume.md` has no What's Next — previous session was interrupted. Read the build plan Batch Log before starting new work.
-
-### Session end: run `/update-sop`
-
-**Every session, no exceptions.** The `/update-sop` command automates this checklist. If the command is not available, execute manually. Never delete without a trace. Update in place, mark superseded, or archive.
-
-0. Pre-flight: collect or terminate any outstanding background subagents (background-by-default since Claude Code 2.1.198).
-1. Run tests (code projects) — fix failures before proceeding.
-2. `Backlog.md` — update status tags in place, append new items. Step 2a hard-blocks P-number collisions with the default branch.
-3. Secondary trackers — reconcile any project-specific finding files (audit-backlog, security-findings, etc.) that use heading-level `[OPEN]`/`[SHIPPED]` tags. Commit-range partitioned via `git merge-base`. Hard block on unreconciled finding IDs.
-4. `docs/feature-map.md` — append shipped items.
-5. `docs/agent-memory.md` narrative + decisions/gotchas directories — new decisions → `docs/agent-memory/decisions/YYYY-MM-DD_<agent-id>_<slug>.md`, new gotchas → `docs/agent-memory/gotchas/`; update In-Flight/Completed lines in `agent-memory.md` by agent-id.
-6. `docs/build-plans/phase-N.md` — append to Batch Log.
-7. `project_resume_<agent-id>.md` — overwrite with current state (per-agent snapshot). Resolve the path with `bash scripts/resolve-resume-path.sh`; never hand-construct it or write into whichever memory directory the session happens to own.
-8. Write session entry to `docs/recent-work/`, then refresh the rollup with `bash scripts/refresh-rollup.sh` (writes `docs/RECENT-WORK.md`).
-9. Commit `docs/` changes with the work.
+3. [Project-specific rule, e.g. "every client-facing document passes check-invariants.py"]
+4. [Project-specific rule]
 
 ---
 
 ## Where the history lives
 
-Session history is in `docs/RECENT-WORK.md` (a rollup of `docs/recent-work/*.md`,
-regenerated by `/update-sop` Step 8b). It is deliberately not inlined here: this
-file is read in full at every session start, and the rollup grows by one line per
-session forever.
-
----
-
-## Deprioritised
-
-*Items moved here from priority lists above. Never removed.*
+Session history: `docs/RECENT-WORK.md`, a rollup of `docs/recent-work/*.md` regenerated at every `/update-sop`. Status: `Backlog.md`. Neither is duplicated here.
