@@ -15,7 +15,7 @@
 # Usage:
 #   bash scripts/refresh-rollup.sh [rollup-file] [recent-work-dir]
 #
-# Called by /update-sop Step 8b and /migrate-to-multi-agent Step 9.
+# Called by /update-sop Step 6 and /migrate-to-multi-agent Step 9.
 #
 # Why this lives in a script rather than inline in the slash commands:
 # the inline form used `local var=$(cmd)` inside a `{ ... } > output`

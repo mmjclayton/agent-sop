@@ -44,54 +44,19 @@ for before in "$SCRIPT_DIR"/*.before.md; do
     *) echo "SKIP: $name has no legal-/illegal- prefix"; continue ;;
   esac
 
-  # Run the validator in fixture mode — no git, no phase files. The
-  # Batch-Log-reference check needs real phase files; fixtures that test
-  # [SHIPPED] transitions must work around this by including a phase file
-  # path grep will match, OR we accept that fixture-mode [SHIPPED] tests
-  # only cover the transition graph, not the batch-log requirement.
-  #
-  # For these v1 fixtures, run from a scratch temp dir so the validator's
-  # glob `docs/build-plans/phase-*.md` either matches a stub or gracefully
-  # no-ops. We create a minimal phase stub in temp for legal-*.
+  # Run the validator in fixture mode — no git. Legal ships of a Feature or
+  # Refactor cite docs/reviews/fixture_P<n>.md on the entry (P105 moved the
+  # citation from the Batch Log to the Backlog entry); the harness creates
+  # those files so the P95 existence check has something real to find.
   tmp=$(mktemp -d)
-  mkdir -p "$tmp/docs/build-plans"
-  # Phase stub: a fixture-specific `<base>.phase-stub.md` wins if present;
-  # otherwise default to a stub that names every possible fixture P-number
-  # with a docs/reviews/ citation so legal [Feature]/[Refactor] ships pass.
-  # Illegal fixtures that need a phase file (e.g. to isolate the new P44
-  # review-path check from the prior no-batch-log check) ship their own stub.
-  if [ -f "${base}.phase-stub.md" ]; then
-    cp "${base}.phase-stub.md" "$tmp/docs/build-plans/phase-test.md"
-  elif [ "$expected" = "0" ]; then
-    cat > "$tmp/docs/build-plans/phase-test.md" <<EOF
-# Test phase
-## Batch Log
-- 2026-04-19 P100 docs/reviews/fixture_P100.md
-- 2026-04-19 P101 docs/reviews/fixture_P101.md
-- 2026-04-19 P102 docs/reviews/fixture_P102.md
-- 2026-04-19 P103 docs/reviews/fixture_P103.md
-- 2026-04-19 P104 docs/reviews/fixture_P104.md
-- 2026-04-19 P105 docs/reviews/fixture_P105.md
-- 2026-04-19 P106 docs/reviews/fixture_P106.md
-- 2026-04-19 P107 docs/reviews/fixture_P107.md
-- 2026-04-19 P108 docs/reviews/fixture_P108.md
-- 2026-04-19 P109 docs/reviews/fixture_P109.md
-EOF
-    # Create the artifacts the stub cites. Before P95 the validator checked only
-    # that the string "docs/reviews/" appeared, so these paths never had to
-    # exist — which is precisely the fail-open P95 closed. The harness must now
-    # produce a real file, which also makes the legal-* fixtures honest: they
-    # assert "a review exists", not "a review is mentioned".
-    mkdir -p "$tmp/docs/reviews"
-    for n in 100 101 102 103 104 105 106 107 108 109; do
-      cat > "$tmp/docs/reviews/fixture_P${n}.md" <<REVIEW
+  mkdir -p "$tmp/docs/reviews"
+  for n in 100 101 102 103 104 105 106 107 108 109; do
+    cat > "$tmp/docs/reviews/fixture_P${n}.md" <<REVIEW
 # Review — fixture P${n}
-
 ## Findings
 - \`fixture.sh:1\` synthetic anchor so --assert-review has something concrete
 REVIEW
-    done
-  fi
+  done
   # Copy fixtures into place so relative paths resolve
   cp "$before" "$tmp/before.md"
   cp "$after" "$tmp/after.md"
@@ -245,6 +210,18 @@ for repl in "$SCRIPT_DIR"/*.repl; do
     failed_cases="$failed_cases $name"
   fi
 done
+
+# A shipped Feature early in a Backlog larger than the pipe buffer must still
+# be validated: the first P105 extraction exited awk early and gave tr SIGPIPE,
+# which errexit turned into a silent exit 141 (P73 shape). Generated at run
+# time because the file has to be big.
+big=$(mktemp -d); mkdir -p "$big/docs/reviews"
+printf '# Review\n## Findings\n- `fixture.sh:1` anchor\n' > "$big/docs/reviews/fixture_P100.md"
+printf '# Backlog\n\n### P100 — Early feature\n`[IN PROGRESS] [Feature]`\n' > "$big/before.md"
+{ printf '# Backlog\n\n### P100 — Early feature\n`[SHIPPED - 2026-09-05] [Feature]`\n\nreview: docs/reviews/fixture_P100.md\n\n---\n\n'; for n in $(seq 200 1400); do printf '### P%s — Filler item number %s with a long enough title to make the file large\n`[OPEN] [Feature]`\n\nBody line one for the filler entry, padded so the file crosses sixty-four kilobytes with room to spare.\n\n---\n\n' "$n" "$n"; done; } > "$big/after.md"
+out=$(cd "$big" && bash "$VALIDATOR" --before-file before.md --after-file after.md 2>&1); rc=$?
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'OK'; then echo "PASS: legal-early-entry-in-large-backlog"; pass=$((pass+1)); else echo "FAIL: legal-early-entry-in-large-backlog — rc=$rc size=$(wc -c < "$big/after.md") out='$(printf '%s' "$out" | head -2)'"; fail=$((fail+1)); failed_cases="$failed_cases legal-early-entry-in-large-backlog"; fi
+rm -rf "$big"
 
 echo ""
 echo "Results: $pass passed, $fail failed"

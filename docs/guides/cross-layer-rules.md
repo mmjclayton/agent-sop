@@ -161,5 +161,5 @@ When a project encounters a cross-layer divergence bug that this guide didn't an
 
 ## See also
 
-- `docs/sop/claude-agent-sop.md` § 6 Step 1b — the reviewer-turn gate that often catches cross-layer divergence at PR time (one of the May 2026 incidents was caught here).
+- `docs/sop/claude-agent-sop.md` § 3 step 2 — the reviewer-turn gate that often catches cross-layer divergence at PR time (one of the May 2026 incidents was caught here).
 - `docs/guides/sop-common-mistakes.md` — the "Editing one site of a multi-site rule" mistake links here.

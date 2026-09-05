@@ -9,8 +9,8 @@ The canonical list of checks used by the SOP Compliance Checker agent. Each chec
 
 ## Scoring
 
-| Tier | Points each | Cap rule |
-|------|-------------|----------|
+| Severity | Weight | Effect |
+|---|---|---|
 | Critical | 10 | Any critical failure caps total score at 49/100 |
 | Important | 5 | Deducted from remaining pool |
 | Recommended | 2 | Advisory — deducted but does not block compliance |
@@ -20,11 +20,9 @@ The canonical list of checks used by the SOP Compliance Checker agent. Each chec
 - Score normalised to 100 based on applicable checks (code vs non-code projects have different totals).
 - Floor at 0.
 
-**Compliance tiers:**
-- 90-100: Fully compliant
-- 70-89: Largely compliant, minor gaps
-- 50-69: Partially compliant, structural work needed
-- 0-49: Non-compliant (or has critical failures)
+**Compliance tiers:** 90-100 fully compliant; 70-89 largely compliant; 50-69 partially compliant; 0-49 non-compliant or a critical failure.
+
+**What changed on 2026-09-05 (P105).** Checks for artefacts a measured review found write-only were removed: `docs/feature-map.md` (F4, FM1-FM4, X1), the Batch Log requirement (P3, P5, X5, the Batch Log half of R1), the Definition of Done, the `## Deprioritised` section (C14), the CLAUDE.md copies of the session checklists (C3, C4, C21), generic code-quality thresholds that load from the user's rules (Q1, Q2), and the six-section `docs/agent-memory.md` narrative (A1 now checks the In-Flight block only). IDs are never reused.
 
 ---
 
@@ -53,19 +51,18 @@ If none match: non-code project. Code-only checks are marked below and scored as
 |----|-------|-----------------|
 | F1 | CLAUDE.md exists | File at project root |
 | F2 | Backlog.md exists | File at project root |
-| F3 | docs/agent-memory.md exists | Exact path. **Downgraded to Important for projects with fewer than 10 sessions** — check git log commit count as proxy. |
-| F4 | docs/feature-map.md exists | Exact path |
-| F5 | At least one build plan exists | Any file matching `docs/build-plans/phase-*.md` |
+| F5 | At least one build plan exists | Any file matching `docs/build-plans/phase-*.md` (planning notes; no Batch Log is required since P105) |
 
 ### Important
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| F6 | Per-agent resume file exists (local) | At least one `project_resume_<agent-id>.md` in the directory returned by `bash scripts/resolve-resume-path.sh --dir`. Legacy unsuffixed `project_resume.md` also accepted for single-agent projects. Resolve the directory — do not name-match across `~/.claude/projects/`, which finds the shared catch-all and scores this project against another's files. |
-| F7 | MEMORY.md index exists (local) | `~/.claude/projects/[hash]/memory/MEMORY.md` — same discovery method |
-| F8 | docs/recent-work/ directory exists | Directory at `docs/recent-work/` with `README.md`. Created by Phase 1 Batch 1.2 / pre-existing in SOP-setup projects from 2026-04-19 onwards. Legacy projects pre-migration acceptable. |
-| F9 | docs/agent-memory/decisions/ directory exists | If `docs/agent-memory.md` exists, the `decisions/` subdirectory under `docs/agent-memory/` must exist with `README.md`. Legacy projects pre-migration acceptable. |
-| F10 | docs/agent-memory/gotchas/ directory exists | Same as F9 for `gotchas/` subdirectory. Legacy projects pre-migration acceptable. |
+| F3 | docs/agent-memory.md exists | Exact path. Carries Key Documents (a pointer), Key Source Files, Preferences and the script-generated In-Flight block. |
+| F6 | Per-agent resume file exists (local) | At least one `project_resume_<agent-id>.md` in the directory `bash scripts/resolve-resume-path.sh --dir` returns; a legacy unsuffixed file whose first non-blank line carries `**SUPERSEDED` does not count. |
+| F8 | docs/recent-work/ directory exists | Directory with `README.md`. |
+| F9 | docs/agent-memory/decisions/ directory exists | With `README.md`. |
+| F10 | docs/agent-memory/gotchas/ directory exists | With `README.md`. |
+| F11 | docs/backlog-archive.md exists when Backlog.md holds closed items older than 90 days | `scripts/archive-backlog.sh --dry-run` reports nothing to move. |
 
 ---
 
@@ -75,28 +72,23 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| C1 | Agent SOP section exists | `## Agent SOP` header referencing the SOP document |
-| C2 | Session & Memory Hygiene section exists | `## Session` header (match flexibly) |
-| C3 | Session start checklist has 5 steps | Numbered list under session start heading (5 steps per canonical SOP) |
-| C4 | Session end checklist has 9 steps | Numbered list under session end heading, step 1 is test gate for code projects. Steps 2a (P-number collision) and 3b (secondary tracker reconciliation) are documented as sub-steps, not separate top-level numbers. An optional `0. Pre-flight` line (background subagents, P62 2026-07-06) does not count toward the 9. Projects still using 7-step (pre-P42) or 8-step (pre-P43) format should be WARN (not FAIL) with a note to update. |
-| C5 | Dispatch reference exists with 5+ files | `## Dispatch` or `## Key Documents & Dispatch` header, table with at least 5 file path entries |
+| C1 | Agent SOP section exists | `## Agent SOP` header pointing at `docs/sop/claude-agent-sop.md`, naming `/restart-sop` and `/update-sop` |
+| C5 | Dispatch reference exists with 5+ files | `## Key Documents & Dispatch` header, intent-based table (`When you need to...`) with at least 5 file path entries |
+| C25 | Project type declared | `**Project type:** code` or `non-code` line near the top (P102) |
 
 ### Important
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| C6 | Build Plans section exists | `## Build Plans` header with link(s) to phase files |
-| C7 | Key Documents table exists | `## Key Documents` or `## Key Documents & Dispatch` header with a markdown table |
-| C8 | Current Priority Items section exists | `## Current Priority` header with P-numbered items |
-| C9 | Backlog Management section exists | `## Backlog Management` header with tag taxonomy |
+| C8 | Current priority items are derived | `<!-- priority-items:start -->` / `<!-- priority-items:end -->` sentinels present; content between them not hand-edited (P92) |
+| C9 | Backlog Management section exists | `## Backlog Management` header with the tag taxonomy |
 | C10 | Stack section exists and populated | `## Stack` header with content (not just placeholders) |
 | C11 | Key Commands section exists and populated | `## Key Commands` header with at least one command |
 | C12 | Rules for Automated Builds section exists | `## Rules for Automated Builds` header with numbered list |
-| C13 | Recent Work rollup exists with sentinel markers | The `<!-- recent-work-rollup:start -->` / `<!-- recent-work-rollup:end -->` sentinels are present in `docs/RECENT-WORK.md` (preferred — keeps the rollup out of the per-session read) or in `CLAUDE.md`. Check `docs/RECENT-WORK.md` first; either location passes. The `## Recent Work (rollup)` header is required only when the block lives inside `CLAUDE.md`; a dedicated file uses its own H1 and needs no subheading. Legacy `## Recent Work` acceptable during the migration window before `/update-sop --migrate-to-multi-agent` has run. |
-| C14 | Deprioritised section exists | `## Deprioritised` header |
+| C13 | Recent Work rollup exists with sentinel markers | `<!-- recent-work-rollup:start -->` / `<!-- recent-work-rollup:end -->` in `docs/RECENT-WORK.md` (preferred) or `CLAUDE.md` |
 | C15 | Non-negotiable rules referenced | Text references "never delete without a trace" or equivalent, and "single source of truth" or "one source of truth" |
 | C16 | Conflict precedence defined or referenced | Text mentions precedence order or references the SOP conflict resolution |
-| C17 | Per-session sections under line limit | Non-code: 200 lines. Code projects with Common Mistakes: 300 lines. Count from `## Agent SOP` through end of `## Dispatch Quick Reference`, excluding Auth/Database/Design System sections |
+| C17 | Per-session sections under line limit | Non-code: 200 lines. Code projects with Common Mistakes: 300 lines. Count everything except Auth/Database/Design System |
 
 ### Important (code projects only)
 
@@ -105,7 +97,6 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | C18 | Auth section exists | `## Auth` header with content |
 | C19 | Database section exists | `## Database` header with content |
 | C20 | Design System section exists | `## Design System` header with content |
-| C21 | Session end step 1 is test gate | First step of session end checklist mentions running tests |
 | C22 | Build rules include schema protocol | Rules for Automated Builds mentions schema change sequence or migration protocol |
 
 ### Recommended
@@ -113,7 +104,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | ID | Check | What to look for |
 |----|-------|-----------------|
 | C23 | Recent Work entries include PR/commit refs | Entries contain `PR`, `#`, or commit hash patterns |
-| C24 | Key Documents table anchors large files | Entries for files over 200 lines name a stable anchor — a symbol, a block, or a grep target (e.g. "tokens in the `:root` block", "grep `@app.command`"). A `(lines N-N)` range FAILS: ranges rot on the next edit with nothing to detect it, and a stale range sends the agent to the wrong slice where it draws a confident conclusion from the wrong text (P91). Projects predating P91 (before 2026-08-03) are exempt — note the exemption rather than failing. |
+| C24 | Key Documents table anchors large files | Entries for files over 200 lines name a stable anchor (a symbol, a block, a grep target). A `(lines N-N)` range FAILS (P91). |
 
 ---
 
@@ -136,149 +127,116 @@ If none match: non-code project. Code-only checks are marked below and scored as
 | B6 | [WON'T] items include reason | Format: `[WON'T] [Type] — Reason: [text]` |
 | B7 | [SHIPPED] and [VERIFIED] items include date | Pattern: `YYYY-MM-DD` present in the tag |
 | B8 | Date formats are YYYY-MM-DD | All dates in the file match this format |
-| B9 | P-numbers are sequential | No unexpected gaps (gaps where intermediate P-numbers exist as [WON'T] referencing a superseding item are acceptable) |
+| B9 | P-numbers are sequential | No unexpected gaps (gaps where intermediate P-numbers exist as [WON'T] referencing a superseding item, or in `docs/backlog-archive.md`, are acceptable) |
+| B13 | Shipped Feature/Refactor entries cite a review or a skip | Every `[SHIPPED]` `[Feature]` or `[Refactor]` entry carries `review: docs/reviews/<file>.md` (the file exists) or `review skipped (P<n>): <docs-only|test-only|dep-bump|below-threshold>` naming its own P-number (P44, P66, P95, P105) |
 
 ### Recommended
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| B10 | Shipped Archive section exists when needed | If file exceeds ~2,000 lines, a `## Shipped Archive` section should exist |
-| B11 | State-transition validator present | `scripts/validate-state-transitions.sh` exists and `/update-sop` references it as Step 3c. Retrospective: run the validator across `git log --follow Backlog.md` range; flag any illegal transitions (e.g. `[OPEN]` → `[SHIPPED]` with no `[IN PROGRESS]` intermediate) that predate the validator or bypassed it. Live sessions are already protected by Step 3c; this check catches historical drift. |
-| B12 | Every `[DEFERRED]` item states a reopen trigger | For each `[DEFERRED]` entry in `Backlog.md` (and in the CLAUDE.md deferred list, where one exists), a `**Reopens when:**` line names the observable condition that returns the item to `[OPEN]`. The literal value "no trigger identified" PASSES — it is the honest answer and marks the item for `[WON'T]` review — but a `[DEFERRED]` item with no reopen line at all FAILS. Grep-verifiable: every `[DEFERRED]` heading should have a `Reopens when` within its entry body. Rationale: Rule 1 makes a project good at admitting postponed work and prone to accumulating it; debt that is admitted but never scheduled is never paid (P71). Projects predating P71 (before 2026-07-26) are exempt. |
+| B10 | Closed items archived | Nothing closed more than 90 days ago remains in `Backlog.md`; `scripts/archive-backlog.sh --dry-run` reports nothing to move; `## Archived items` pointers present when the archive exists |
+| B11 | State-transition validator present | `scripts/validate-state-transitions.sh` exists and `/update-sop` runs it in Step 4 |
+| B12 | Every `[DEFERRED]` item states a reopen trigger | A `**Reopens when:**` line names the observable condition; "no trigger identified" is legal and marks a `[WON'T]` candidate (P71) |
 
 ---
 
 ## 4. docs/agent-memory.md Structure
 
-### Critical
-
-| ID | Check | What to look for |
-|----|-------|-----------------|
-| A1 | All 6 required narrative sections present | Headers for: Key Documents, Key Source Files, In-Flight Work, Preferences (may use project name), Completed Work, Archived. Decisions and Gotchas live in `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/` directories — their narrative sections may either pointer-link to those directories or be absent entirely. |
-
 ### Important
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
+| A1 | In-Flight block is script-generated | `<!-- in-flight:start -->` / `<!-- in-flight:end -->` sentinels present, content matches `docs/agent-memory/in-flight/*.md` (refreshed by `scripts/refresh-in-flight.sh`) |
 | A2 | Key Documents references CLAUDE.md (not duplicated) | Section says "See CLAUDE.md" or equivalent, does not contain its own full Key Documents table |
-| A3 | Decisions dated in YYYY-MM-DD format | Entries start with or contain `YYYY-MM-DD:` pattern |
-| A4 | Superseded entries properly marked | Any superseded items use `[SUPERSEDED - YYYY-MM-DD: reason]` format |
-| A5 | No derived facts stored | Scan for test counts, specific line numbers, version numbers, file sizes as stored facts (not as references in decisions about changes) |
+| A4 | Superseded entries properly marked | Superseded decisions and gotchas carry a trailing `*Superseded by:*` line and live in `archive/` |
+| A5 | No derived facts stored | Scan for test counts, specific line numbers, version numbers, file sizes as stored facts |
 
 ### Recommended
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| A6 | In-Flight Work matches Backlog | Items listed in In-Flight should have corresponding `[IN PROGRESS]` entries in Backlog.md. Empty In-Flight is fine. |
+| A6 | In-Flight matches Backlog | Items listed in In-Flight have corresponding `[IN PROGRESS]` entries in Backlog.md. Empty In-Flight is fine. |
+| A7 | Entry files follow the naming convention | `docs/agent-memory/decisions/` and `gotchas/` files are `YYYY-MM-DD_<agent-id>_<slug>.md` with a title, `**Date:**` and `**Agent:**` |
 
 ---
 
-## 5. docs/feature-map.md Structure
-
-### Important
-
-| ID | Check | What to look for |
-|----|-------|-----------------|
-| FM1 | Last updated header present | `Last updated: YYYY-MM-DD` near top of file |
-| FM2 | Shipped features section exists | Header for shipped/completed features with a table |
-| FM3 | Roadmap section exists with priority tiers | At least one priority tier (High/Medium/Low) |
-
-### Recommended
-
-| ID | Check | What to look for |
-|----|-------|-----------------|
-| FM4 | Backlog shipped items reflected here | All `[SHIPPED]` P-numbers in Backlog.md appear in the shipped features table |
-
----
-
-## 6. docs/build-plans/phase-*.md Structure
+## 5. docs/build-plans/phase-*.md Structure
 
 ### Important
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
 | P1 | Status line present | `Status:` line with Planning, In Progress, or Shipped YYYY-MM-DD |
-| P2 | All 7 required sections present | Problem, Scope, Architecture, Key Decisions Locked In, Batch Log, Deploy Checklist, Open Questions |
-| P3 | Batch Log entries dated | Entries contain `YYYY-MM-DD:` pattern |
+| P2 | Planning sections present | Problem, Scope, Architecture, Key Decisions Locked In, Open Questions (a Batch Log may exist but is not required since P105) |
 | P4 | Locked decisions marked | Items in Key Decisions use `[LOCKED]` marker |
 
-### Recommended
-
-| ID | Check | What to look for |
-|----|-------|-----------------|
-| P5 | Batch Log entries reference PRs/commits | Entries contain `PR`, `#`, or commit hash patterns |
-
 ---
 
-## 7. project_resume.md Structure
+## 6. project_resume.md Structure
 
 ### Important
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| RP1 | Resume file follows the per-agent naming convention, in the resolved directory | `project_resume_<agent-id>.md`, or the legacy unsuffixed `project_resume.md` on single-agent projects. No project-specific prefix (e.g. not `project_myapp_resume.md`) — projects are separated by the repo-root-derived directory, not by the filename. The file must sit in the directory `scripts/resolve-resume-path.sh --dir` returns; one found only in the shared catch-all directory fails this check. Matches F6 and M4 — a multi-agent project passing those must not fail here. |
+| RP1 | Resume file follows the per-agent naming convention, in the resolved directory | `project_resume_<agent-id>.md` in the directory `bash scripts/resolve-resume-path.sh --dir` returns; no hand-built path (P96) |
 | RP2 | Contains required sections | What was done, What is next, Blockers (or equivalent headings) |
-| RP3 | Uses snapshot format | Single session block, not a growing log with multiple dated entries. Should have `Last updated:` near the top. |
+| RP3 | Uses snapshot format | Single session block with `Last updated:` near the top, not a growing log |
 
 ---
 
-## 8. Cross-File Consistency
+## 7. Cross-File Consistency
 
 ### Important
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| X1 | Shipped items in both Backlog and feature-map | Extract P-numbers with `[SHIPPED]` from Backlog.md, verify they appear in feature-map.md shipped table |
-| X2 | In-Flight Work consistent with Backlog | Items in agent-memory.md In-Flight section should have matching `[IN PROGRESS]` entries in Backlog.md |
-| X3 | Key Documents tables consistent | agent-memory.md references CLAUDE.md table rather than maintaining its own |
+| X2 | In-Flight consistent with Backlog | Items in the In-Flight block have matching `[IN PROGRESS]` entries in Backlog.md |
+| X3 | Key Documents tables consistent | agent-memory.md references the CLAUDE.md table rather than maintaining its own |
 
 ### Recommended
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| X4 | Recent Work has PR/commit refs | CLAUDE.md Recent Work entries contain references to PRs or commits |
-| X5 | Build plan Batch Log references PRs | Batch Log entries contain PR numbers or commit hashes |
-| X6 | Secondary trackers reconciled with commit history | For every `.md` file in CLAUDE.md Key Documents that uses heading-level `[OPEN]`/`[SHIPPED]` tags (excluding `Backlog.md`): extract finding IDs from the last 20 commit messages (pattern `\b[A-Z]+-?[0-9]+\b`), then verify any matching entries in the tracker are not still `[OPEN]`. A still-`[OPEN]` entry whose ID was referenced in a shipped commit indicates drift from a skipped `/update-sop` Step 3b. |
-| X7 | Declared project type does not contradict the heuristics | Recommended. If CLAUDE.md declares `**Project type:** non-code` while any code heuristic holds (an `## Auth`/`## Database`/`## Design System` heading, a `claude-md-template-code.md` reference, a test command under `## Key Commands`, or a manifest at the root), FAIL: the declaration wins and ship-sop's reviewer gate is off for what the repository says is code — remove the line or record why in the same sentence. The reverse (declared `code` with no heuristic hit) is the documented opt-in for scripts-and-markdown repos and PASSES. `bash ~/.claude/scripts/hooks/agent-sop/sop-project-type.sh` gives the declared answer; the same library's `sop_code_signals` lists the hits (P102). |
+| X4 | Recent Work has PR/commit refs | Rollup entries or session records contain references to PRs or commits |
+| X6 | Secondary trackers reconciled with commit history | For every `.md` file `scripts/detect-trackers.sh` lists: extract finding IDs from the last 20 commit messages (`\b[A-Z]+-?[0-9]+\b`) and verify matching tracker entries are not still `[OPEN]` (P42) |
+| X7 | Declared project type does not contradict the heuristics | A `**Project type:** non-code` declaration while any code heuristic holds FAILS (the reviewer gate and the Stop hook are off for what the repository says is code); declared `code` with no heuristic hit PASSES as the documented opt-in. `sop-project-type.sh` gives the answer; `sop_code_signals` in the same library lists the hits (P102) |
 
 ---
 
-## 9. Security, Hooks, Code Quality, and Agents
+## 8. Security, Hooks, and Agents
 
 ### Critical
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
 | S1 | No secrets in committed files | Scan for `.env` files, hardcoded API keys (`sk-...`), private keys, `password=` patterns in tracked files. Exclude `.env.example` and test fixtures. |
-| S5 | CI workflows invoking Claude Code are hardened | Applies only when `.github/workflows/*` (or equivalent CI config) invokes Claude Code or a Claude action; otherwise N/A. FAIL if any such workflow sets `allowed_non_write_users: "*"` or references a third-party action by floating tag (`@v1`, `@main`) instead of a commit SHA. Comment-and-Control class, CVE-2025-66032. |
+| S5 | CI workflows invoking Claude Code are hardened | Applies only when CI invokes Claude Code or a Claude action; otherwise N/A. FAIL if any such workflow sets `allowed_non_write_users` (or equivalent) to a wildcard, or lets an unprivileged actor trigger a write-capable run. |
 
 ### Important
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
 | S2 | Security guidance referenced | `docs/sop/security.md` exists OR CLAUDE.md references security guidance |
-| S3 | No `--dangerously-skip-permissions` usage | Scan `.claude/settings.json`, CLAUDE.md, and any shell scripts for the flag. Agents should use explicit permission rules (`allowedTools`) instead. Hardened in Claude Code v2.1.97. |
-| S4 | Context-file integrity flag present | `.claude/commands/restart-sop.md` Step 4 contains the memory-poisoning guard (dirty-context-file check on CLAUDE.md, `Backlog.md`, `docs/agent-memory*` before acting on their contents), and `docs/sop/security.md` names the project's own persistent context files as injection surfaces. Grep-verifiable by pattern `memory-poisoning` in restart-sop.md. Projects predating P61 (before 2026-07-06) are exempt. |
-| S6 | Read-only token posture for CI review workflows | Applies only when CI runs Claude Code in a review-only capacity; otherwise N/A. The workflow's token grants read-only repository access (e.g. `permissions: contents: read` in the workflow, no `write` scopes beyond what the job demonstrably needs). Documented rationale in the workflow file or security guidance counts as a PASS when a write scope is genuinely required. |
-| S7 | Gate integrity — validators unchanged in the range they gate | Applies when the project has either a validation script that `/update-sop` invokes (`scripts/validate-*.sh` or equivalent) **or** a checked-in check definition (`.claude/agents/sop-checker.md`); otherwise N/A. For each `[SHIPPED]` item whose ship commit is on or after 2026-07-26, run:<br>`git diff --name-only <ship-commit>^..<ship-commit> -- 'scripts/validate-*.sh' '.claude/agents/sop-checker.md'`<br>**Use `<ship-commit>^..<ship-commit>`, not `<merge-base>..<ship-commit>`.** A shipped commit is an ancestor of the default branch, so `git merge-base <default> <ship-commit>` returns the ship commit itself and the range is always empty — the check would pass unconditionally. Use `^1` instead of `^` when the project merges with true merge commits rather than squashes. **PASS** when there is no output, or when there is output and the change is a declared Backlog item that either carries a `docs/reviews/` artifact or declares the Step 1b skip on its Batch Log line with the token `review skipped (P<n>): <docs-only|test-only|dep-bump|below-threshold>`, naming its own P-number (the same token `scripts/validate-state-transitions.sh` reads — P66 unified them deliberately, so the check and the validator cannot disagree about what a declared exemption is). **FAIL** when a watched file changed and no declaration, artifact, or Batch Log note accounts for it. Rationale in `docs/sop/security.md` rule 11. Note `docs/sop/compliance-checklist.md` is deliberately outside the pathspec: it is data the checker reads rather than an execution arm, and routine `/update-agent-sop` syncs would make the check noise. Ship commits before 2026-07-26 are exempt (commit-scoped, not project-scoped — a project-scoped exemption would make this check inert everywhere, permanently). |
-| Q1 | File size limits specified (code) | CLAUDE.md or a Code Quality section mentions maximum file line count (e.g. 800 lines) |
-| Q2 | Test coverage threshold specified (code) | CLAUDE.md or a Code Quality section mentions minimum test coverage (e.g. 80%) |
+| S3 | No `--dangerously-skip-permissions` usage | Scan `.claude/settings.json`, CLAUDE.md, and shell scripts for the flag |
+| S4 | Context-file integrity surfaced | The user-scope context hook is installed (`~/.claude/settings.json` registers `sop-session-context.sh`), so uncommitted edits to CLAUDE.md, `Backlog.md` and `docs/agent-memory*` are printed before the session acts on them; without hooks, `/restart-sop` Step 1 reads `git status` on those files |
+| S6 | Read-only token posture for CI review workflows | Applies only when CI runs Claude Code in a review-only capacity; otherwise N/A. The workflow's token grants read-only repository access. |
+| S7 | Gate integrity — validators unchanged in the range they gate | When the project has `scripts/validate-*.sh` or a checked-in check, a session that changes a validator ships that change as its own Backlog item with a `review:` citation or an accepted skip token (`test-only`, `dep-bump`); `docs-only` and `below-threshold` are not accepted on validator paths (P87) |
 
 ### Recommended
 
 | ID | Check | What to look for |
 |----|-------|-----------------|
-| H1 | Session hooks documented or configured | At least SessionStart and SessionEnd hooks mentioned in CLAUDE.md, `docs/sop/harness-configuration.md`, or `.claude/settings.json` |
-| G1 | At least 2 review agents available | `.claude/agents/` contains at least 2 agent definitions (e.g. code-reviewer + security-reviewer or sop-checker + any other) |
-| R1 | Reviewer-turn gate honoured for shipped [Feature]/[Refactor] items | For every `[SHIPPED]` `[Feature]` or `[Refactor]` item in the last 30 days whose session diff exceeded `review_loc_threshold` or `review_files_threshold` (from `agent-sop.config.json`, defaults 50 LOC / 3 files): verify a matching review artifact exists at `docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md` AND passes `bash scripts/validate-state-transitions.sh --assert-review <path>`. Best-effort retrospective — measure the session diff with `git diff --numstat <ship-commit>^..<ship-commit>` (sum columns 1+2 for LOC; line count for files), using `^1` where the project merges rather than squashes. **Corrected 2026-07-26 (P69 review):** this previously read `<merge-base>..<ship-commit>`, which is empty for any commit already on the default branch and therefore measured every shipped item as a 0-LOC diff, silently exempting all of them from the threshold. `git show --stat` is per-commit and undercounts multi-commit sessions — do not use. Projects predating P44 (before 2026-04-19) are exempt. |
-| T1 | Test-gate escape hatch is bounded, not self-judged | `.claude/commands/update-sop.md` Step 2 must not permit continuing past a failing suite on the agent's own assessment. FAIL on any unbounded self-judged exit — patterns like "cannot be fixed quickly", "if time permits", "use your judgement", "where practical" attached to the test gate. PASS when the exit is conditioned on artifacts a later reader can verify: a filed `[Bug]`, a named blocker in the resume snapshot, and no `[Feature]`/`[Refactor]` shipping. Grep-verifiable by pattern `cannot be fixed quickly` returning nothing in `.claude/commands/update-sop.md`. Rationale: [arXiv:2607.01456](https://arxiv.org/abs/2607.01456) measured this authoring pattern in 94% of 238 agent instruction files, and found smells are seldom corrected once introduced — which is why this is a standing check rather than a one-off cleanup. Projects predating P70 (before 2026-07-26) are exempt. |
-| D1 | Drift-detection infrastructure present | `scripts/validate-state-transitions.sh --check-drift` works when invoked; `.claude/commands/update-sop.md` references Step 3d; `.claude/commands/restart-sop.md` includes the in-flight reassertion in Step 0d. **Extended 2026-08-03 (P75):** for projects that track pristine replicas (`baseline_shas` non-empty in `agent-sop.config.json`), `--check-replication` must also work when invoked and `.claude/commands/update-sop.md` must reference Step 3e. Projects with an empty or absent `baseline_shas` are exempt from the replication half — the check is a no-op for them by design. Tooling presence is the check — retrospective audit of every past session for drift is out of scope (too expensive; `## Scope Change` blocks in `docs/recent-work/` would already surface legitimate cases). Projects predating P46 (before 2026-04-19) are exempt; the replication half exempts projects predating P75 (before 2026-08-03). |
+| H1 | User-scope hooks installed | `~/.claude/settings.json` registers `sop-session-context.sh`, `sop-stop-drift.sh` and `sop-push-gate.sh` (installed by `scripts/install-hooks.sh`); project-scope hook entries for the retired `auto-ship-hook.sh` are gone |
+| G1 | At least 2 review agents available | `~/.claude/agents/` or `.claude/agents/` contains at least 2 reviewer definitions |
+| R1 | Reviewer-turn gate honoured for shipped [Feature]/[Refactor] items | For every `[SHIPPED]` `[Feature]` or `[Refactor]` in the last 30 days whose diff exceeded the threshold, the entry cites an existing `docs/reviews/` artefact that passes `--assert-review`; a skip token is accepted only for the enumerated reasons. Measured with `git diff --numstat <ship-commit>^..<ship-commit>` |
+| T1 | Test-gate escape hatch is bounded, not self-judged | `.claude/commands/update-sop.md` Step 1 permits continuing past a failing suite only with a filed `[Bug]`, a Blockers entry, and no `[Feature]`/`[Refactor]` shipping (P70) |
+| D1 | Drift-detection infrastructure present | `scripts/validate-state-transitions.sh --check-drift` works when invoked and `/update-sop` runs it in Step 4; for projects tracking pristine replicas, `--check-replication` also runs there (P46, P75) |
 
 ---
 
-## 10. Benchmark-Proven Practices
+## 9. Benchmark-Proven Practices
 
-*These checks verify the patterns from SOP Section 15. A/B benchmarks measured those patterns at +8% to +33% across rounds R1-R5 at k=1 per arm — directional, not a measured effect size. See SOP Section 15's opening note for the citation caveat on the +33% figure specifically.*
+*These checks verify the patterns the core SOP §5 requires (Common Mistakes, intent-based dispatch). A/B benchmarks measured those patterns at +8% to +33% across rounds R1-R5 at k=1 per arm — directional, not a measured effect size. See SOP Section 15's opening note for the citation caveat on the +33% figure specifically.*
 
 ### Important (code projects only)
 
@@ -296,7 +254,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 ---
 
-## 11. Multi-Agent Parallel Sessions
+## 10. Multi-Agent Parallel Sessions
 
 *These checks apply only when the project is in parallel-agent mode (`multi_agent: auto` and worktree count > 1, OR `multi_agent: on`). Non-applicable when `multi_agent: off` or the project has never added per-agent directories.*
 
@@ -327,22 +285,21 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 | Category | Critical | Important | Recommended | Total |
 |----------|----------|-----------|-------------|-------|
-| File Existence | 5 | 5 | 0 | 10 |
-| CLAUDE.md Structure | 5 | 12 (+5 code) | 2 | 19 (+5) |
-| Backlog.md Structure | 2 | 7 | 3 | 12 |
-| agent-memory.md Structure | 1 | 4 | 1 | 6 |
-| feature-map.md Structure | 0 | 3 | 1 | 4 |
-| Build Plans Structure | 0 | 4 | 1 | 5 |
+| File Existence | 3 | 6 | 0 | 9 |
+| CLAUDE.md Structure | 3 | 9 (+4 code) | 2 | 14 (+4) |
+| Backlog.md Structure | 2 | 8 | 3 | 13 |
+| docs/agent-memory.md Structure | 0 | 4 | 2 | 6 |
+| docs/build-plans/phase-*.md Structure | 0 | 3 | 0 | 3 |
 | project_resume.md Structure | 0 | 3 | 0 | 3 |
-| Cross-File Consistency | 0 | 3 | 3 | 6 |
-| Security, Hooks, Quality, Agents | 2 | 5 (+2 code) | 5 | 12 (+2) |
+| Cross-File Consistency | 0 | 2 | 3 | 5 |
+| Security, Hooks, and Agents | 2 | 5 | 5 | 12 |
 | Benchmark-Proven Practices | 0 | 0 (+2 code) | 2 | 2 (+2) |
 | Multi-Agent Parallel Sessions | 1 | 3 | 2 | 6 |
-| **Total (non-code)** | **16** | **49** | **21** | **86** |
-| **Total (code)** | **16** | **58** | **21** | **95** |
+| **Total (non-code)** | **11** | **43** | **19** | **73** |
+| **Total (code)** | **11** | **49** | **19** | **79** |
 
 **Maximum deductions:**
-- Non-code: 16 x 10 + 49 x 5 + 20 x 2 = 160 + 245 + 40 = 445
-- Code: 16 x 10 + 58 x 5 + 20 x 2 = 160 + 290 + 40 = 490
+- Non-code: 11 x 10 + 43 x 5 + 19 x 2 = 110 + 215 + 38 = 363
+- Code: 11 x 10 + 49 x 5 + 19 x 2 = 110 + 245 + 38 = 393
 
 **Normalisation:** Score = max(0, 100 - (total deductions / max possible deductions * 100)). Then apply critical cap (49 max) if any critical check fails.

@@ -4,7 +4,7 @@
 #
 # Runs at /update-sop Step 2c. Rejects illegal transitions like [OPEN] →
 # [SHIPPED] with no [IN PROGRESS] intermediate, terminal-state revivals,
-# and [SHIPPED] entries with no matching Batch Log reference. Exit code:
+# and [SHIPPED] Feature/Refactor entries with no review citation. Exit code:
 # 0 if all transitions legal, 1 if any illegal.
 #
 # Usage:
@@ -50,7 +50,7 @@ DRIFT_THRESHOLD_FILES=""    # override the files threshold (skip config lookup)
 REPL_CONFIG_FILE=""         # override for --check-replication fixture mode
 REPL_CHANGED_FILE=""        # fixture: file listing this session's changed paths
 REPL_HOME=""                # fixture: stand-in for $HOME when resolving mirrors
-SELF_MOD_CHANGED_FILE=""    # fixture: file listing changed paths for the Step 1b trigger (b) check
+SELF_MOD_CHANGED_FILE=""    # fixture: file listing changed paths for the review trigger (b) check
 
 print_help() {
   # Print the leading comment block, stopping at the first non-comment line.
@@ -108,7 +108,7 @@ if [ "$MODE" = "assert-review" ]; then
   #    file path with line number (`foo.ts:42`) or a backticked symbol/path
   #    (`processOrder`, `scripts/foo.sh`). Sycophancy gate (P55): reviews
   #    that pass structurally but cite nothing concrete are blocked here.
-  #    Reasoning lives in claude-agent-sop.md §6 Step 1b — Anthropic's
+  #    Reasoning lives in claude-agent-sop.md §3 step 2 — Anthropic's
   #    30 April 2026 personal-guidance research measured 9% baseline /
   #    25-38% emotional-domain validation rates even in frontier models
   #    trained against sycophancy. Reviewer-as-peer-agent carries the
@@ -151,7 +151,7 @@ if [ "$MODE" = "assert-review" ]; then
   if [ -n "$missing" ]; then
     echo "BLOCK: review artifact $ASSERT_REVIEW_FILE missing:$missing" >&2
     echo "Required: diff summary heading, Severity: <enum>, Findings section (or reasoned 'No issues — <reason>'), and at least one concrete anchor inside findings/no-issues — a file path with line number (e.g. \`foo.ts:42\`) or a backticked symbol or path (e.g. \`processOrder\`, \`scripts/foo.sh\`)." >&2
-    echo "Sycophancy gate: reviews that pass structurally but cite nothing concrete are blocked. See SOP §6 Step 1b for rationale." >&2
+    echo "Sycophancy gate: reviews that pass structurally but cite nothing concrete are blocked. See SOP §3 step 2 for rationale." >&2
     exit 1
   fi
   exit 0
@@ -172,7 +172,7 @@ if [ "$MODE" = "check-drift" ]; then
   if [ -z "$resume_file" ]; then
     # Delegated to scripts/resolve-resume-path.sh (P96). This block previously
     # inlined the agent-id and memory-dir derivation, which /restart-sop
-    # duplicated verbatim and /update-sop Step 7 did not implement at all —
+    # duplicated verbatim and /update-sop Step 6 did not implement at all —
     # so the writer and the two readers could target different directories.
     # One implementation now serves all three; see the script header and
     # docs/guides/cross-layer-rules.md Tier A.
@@ -349,7 +349,7 @@ if [ "$MODE" = "check-drift" ]; then
   echo "Resolve by one of:" >&2
   echo "  1) If you changed scope deliberately: add a '## Scope Change' block to $resume_file with a one-line reason." >&2
   echo "  2) If you drifted unintentionally: amend the commit message(s) to reference the in-flight P-number, or split the work so the declared item ships." >&2
-  echo "  3) If the prior resume file is stale: update it (Step 7 of /update-sop) and re-run." >&2
+  echo "  3) If the prior resume file is stale: update it (Step 6 of /update-sop) and re-run." >&2
   exit 1
 fi
 
@@ -358,7 +358,7 @@ fi
 #
 # Every existing gate asks "was this change declared?". None asks "did this
 # change reach the surface that enforces it?". A session can edit a
-# pristine-replica file, pass Step 3c and 3d, merge, and leave the user-scope
+# pristine-replica file, pass Step 4, merge, and leave the user-scope
 # copy that actually executes untouched — observed twice, in both directions
 # (Batch 0.27 left user scope stale for eight days; Batch 0.26 found a
 # project-specific step that had leaked the other way).
@@ -504,7 +504,7 @@ EOF
   echo "" >&2
   echo "Resolve by one of:" >&2
   echo "  1) Run /update-agent-sop to replicate the change and refresh baselines." >&2
-  echo "  2) If the divergence is deliberate, record it on this item's Batch Log line as: replication deferred (P<n>): <reason>" >&2
+  echo "  2) If the divergence is deliberate, record it on this item's Backlog entry as: replication deferred (P<n>): <reason>" >&2
   exit 1
 fi
 
@@ -574,10 +574,10 @@ transition_is_legal() {
 legal_paths_from() {
   case "$1" in
     "<absent>") echo "[OPEN], [DEFERRED], [IN PROGRESS]" ;;
-    "[OPEN]") echo "[IN PROGRESS], [DEFERRED], [SHIPPED] (needs Batch Log), [WON'T]" ;;
-    "[IN PROGRESS]") echo "[BLOCKED], [DEFERRED], [SHIPPED] (needs Batch Log), [WON'T]" ;;
-    "[BLOCKED]") echo "[IN PROGRESS], [DEFERRED], [SHIPPED] (needs Batch Log), [WON'T]" ;;
-    "[DEFERRED]") echo "[IN PROGRESS], [SHIPPED] (needs Batch Log), [WON'T], [BLOCKED]" ;;
+    "[OPEN]") echo "[IN PROGRESS], [DEFERRED], [SHIPPED] (Feature/Refactor cites a review), [WON'T]" ;;
+    "[IN PROGRESS]") echo "[BLOCKED], [DEFERRED], [SHIPPED] (Feature/Refactor cites a review), [WON'T]" ;;
+    "[BLOCKED]") echo "[IN PROGRESS], [DEFERRED], [SHIPPED] (Feature/Refactor cites a review), [WON'T]" ;;
+    "[DEFERRED]") echo "[IN PROGRESS], [SHIPPED] (Feature/Refactor cites a review), [WON'T], [BLOCKED]" ;;
     "[SHIPPED]") echo "[VERIFIED]" ;;
     "[VERIFIED]"|"[WON'T]") echo "(terminal — revival requires new P-number)" ;;
   esac
@@ -591,7 +591,7 @@ legal_paths_from() {
 # revalidated with `--before <merge-base>` explicitly.
 #
 # Override precedence: --before-file > --before <ref> > HEAD (default).
-# ── Step 1b trigger (b): SOP self-modification ────────────────────────────────
+# ── Review trigger (b): SOP self-modification ────────────────────────────────
 #
 # claude-agent-sop.md states this as the SOP's one unconditional gate: edits to
 # files the SOP itself executes or instructs are load-bearing "regardless of
@@ -653,7 +653,7 @@ resolve_before() {
 }
 
 TMP_BEFORE=$(mktemp)
-trap 'rm -f "$TMP_BEFORE"' EXIT
+trap 'rm -f "$TMP_BEFORE" "${AFTER_CLEAN:-}"' EXIT
 
 resolve_before > "$TMP_BEFORE"
 if [ ! -s "$TMP_BEFORE" ]; then
@@ -700,135 +700,102 @@ while IFS=$'\t' read -r p after_status; do
         ;;
     esac
 
-    # [SHIPPED] transitions require a Batch Log reference in some phase file.
-    # For [Feature]/[Refactor] items over threshold, the Batch Log entry must
-    # additionally cite a review artifact under docs/reviews/ — enforces P44's
-    # reviewer-turn gate at the state-transition layer, not just by prose.
+    # [SHIPPED] transitions of a [Feature]/[Refactor] item (or any item when the
+    # session touched the SOP's own executable surface, trigger (b), P87) must
+    # cite a review artifact under docs/reviews/ or declare an enumerated skip
+    # — on the Backlog entry itself. Until P105 (2026-09-05) the citation lived
+    # on a Batch Log line in docs/build-plans/; a measured review found the
+    # Batch Log read by nothing else, so the entry is now the single place.
     if [ "$after_status" = "[SHIPPED]" ] && [ "$before_status" != "[SHIPPED]" ]; then
-      batch_match=""
-      # `|| true` is load-bearing, not defensive. `grep -l` exits 1 when the
-      # P-number appears in no phase file, pipefail carries that past `head`,
-      # and errexit then kills the script BEFORE the BLOCK message below can
-      # print — so the operator saw a bare `exit 1` with no output at all.
-      # Fixed 2026-07-26 (P73). The identical shape was fixed once in the
-      # drift check at 66ee6a4 and this second site was missed; see
-      # docs/agent-memory/gotchas/2026-07-26_solo_pipefail-kills-the-error-message-before-it-prints.md
-      batch_match=$( { grep -lE "\b${p}\b" docs/build-plans/phase-*.md 2>/dev/null || true; } | head -1)
-      if [ -z "$batch_match" ]; then
-        echo "BLOCK: $p shipped but no Batch Log reference found in docs/build-plans/phase-*.md"
+      # Bounded at the next `### ` or `## ` heading (a `## Shipped Archive`
+      # after the last entry must not lend it a citation), anchored the same
+      # way extract_statuses anchors (`### P<n>` followed by a non-digit), and
+      # CRLF-tolerant. An entry that cannot be located fails closed below.
+      # No early exit in the pipeline: an awk `exit` or `grep -q` that stops
+      # reading while `tr` is still writing a file larger than the pipe buffer
+      # gives tr SIGPIPE, pipefail reports 141, and errexit ends the script
+      # with no message — the P73 shape, reproduced on the real Backlog when
+      # the shipped entry sat early in the file. CR is stripped once, to a
+      # temp file, and awk reads it to the end.
+      if [ -z "${AFTER_CLEAN:-}" ]; then
+        AFTER_CLEAN=$(mktemp); tr -d '\r' < "$AFTER_FILE" > "$AFTER_CLEAN"
+      fi
+      entry_body=$(awk -v p="### ${p}" '
+        $0 ~ "^"p"([^0-9]|$)" { found=1; next }
+        found && /^(### |## )/ { found=0 }
+        found { print }
+      ' "$AFTER_CLEAN")
+      if ! grep -qE "^### ${p}([^0-9]|$)" "$AFTER_CLEAN"; then
+        echo "BLOCK: $p transitioned to [SHIPPED] but its entry heading could not be located in Backlog.md (expected a line starting \"### ${p}\")."
         violations=$((violations + 1))
-      else
-        # Determine whether this P-number is [Feature]/[Refactor]. If so,
-        # require the Batch Log entry referencing the P-number to also name
-        # a docs/reviews/ path.
-        item_type=$(awk -v p="### ${p}" '
-          $0 ~ "^"p"( |$)" { found=1; next }
-          found && /^`\[/ {
-            line=$0
-            gsub(/`/, "", line)
-            # strip the first bracket block (status) plus trailing whitespace
-            sub(/^\[[^]]+\][[:space:]]*/, "", line)
-            # extract the first bracket block from what remains (type tag)
-            if (match(line, /^\[[^]]+\]/)) {
-              type=substr(line, RSTART+1, RLENGTH-2)
-              print type
-            }
-            exit
-          }
-        ' "$AFTER_FILE")
-        # Trigger (b), P87. Resolve once per run, not per item.
-        if [ -z "${SELF_MOD_CHECKED:-}" ]; then
-          SELF_MOD_CHECKED=1
-          if [ -n "$SELF_MOD_CHANGED_FILE" ] && [ -f "$SELF_MOD_CHANGED_FILE" ]; then
-            SELF_MOD_FILES=$(sop_self_mod_paths "$(cat "$SELF_MOD_CHANGED_FILE")")
-          else
-            SELF_MOD_FILES=$(sop_self_mod_paths "$(session_changed_files)")
-          fi
+        continue
+      fi
+      # Only labelled lines outside code fences count (review: HIGH): a path
+      # quoted as an example, or a skip token in prose, is not a declaration.
+      # The citation is a bare filename under docs/reviews/ — no slash after
+      # it, so `..` cannot reach a file that is not a review (review: CRITICAL).
+      review_lines=$(printf '%s\n' "$entry_body" | awk '/^[[:space:]]*```/{f=!f; next} !f' | grep -E '^[[:space:]]*review( skipped)?[: (]' || true)
+      item_type=$(printf '%s\n' "$entry_body" | awk '
+        !done && /^`\[/ {
+          line=$0
+          gsub(/`/, "", line)
+          sub(/^\[[^]]+\][[:space:]]*/, "", line)
+          if (match(line, /^\[[^]]+\]/)) { print substr(line, RSTART+1, RLENGTH-2) }
+          done=1
+        }')
+      # Trigger (b), P87. Resolve once per run, not per item.
+      if [ -z "${SELF_MOD_CHECKED:-}" ]; then
+        SELF_MOD_CHECKED=1
+        if [ -n "$SELF_MOD_CHANGED_FILE" ] && [ -f "$SELF_MOD_CHANGED_FILE" ]; then
+          SELF_MOD_FILES=$(sop_self_mod_paths "$(cat "$SELF_MOD_CHANGED_FILE")")
+        else
+          SELF_MOD_FILES=$(sop_self_mod_paths "$(session_changed_files)")
         fi
-        gate_type="$item_type"
-        if [ -n "${SELF_MOD_FILES:-}" ]; then
-          # The session edited files the SOP itself executes. Every shipped item
-          # takes the gate, whatever its tag — see the sop_self_mod_paths note.
-          gate_type="Feature"
-        fi
+      fi
+      gate_type="$item_type"
+      if [ -n "${SELF_MOD_FILES:-}" ]; then
+        gate_type="Feature"
+      fi
 
-        case "$gate_type" in
-          "Feature"|"Refactor")
-            # Find the batch-log line that names this P-number and check for a
-            # review path on it — OR an enumerated skip declaration.
-            #
-            # P66 (fixed 2026-07-26): this gate used to require `docs/reviews/`
-            # unconditionally, with no knowledge of the Step 1b skip list that
-            # P59 introduced. Prose said a docs-only ship skips the reviewer
-            # turn; this validator blocked that same ship for having no review.
-            # One logical rule, two runtimes, opposite answers. The workaround
-            # people reached for was committing before running /update-sop,
-            # which evades the gate entirely — a worse outcome than either rule.
-            #
-            # Tier A resolution per docs/guides/cross-layer-rules.md: the
-            # validator now understands the skip list rather than being blind
-            # to it. The reason must come from the enumerated set — a bare
-            # "review skipped:" with free text is still a BLOCK, so the escape
-            # is bounded rather than self-judged. Same token as compliance
-            # check S7, deliberately, so the two agree on what counts as a
-            # declared exemption.
-            batch_line=$( { grep -E "\b${p}\b" "$batch_match" || true; } | head -1)
-            # The skip declaration must name its own P-number and end on a word
-            # boundary. Both constraints came out of the P66-P73 review:
-            #   - Without the P-number, `head -1` picks ANY line mentioning the
-            #     number, so "P299 review skipped: docs-only (prep for P300)"
-            #     silently exempted a P300 code ship. Batch lines routinely name
-            #     several P-numbers, and a phrase is far easier to place
-            #     incidentally than a review path.
-            #   - Without the trailing \b, "review skipped: dep-bumpkin" passed,
-            #     which made "free text is not accepted" untrue.
-            skip_re="review skipped \(${p}\): *(docs-only|test-only|dep-bump|below-threshold)\b"
-            # Trigger (b) overrides exactly two of those reasons, so accepting
-            # them on a self-modifying diff would reinstate the loophole P87
-            # closed: the SOP calls SOP edits load-bearing "regardless of LOC"
-            # (killing below-threshold) and the skip list's own note says
-            # trigger (b) overrides the docs-only entry. test-only and dep-bump
-            # cannot arise on these paths. So no skip is valid here.
-            if [ -n "${SELF_MOD_FILES:-}" ]; then
-              skip_re="review skipped \(${p}\): *(test-only|dep-bump)\b"
-            fi
-            if printf '%s' "$batch_line" | grep -qE 'docs/reviews/'; then
-              # A citation is not evidence until the path resolves. Until P95
-              # this branch accepted the mere presence of the string
-              # "docs/reviews/", so any plausible filename cleared the gate —
-              # including one for a review that was never written. Batch 0.30
-              # recorded exactly that ("a false citation the validator would
-              # have accepted") and corrected it by hand; nothing stopped the
-              # next one. Extract every cited path and require each to exist.
-              missing_reviews=""
-              for cited in $(printf '%s' "$batch_line" | grep -oE 'docs/reviews/[A-Za-z0-9._/-]+\.md'); do
-                [ -f "$cited" ] || missing_reviews="$missing_reviews $cited"
-              done
-              if [ -n "$missing_reviews" ]; then
-                echo "BLOCK: $p ([${item_type}]) cites a review artifact that does not exist:${missing_reviews}"
-                echo "  A cited path that does not resolve is not a review. Either write the artifact,"
-                echo "  or declare the skip as: review skipped (${p}): <docs-only|test-only|dep-bump|below-threshold>"
-                violations=$((violations + 1))
-              fi
-            elif printf '%s' "$batch_line" | grep -qEi "$skip_re"; then
-              : # enumerated Step 1b skip, bound to this P-number — gate satisfied
-            else
-              if [ -n "${SELF_MOD_FILES:-}" ]; then
-                echo "BLOCK: $p ([${item_type}]) shipped in a session that modified the SOP's own executable surface — Step 1b trigger (b) fires regardless of tag or diff size."
-                echo "  Self-modifying paths changed this session:"
-                printf '%s\n' "$SELF_MOD_FILES" | sed 's/^/    /'
-                echo "  Requires a real reviewer artifact. docs-only and below-threshold are not accepted here — trigger (b) exists to override them."
-                violations=$((violations + 1))
-                continue
-              fi
-              echo "BLOCK: $p ([${item_type}]) shipped but Batch Log entry in ${batch_match} neither cites a docs/reviews/ artifact nor declares an enumerated Step 1b skip."
-              echo "  Either add the review artifact path to the Batch Log line that names ${p},"
-              echo "  or declare the skip on that line as: review skipped (${p}): <docs-only|test-only|dep-bump|below-threshold>"
+      case "$gate_type" in
+        "Feature"|"Refactor")
+          # The skip must name its own P-number and use the enumerated set
+          # (P66); under trigger (b) only test-only and dep-bump survive.
+          skip_re="review skipped \(${p}\): *(docs-only|test-only|dep-bump|below-threshold)\b"
+          if [ -n "${SELF_MOD_FILES:-}" ]; then
+            skip_re="review skipped \(${p}\): *(test-only|dep-bump)\b"
+          fi
+          if printf '%s' "$review_lines" | grep -qE '^[[:space:]]*review:[[:space:]]*docs/reviews/'; then
+            # A citation is not evidence until the path resolves (P95).
+            missing_reviews=""
+            for cited in $(printf '%s' "$review_lines" | grep -oE '^[[:space:]]*review:[[:space:]]*docs/reviews/[A-Za-z0-9._-]+\.md' | sed -E 's/^[[:space:]]*review:[[:space:]]*//'); do
+              [ -f "$cited" ] || missing_reviews="$missing_reviews $cited"
+            done
+            [ -n "$missing_reviews" ] || [ -n "$(printf '%s' "$review_lines" | grep -oE '^[[:space:]]*review:[[:space:]]*docs/reviews/[A-Za-z0-9._-]+\.md')" ] || missing_reviews=" (a review: line with a path that is not a bare filename under docs/reviews/)"
+            if [ -n "$missing_reviews" ]; then
+              echo "BLOCK: $p ([${item_type}]) cites a review artifact that does not exist:${missing_reviews}"
+              echo "  A cited path that does not resolve is not a review. Either write the artifact,"
+              echo "  or declare the skip on the entry as: review skipped (${p}): <docs-only|test-only|dep-bump|below-threshold>"
               violations=$((violations + 1))
             fi
-            ;;
-        esac
-      fi
+          elif printf '%s' "$review_lines" | grep -qEi "$skip_re"; then
+            : # enumerated skip, bound to this P-number — gate satisfied
+          else
+            if [ -n "${SELF_MOD_FILES:-}" ]; then
+              echo "BLOCK: $p ([${item_type}]) shipped in a session that modified the SOP's own executable surface — the review trigger fires regardless of tag or diff size."
+              echo "  Self-modifying paths changed this session:"
+              printf '%s\n' "$SELF_MOD_FILES" | sed 's/^/    /'
+              echo "  Requires a real reviewer artifact cited on the Backlog entry as: review: docs/reviews/<file>.md"
+              violations=$((violations + 1))
+              continue
+            fi
+            echo "BLOCK: $p ([${item_type}]) shipped but its Backlog entry neither cites a docs/reviews/ artifact nor declares an enumerated review skip."
+            echo "  Add a line under the status line: review: docs/reviews/<file>.md"
+            echo "  or declare the skip there as: review skipped (${p}): <docs-only|test-only|dep-bump|below-threshold>"
+            violations=$((violations + 1))
+          fi
+          ;;
+      esac
     fi
   else
     echo "BLOCK: $p transitioned $before_status -> $after_status (illegal)"

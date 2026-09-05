@@ -1,669 +1,110 @@
 ---
-description: Run the Agent SOP session end checklist. Updates all tracking files, writes the resume snapshot, and commits.
-sop_version: "2026-07-06"
+description: Session end for an Agent SOP project. Tests, one review run, Backlog tags, the validators, memory entries, the resume snapshot and session record, then commit.
+sop_version: "2026-09-05"
 ---
 
-Execute the Agent SOP session end checklist. Complete every step below before the session ends. Do not skip any step. Never delete without a trace: update in place, mark superseded, or archive.
+Deliberate session close. The Stop hook enforces the minimum on code projects (a session record, clean trackers, a covering gate report); this command is the full close and the only close on non-code projects. Never delete without a trace: update in place, mark superseded, or archive.
 
 ## Gate: is this an Agent SOP project?
 
-The checklist below is for repositories that carry the SOP file set. Prose projects (Imagineers, Heckler X) deliberately carry none, and a session launched from another directory does not load their own `.claude/commands/` overrides — so this global command is what runs there. Check first:
-
 ```bash
 root=$(git rev-parse --show-toplevel 2>/dev/null) || root=$PWD
-# One rule: sop_is_sop_repo in the installed hook library. The inline test is
-# the same rule for a machine without the hooks (setup.sh --no-hooks).
 LIB="$HOME/.claude/scripts/hooks/agent-sop/sop-lib.sh"
 if [ -f "$LIB" ]; then . "$LIB"; is_sop() { sop_is_sop_repo "$1"; }
 else is_sop() { [ "$1" != "$HOME" ] && [ -f "$1/Backlog.md" ] && [ -f "$1/docs/sop/claude-agent-sop.md" ]; }; fi
-if ! is_sop "$root"; then
-  echo "not-sop-project"
-  [ -f "$root/.claude/commands/update-sop.md" ] && echo "project-override: $root/.claude/commands/update-sop.md"
-fi
+is_sop "$root" || { echo "not-sop-project"; [ -f "$root/.claude/commands/update-sop.md" ] && echo "project-override: $root/.claude/commands/update-sop.md"; }
 ```
 
-If it prints `not-sop-project`: do not run any step below, do not create `Backlog.md`, and do not install scaffolding. If it also prints a `project-override` path, that file is the project's own session-end checklist — read it and follow it instead of this one. Otherwise say, in one line, that this is not an Agent SOP project, and stop.
+`not-sop-project`: run nothing below, create no `Backlog.md`, install nothing. With a `project-override` path, read that file and follow it instead. Otherwise say so in one line and stop.
 
-## Pre-flight check: No outstanding background subagents
-
-Subagents run in the background by default from Claude Code 2.1.198 (1 July 2026) — the session keeps working while they run. A checklist executed while subagents are outstanding produces a resume snapshot and Backlog state that omit their work.
-
-Before Step 1: collect results from (or explicitly terminate) every subagent this session spawned. If the harness lists running tasks, confirm none are still pending. If a subagent's result is genuinely not needed, terminate it and record that in the resume snapshot's What was done. Do not start Step 1 with work still in flight.
-
-## Step 0: Resolve agent identity
-
-Agent identity appears in filenames (`docs/recent-work/YYYY-MM-DD_<agent-id>_<slug>.md`), in per-agent `project_resume_<agent-id>.md`, and in commit-range partitioning routines (Step 3b, Step 11). Resolve it first so every subsequent step uses a consistent value.
-
-Precedence: `CLAUDE_AGENT_ID` env var > `.sop-agent-id` file at worktree root > `solo` (single-worktree default) > 6-char hash of worktree path. See `docs/guides/multi-agent-parallel-sessions.md` Section 1 for full scenarios.
+## Step 0: Identity, range, outstanding subagents
 
 ```bash
-resolve_agent_id() {
-  if [ -n "${CLAUDE_AGENT_ID:-}" ]; then
-    printf '%s' "$CLAUDE_AGENT_ID"
-    return
-  fi
-
-  local root
-  root=$(git rev-parse --show-toplevel 2>/dev/null) || { printf 'solo'; return; }
-
-  if [ -f "$root/.sop-agent-id" ]; then
-    head -1 "$root/.sop-agent-id" | tr -d '[:space:]'
-    return
-  fi
-
-  local count
-  count=$(git worktree list 2>/dev/null | wc -l | tr -d '[:space:]')
-  if [ "$count" = "1" ]; then
-    printf 'solo'
-    return
-  fi
-
-  if command -v shasum >/dev/null 2>&1; then
-    printf '%s' "$root" | shasum -a 256 | cut -c1-6
-  else
-    printf '%s' "$root" | sha256sum | cut -c1-6
-  fi
-}
-
-AGENT_ID=$(resolve_agent_id)
-echo "Agent identity: $AGENT_ID"
+AGENT_ID=$(bash scripts/resolve-resume-path.sh --agent-id)          # solo, or the worktree id
+SESSION_RANGE=$( . "$HOME/.claude/scripts/hooks/agent-sop/sop-lib.sh" 2>/dev/null; b=$(sop_range_base "$(pwd)"); [ -n "$b" ] && printf '%s..HEAD' "$b" )
 ```
 
-If `$AGENT_ID` is `solo`, single-agent conventions apply. If it is any other value, parallel-session conventions apply — see `docs/guides/multi-agent-parallel-sessions.md`.
+`SESSION_RANGE` is empty on the default branch with no diverging commits; steps that partition by range are no-ops then. Collect or terminate every subagent this session spawned before Step 1; a close taken while one is still running omits its result.
 
-## Step 0a: Resolve session commit range
+## Step 1: Tests (code projects)
 
-Step 3b (secondary-tracker reconciliation) and Step 11 (hard-block reconciliation check) both partition commits by "what this session added to its branch, not yet on the default branch". Resolve the range once so both steps use it consistently.
+Code project by the shared rule: the context block header, or `bash ~/.claude/scripts/hooks/agent-sop/sop-project-type.sh`. Run the full suite. Continuing with a red suite requires all three: the failure filed as a `[Bug]` this session, named in the resume snapshot's Blockers, and nothing tagged `[Feature]` or `[Refactor]` shipping. Otherwise the suite is the gate (P70: the exit is declared, never self-judged). Non-code: skip.
 
-```bash
-resolve_session_commit_range() {
-  local default_branch
-  default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/@@')
-  if [ -z "$default_branch" ]; then
-    for candidate in origin/main origin/master origin/develop; do
-      if git rev-parse --verify "$candidate" >/dev/null 2>&1; then
-        default_branch="$candidate"
-        break
-      fi
-    done
-  fi
-  if [ -z "$default_branch" ]; then
-    printf ''
-    return
-  fi
+## Step 2: Review (one run serves the ship gate and this step)
 
-  local base head_sha
-  base=$(git merge-base "$default_branch" HEAD 2>/dev/null)
-  head_sha=$(git rev-parse HEAD 2>/dev/null)
-  if [ -z "$base" ] || [ "$base" = "$head_sha" ]; then
-    printf ''
-    return
-  fi
-  printf '%s..HEAD' "$base"
-}
+For each item shipping this session as `[Feature]` or `[Refactor]`, a reviewer turn fires on any trigger:
 
-SESSION_RANGE=$(resolve_session_commit_range)
-echo "Session commit range: ${SESSION_RANGE:-<empty — on default branch or no divergence>}"
-```
+- a. diff over threshold: `review_loc_threshold` (default 50) or `review_files_threshold` (default 3) in `~/.claude/agent-sop.config.json`, counted over `SESSION_RANGE` with `git diff --numstat`;
+- b. SOP self-modification: any change under `docs/sop/`, `docs/guides/sop-*`, `.claude/agents/`, `.claude/commands/`, `scripts/validate-*` fires the turn for every item shipping, whatever its tag or size;
+- c. a path listed in `agent-sop.config.json#review_triggers[]`, or a security path (`auth`, `login`, `session`, `token`, `password`, `credential`, `jwt`, `oauth`, `crypto`, `encrypt`, `signing`, `csrf`, `cors`, `xss`, `payment`, `billing`, `stripe`, `webhook`, `sanitize`, `escape_`, `raw_query`, matched against changed paths) which also routes to `security-reviewer`.
 
-When `SESSION_RANGE` is empty, Step 3b and Step 11's commit enumeration become no-ops — correct behaviour when an agent is committing directly to `main` or has made no commits yet. Guard every consumer with `if [ -n "$SESSION_RANGE" ]; then ... fi`.
+On a code project with ship-sop `trigger.mode: "auto"`, the gate run the Stop hook demands **is** this turn: launch the config's enabled agents with `isolation: "worktree"`, read-only, wait for every result, write `docs/reviews/<YYYYMMDD-HHMMSS>-ship-auto.md` with `Covers: <sha>` after any fix commit. Otherwise launch `code-reviewer` (or `security-reviewer` for trigger c) the same way and write `docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md` from the review template. Either way the session writes the artefact; agents return findings inline.
 
-## Step 1: Self-evaluate against Definition of Done
-
-Before updating any tracking files, check your work against the relevant Definition of Done rubric in CLAUDE.md:
-- **Bug fix:** Root cause identified? Fix applied to ALL instances? New test? Existing tests pass?
-- **Feature:** All ACs met? Tests added? Design system followed? Brand voice checked?
-- **Refactor:** Behaviour unchanged? No unrelated files? Dead code removed?
-- **Test writing:** Edge cases covered? Test names describe behaviour? Existing patterns followed?
-
-If any criterion is not met, fix it before proceeding. If it cannot be fixed in this session, note it in Step 4 (agent-memory.md Gotchas).
-
-## Step 1b: Required reviewer turn (Features & Refactors over threshold)
-
-Self-evaluation (Step 1 above) is the agent reviewing its own work. For any item transitioning to `[SHIPPED]` this session AND tagged `[Feature]` or `[Refactor]` AND whose session diff exceeds the threshold, invoke a sibling reviewer agent for an independent pass. The findings file is the gate — no file, no ship. No human sign-off; the reviewer is another agent, the substance assertion is automated.
-
-**Threshold** (configurable in `~/.claude/agent-sop.config.json`, fields `review_loc_threshold` default 50 and `review_files_threshold` default 3):
-
-```bash
-# Count changed lines and files in the session range (merge-base..working-tree).
-# Uses --numstat (machine-readable: "<added>\t<deleted>\t<path>" per file) and
-# sums both columns. --shortstat is human-prose and breaks for deletion-only
-# diffs where "1 deletion(-)" shifts columns.
-count_session_diff() {
-  local base="${1:-HEAD}"
-  local loc files
-  loc=$(git diff --numstat "$base" -- 2>/dev/null | awk '{a+=$1; d+=$2} END{print a+d+0}')
-  files=$(git diff --numstat "$base" -- 2>/dev/null | wc -l | tr -d ' ')
-  [ -z "$loc" ] && loc=0
-  echo "loc=$loc files=$files"
-}
-```
-
-Resolve the range once: prefer `SESSION_RANGE` from Step 0a; fall back to `HEAD` when on the default branch directly. Read thresholds from the config file or use defaults.
-
-**For each P-number that shipped in this session as `[Feature]` or `[Refactor]`** (detected by diff of `Backlog.md` between `HEAD` and working tree — any tag flip to `[SHIPPED - YYYY-MM-DD]`):
-
-0. **Trigger (b) first — SOP self-modification.** If this session changed any file the SOP itself executes or instructs — `docs/sop/**`, `docs/guides/sop-*.md`, `.claude/agents/**`, `.claude/commands/**`, `scripts/validate-*.sh` — then every item shipping this session takes the reviewer turn, **regardless of its tag and regardless of diff size**. Steps 1-3 below do not apply; go straight to invoking the reviewer.
-
-   Enforced, not advisory: `scripts/validate-state-transitions.sh` inspects the session's changed paths at Step 3c and blocks a ship that neither cites a resolving review artifact nor declares `test-only` / `dep-bump`. `docs-only` and `below-threshold` are **rejected** on these paths — trigger (b) exists precisely to override them, so accepting either would reinstate the loophole.
-
-   Tag-independent by design (P87). The tag exemption was the larger hole: the sessions that most needed review on these paths shipped as `[Bug]` or `[Refactor]` and were exempt, and the reviews that did run found a HIGH and two CRITICALs. Tag is a poor proxy for risk on the surface the agent itself executes.
-
-1. If session diff is below threshold, skip — the item is small enough that self-eval suffices.
-2. If `docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md` already exists AND passes substance assertion, skip (already reviewed).
-3. Otherwise, invoke a reviewer subagent:
-   - Default: `code-reviewer` (via the Agent tool with `subagent_type: code-reviewer`).
-   - **Security override:** if any file in the session diff matches the auth / crypto / payment / auth-token / input-sanitisation heuristic list below, use `security-reviewer` instead.
-
-    Security-trigger paths — narrowed to reduce false positives on generic prose (e.g. `git rev-parse --verify`, documentation using "sign" in "signature"). Match as case-insensitive substring against changed file paths only (not diff content), and prefer multi-token forms:
-
-    - Auth: `auth`, `login`, `session`, `access_token`, `refresh_token`, `password`, `credential`, `jwt`, `oauth`
-    - Crypto: `crypto`, `cipher`, `encrypt`, `decrypt`, `verify_token`, `verify_password`, `signing`, `signature`, `hash_password`
-    - Web security: `csrf`, `cors`, `xss`, `content-security-policy`
-    - Payments: `payment`, `billing`, `stripe`, `webhook`
-    - Input safety: `sanitize`, `sanitise`, `escape_html`, `escape_sql`, `raw_query`
-
-    Bare tokens like `sign`, `verify`, or `sql` are deliberately excluded — they match too broadly (prose, commit messages, unrelated utilities). Add project-specific trigger paths in `agent-sop.config.json` under a future `security_trigger_paths` field (not yet schemed; extend when a downstream project needs it).
-
-4. Prompt the reviewer: "Review diff in SESSION_RANGE for `P<n>: <title>`. Use the review template at `docs/templates/review-template.md`. Write the result to `docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md`. Include: Summary, Severity (enum), Findings (concrete file:line bullets) OR a reasoned 'No issues — <reason>' statement."
-5. **Wait for the reviewer to return before asserting.** Subagents run in the background by default from Claude Code 2.1.198, so the invocation in item 3 hands control back before the artifact is written — and `/code-review` behaves the same way from 2.1.218 for projects that wire the slash command into this gate. Collect the reviewer's result, then confirm the file exists on disk:
-   ```bash
-   test -f "docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md" || echo "Reviewer has not written the artifact yet — wait, do not treat as a missing review."
-   ```
-   A not-yet-written artifact and a never-run review look identical to the assertion in item 6. Asserting early turns a working gate into a spurious hard block, and the obvious way out of a spurious block is to write the artifact by hand — which defeats the gate. Wait.
-6. Assert substance:
-   ```bash
-   bash scripts/validate-state-transitions.sh --assert-review "docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md" || exit 1
-   ```
-7. The Batch Log entry (Step 6) for this P-number must reference the review path — the state-transition validator's Batch Log check (Step 3c) keeps this honest.
-
-**Hard-block conditions:**
-- Shipping a `[Feature]`/`[Refactor]` over threshold with no review artifact → fail.
-- Review artifact exists but fails substance assertion (stub / missing sections) → fail.
-- Review artifact's severity is `CRITICAL` or `HIGH` with no matching Gotcha entry in `docs/agent-memory/gotchas/` or Backlog follow-up → warning (not block), but agent should address or note.
-
-**Pre-migration projects:** if `docs/templates/review-template.md` or `docs/reviews/` is absent, skip with a non-blocking warning: "Run `/update-agent-sop` to sync the review template + directory conventions."
-
-Bug fixes, Iterations, and items under threshold are exempt — the self-eval rubric in Step 1 stands alone for them.
-
-**Declaring a skip (required for `[Feature]`/`[Refactor]`).** When the gate does not fire for a `[Feature]` or `[Refactor]` because the diff matched the skip list or fell under threshold, say so on that item's Batch Log line (Step 6) using the exact token:
+Then, on the Backlog entry, one line under the status line:
 
 ```
+review: docs/reviews/<file>.md            # the path must exist
 review skipped (P<n>): <docs-only|test-only|dep-bump|below-threshold>
 ```
 
-The reason must come from that enumerated set, and the declaration must name its own P-number. Both constraints are load-bearing: without the P-number, a skip declared for one item silently exempts another named on the same Batch Log line (batch lines routinely name several); without the trailing enumeration boundary, `dep-bumpkin` passes. Free text is not accepted.
-
-This is what keeps the prose and the validator agreeing. Before P66 was fixed, Step 1b's skip list said a docs-only `[Feature]` needs no reviewer turn while `scripts/validate-state-transitions.sh` blocked that same ship for citing no review, and the workaround people reached for was committing before running `/update-sop`, which evades the gate entirely. The validator now reads this token, so a declared skip passes and an undeclared one still blocks. Compliance check S7 reads the same token for the same reason.
-
-## Step 2: Run tests (code projects only)
-
-"Code project" is decided by one rule, the same one the hooks and `/ship` use: the context block header says `code project` or `non-code project`; without a block, `bash ~/.claude/scripts/hooks/agent-sop/sop-project-type.sh` prints it (an explicit `**Project type:**` line in CLAUDE.md wins, else the four checks in `docs/sop/compliance-checklist.md` § Code vs Non-Code Detection). If the script is not installed, apply those four checks by hand. Non-code: skip this step.
-
-If this is a code project with a test suite, run the full test suite now. **Fix any failures before proceeding.**
-
-A red suite at session end is a real situation, so there is an exit — but it is a declared one, not a judgement call. You may continue with the remaining steps **only when all three of these hold**:
-
-1. The failure is filed as a `[Bug]` Backlog item this session, naming the failing test.
-2. It is named in the resume snapshot's `## Blockers` (Step 7), so the next session sees it before it starts work.
-3. This session ships nothing tagged `[Feature]` or `[Refactor]`. A red suite and a shipped feature do not go together.
-
-If any of the three is false, the suite is the gate. Fix it or stop.
-
-This step previously let the agent continue whenever it judged the failures too slow to fix. That was an unbounded self-judged exit: the threshold was undefined, it left no artifact, and the gate therefore held exactly as long as the agent felt like holding it — while `docs/sop/claude-agent-sop.md` Section 6 step 1 stated the same gate unconditionally. Fixed under P70, prompted by [arXiv:2607.01456](https://arxiv.org/abs/2607.01456), which found this authoring pattern (the Rationalization Loophole) in 94% of 238 surveyed agent instruction files. An escape an agent can grant itself is not a gate.
-
-The prior wording is quoted verbatim in P70's `Backlog.md` entry and in git history, not here — check T1 greps this file for that phrase, so reproducing it in the explanation would fail the check on the reference implementation itself. That is not hypothetical: it did fail, and the P66-P73 review caught it.
-
-Skip this step for non-code projects (by the rule above), which is what documentation-only and markdown-only projects are.
-
-## Step 2a: Check for P-number collisions with the default branch
-
-When multiple agents run in parallel, two sessions can assign the same P-number to different items before either merges to main. This step detects the collision before `/update-sop` writes conflicting entries. Hard-blocks if found — resolution is manual, via the `renumber_p` helper in `docs/guides/multi-agent-parallel-sessions.md` Section 6.
+The skip must name its own P-number and use that enumerated set. Under trigger b only `test-only` and `dep-bump` are accepted. Assert substance:
 
 ```bash
-detect_pnumber_collisions() {
-  git fetch origin --quiet 2>/dev/null || {
-    echo "Warning: could not fetch origin. Skipping P-number collision check."
-    return 0
-  }
-
-  local default_branch
-  default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/@@')
-  if [ -z "$default_branch" ]; then
-    for candidate in origin/main origin/master origin/develop; do
-      if git rev-parse --verify "$candidate" >/dev/null 2>&1; then
-        default_branch="$candidate"; break
-      fi
-    done
-  fi
-  [ -z "$default_branch" ] && return 0
-
-  local branch_pnums main_pnums collisions=""
-  branch_pnums=$(grep -oE '^### P[0-9]+' Backlog.md 2>/dev/null | grep -oE '[0-9]+' | sort -u)
-  main_pnums=$(git show "${default_branch}:Backlog.md" 2>/dev/null | grep -oE '^### P[0-9]+' | grep -oE '[0-9]+' | sort -u)
-
-  for p in $branch_pnums; do
-    if printf '%s\n' "$main_pnums" | grep -qx "$p"; then
-      # Same P-number on both sides — check if content differs (titles only as a cheap heuristic)
-      local branch_title main_title
-      branch_title=$(awk -v p="### P${p}" '$0 ~ "^"p"($| )" {getline; getline; print; exit}' Backlog.md 2>/dev/null)
-      main_title=$(git show "${default_branch}:Backlog.md" 2>/dev/null | awk -v p="### P${p}" '$0 ~ "^"p"($| )" {getline; getline; print; exit}')
-      if [ "$branch_title" != "$main_title" ]; then
-        collisions="$collisions $p"
-      fi
-    fi
-  done
-
-  if [ -n "$collisions" ]; then
-    local max_main
-    max_main=$(printf '%s\n' "$main_pnums" | sort -n | tail -1)
-    echo ""
-    echo "BLOCK: P-number collision(s) detected with ${default_branch}"
-    echo "The following P-numbers exist on both this branch and ${default_branch} with different content:"
-    for p in $collisions; do echo "  - P${p}"; done
-    echo ""
-    echo "Next free P-number on ${default_branch}: P$((max_main + 1))"
-    echo ""
-    echo "Resolve with the renumber_p helper from docs/guides/multi-agent-parallel-sessions.md Section 6:"
-    local next=$((max_main + 1))
-    for p in $collisions; do echo "  renumber_p ${p} ${next}"; next=$((next + 1)); done
-    echo ""
-    echo "Then re-run /update-sop."
-    return 1
-  fi
-  return 0
-}
-
-detect_pnumber_collisions || exit 1
+bash scripts/validate-state-transitions.sh --assert-review docs/reviews/<file>.md || exit 1
 ```
 
-When no collisions are found, this step is silent. When a collision is found, stop — do not proceed to Step 3 until the agent has run the renumber helper and verified the result with `git diff`.
+A not-yet-written artefact and a never-run review look identical to the assertion; wait for the reviewer, do not write the file by hand.
 
-## Step 3: Update Backlog.md
+## Step 3: Backlog
 
-- Update status tags for any items worked on this session (e.g. `[OPEN]` to `[IN PROGRESS]`, or `[IN PROGRESS]` to `[SHIPPED - YYYY-MM-DD]`)
-- Append any new work items discovered during the session with `[OPEN]` status
-- Add to the Shipped Archive if items were shipped
-- Never delete items. Never remove items. Update in place.
-
-Then regenerate the derived priority block in CLAUDE.md, so the open-items view
-cannot drift from the Backlog it is derived from:
+Update status tags in place; add new items with acceptance criteria; never remove an entry. `[WON'T]` carries a `Reason:`; `[DEFERRED]` carries `**Reopens when:**`. Then:
 
 ```bash
-bash scripts/refresh-priorities.sh
+bash scripts/refresh-priorities.sh          # rewrites CLAUDE.md priority block from Backlog tags where the sentinels exist
+bash scripts/archive-backlog.sh             # closed items older than 90 days move to docs/backlog-archive.md; a no-op most sessions
 ```
 
-Opt-in and idempotent: a CLAUDE.md with no `<!-- priority-items:start -->` block
-is left untouched and the script exits 0. Never hand-edit between the sentinels
-— `Backlog.md` is the single source of truth for status (P92).
-
-## Step 3b: Reconcile project-specific secondary trackers
-
-Many projects maintain tracker files separate from `Backlog.md` — audit findings, security scans, compliance checklists, migration punch-lists — using the same `[OPEN]` / `[SHIPPED]` status tags. `/update-sop` must reconcile those files too, or shipped work silently leaves stale `[OPEN]` entries behind.
-
-**Detection (auto, no config):** scan every `.md` path listed in CLAUDE.md's Key Documents & Dispatch table. A file is a secondary tracker if any of its headings (`^##` or `^###`) carry a status tag — one of `[OPEN]`, `[IN PROGRESS]`, `[BLOCKED]`, `[DEFERRED]`, `[SHIPPED`, `[VERIFIED`, `[WON'T]`. Skip `Backlog.md` itself (covered by Step 3).
+## Step 4: Validators
 
 ```bash
-# One definition, shared with Step 11's hard block. Emits one bare path per line.
-bash scripts/detect-trackers.sh
+bash scripts/detect-trackers.sh             # secondary trackers (heading-level status tags); reconcile IDs named in SESSION_RANGE commits, [OPEN] -> [SHIPPED - date]
+bash scripts/validate-state-transitions.sh || exit 1                       # legal tag transitions; shipped Feature/Refactor cites a review or a skip
+bash scripts/validate-state-transitions.sh --check-drift || exit 1        # commits reference a P-number the resume declared, or a `## Scope Change` block says why not
+bash scripts/validate-state-transitions.sh --check-replication || exit 1  # pristine-replica files changed this session reached the installed copy
 ```
 
-Empty output means the project has no secondary trackers — a normal state, not an error. If the script is missing (pre-migration project), invoke it via the agent-sop upstream: `bash ~/Projects/agent-sop/scripts/detect-trackers.sh`.
+Drift resolution: add `## Scope Change` to the resume snapshot with the actual P-number and one line of reason, or fix the commit references. Replication resolution: run `/update-agent-sop`, or record `replication deferred (P<n>): <reason>` on the Backlog entry.
 
-**For each detected tracker:**
+## Step 5: Memory
 
-1. Identify this session's commits that reference a finding ID — e.g. `fix(audit): A1`, `fix(security): H-3`, `feat(migration): M5`. Use the `SESSION_RANGE` resolved in Step 0a — it naturally partitions commits per-agent via `git merge-base`, so parallel sessions on sibling branches never contaminate each other's reconciliation.
-   ```bash
-   if [ -n "$SESSION_RANGE" ]; then
-     git log "$SESSION_RANGE" --format='%s' | grep -oE '\b[A-Z]+-?[0-9]+\b' | sort -u
-   fi
-   ```
-2. For each referenced ID, locate the matching entry in the tracker and update its status tag: `[OPEN]` → `[SHIPPED - YYYY-MM-DD]`. Preserve the entry body. Never delete.
-3. Update the tracker's `Last updated:` header (if present) to today's date.
-4. Apply the same tag discipline as `Backlog.md`: status first, `[WON'T]` requires an inline reason, `[DEFERRED]` for intentional postponement.
+Substance gate first: a decision is "we chose X over Y because Z"; a gotcha is the surprise, the prior expectation, and the rule that prevents a repeat. If a slot is empty, it goes in the session record, not a file.
 
-Skip this step entirely when `SESSION_RANGE` is empty (agent is on the default branch directly with no diverging commits). Projects with no secondary trackers also see a no-op regardless of range.
-
-## Step 3c: Validate Backlog state transitions
-
-Step 2a catches P-number collisions. It does not catch illegal status-tag transitions — e.g. an entry jumping `[OPEN]` → `[SHIPPED - YYYY-MM-DD]` with no `[IN PROGRESS]` intermediate, a terminal-state revival, or a `[SHIPPED]` transition with no matching Batch Log entry. Step 3c runs the state-transition validator against the graph documented in Section 8 of the core SOP.
+Write `docs/agent-memory/decisions/YYYY-MM-DD_<agent-id>_<slug>.md` and `docs/agent-memory/gotchas/...` (title, `**Date:**`, `**Agent:**`, body; slug kebab-case, no underscores). Superseded entries get a trailing `*Superseded by:*` line, never deletion. Then:
 
 ```bash
-if [ -x scripts/validate-state-transitions.sh ]; then
-  bash scripts/validate-state-transitions.sh || exit 1
-else
-  echo "Warning: validate-state-transitions.sh not found. Upgrade with /update-agent-sop or run from upstream: bash ~/Projects/agent-sop/scripts/validate-state-transitions.sh"
-fi
+bash scripts/refresh-in-flight.sh           # regenerates the In-Flight block of docs/agent-memory.md from docs/agent-memory/in-flight/
 ```
 
-Hard-blocks on non-zero exit. Runs *after* Step 3 (and Step 3b) so the validator sees this session's finalised Backlog state. The validator compares `HEAD:Backlog.md` against working-tree `Backlog.md` — exactly the changes this `/update-sop` is about to commit. No-ops when there is no working-tree diff.
+Remove this session's line from `docs/agent-memory/in-flight/<agent-id>.md` if the work is done; leave it if it carries over.
 
-For a retrospective whole-session validation, invoke with the session's merge-base: `bash scripts/validate-state-transitions.sh --before $(git merge-base origin/main HEAD)`. Use this if earlier commits in the session predated the validator or bypassed it.
-
-Typical violations and fixes:
-- `<absent> → [SHIPPED]` or `[OPEN] → [SHIPPED]` — missing `[IN PROGRESS]` intermediate. Fix: add it in the same `Backlog.md` edit, or downgrade to `[OPEN]` and ship in a follow-up session.
-- `[VERIFIED] → [OPEN]` (or other terminal revival) — create a new P-number that references the original.
-- `[SHIPPED]` without Batch Log reference — append the P-number to the current phase's `docs/build-plans/phase-N.md` Batch Log.
-
-Soft warnings (`[BLOCKED]` ↔ `[DEFERRED]` with no decision file in the commit range) are non-blocking — re-classification is legitimate, the warning is a prompt to consider writing a decision entry.
-
-## Step 3d: Detect session drift
-
-`/restart-sop` reminds the agent of the declared in-flight P-number at session start. Mid-session context drift — auto-compaction, context resets, tangents into unrelated code — can leave the session committing work that the resume file never predicted. Step 3d compares P-numbers in this session's commit messages against P-numbers mentioned in `project_resume_<agent-id>.md` (the per-agent declaration of in-flight work). Hard-blocks if the session exceeds threshold AND no declared P-number is referenced AND no `## Scope Change` block exists in the resume.
+## Step 6: Resume snapshot and session record
 
 ```bash
-if [ -x scripts/validate-state-transitions.sh ]; then
-  bash scripts/validate-state-transitions.sh --check-drift || exit 1
-else
-  echo "Warning: validate-state-transitions.sh not found. Upgrade with /update-agent-sop."
-fi
+RESUME=$(bash scripts/resolve-resume-path.sh)    # write target; never hand-construct
 ```
 
-Thresholds reuse the P44 config fields (`review_loc_threshold` / `review_files_threshold`) — the same "too small to worry about" boundary applies. Below threshold: skip. First session (no prior resume file): skip.
+Overwrite `$RESUME` with: title, `Last updated:`, `## What was done` (commits or PRs), `## What is next` (file, function or P-number), `## Blockers`. Snapshot, not log. If an unsuffixed `project_resume.md` sits beside it, its first line becomes `**SUPERSEDED - YYYY-MM-DD.**`.
 
-Resolution paths when the gate fires:
-- **Deliberate scope change:** add a `## Scope Change` block to `project_resume_<agent-id>.md` with the actual P-number + one-line reason. The validator accepts this as explicit redirection — documents the drift rather than hiding it.
-- **Unintentional drift:** the commits are under the wrong P-number. Either amend the commit messages to reference the in-flight P-number, or split the work so the declared item ships this session and the drift item becomes its own Backlog entry next session.
-- **Stale resume:** if the declared item already shipped in an earlier session but the resume wasn't refreshed, update the resume (Step 7 would overwrite it anyway) and re-run.
-
-## Step 3e: Replication check (pristine-replica files reached the surface that executes them)
-
-Steps 3c and 3d both ask "was this change declared?". Neither asks "did this change reach the copy that runs?". A session can edit a pristine-replica file, pass every gate, merge, and leave the user-scope mirror untouched — the repo is then correct about intent and wrong about effect. Observed twice in opposite directions: Batch 0.27 left `~/.claude/commands/update-sop.md` eight days behind the shipped state while three trackers recorded it as shipped, and Batch 0.26 found a project-specific step that had leaked the other way.
-
-Step 3e intersects this session's changed files with the `baseline_shas` manifest in `agent-sop.config.json` — the same source `/update-agent-sop` reads, deliberately, so the two cannot drift apart. Sessions touching no manifest file are a silent no-op.
+Write `docs/recent-work/YYYY-MM-DD_<agent-id>_<slug>.md`: title, `**Date:**`, `**Agent:**`, `**Commits:**`, and two to four lines on what shipped with P-numbers. Its title is what the rollup and the context block show; keep it short. Then:
 
 ```bash
-if [ -x scripts/validate-state-transitions.sh ]; then
-  bash scripts/validate-state-transitions.sh --check-replication || exit 1
-else
-  echo "Warning: validate-state-transitions.sh not found. Upgrade with /update-agent-sop."
-fi
+bash scripts/refresh-rollup.sh              # docs/RECENT-WORK.md
 ```
 
-Resolution paths when the gate fires:
-- **Normal case:** run `/update-agent-sop` to replicate the change and refresh the baselines, then re-run.
-- **Deliberate divergence:** record it on this item's Batch Log line as `replication deferred (P<n>): <reason>`. Use this only when the consumer copy genuinely should not track the repo — the same enumerated-token discipline as Step 1b's skip declaration, so a later reader can tell a decision from an omission.
-
-## Step 4: Update docs/feature-map.md
-
-**Execution note:** Steps 4, 7, and 8 are independent writes (feature-map, per-agent resume snapshot, recent-work entry). Their tool calls have no inter-dependencies. When you reach Step 4, issue all three writes as a parallel tool-call batch in a single message rather than three sequential turns. Step 5 (decisions/gotchas) and Step 6 (build-plan Batch Log) depend on Step 1's self-eval output and stay sequential.
-
-**Skip predicate:** if `SESSION_RANGE` is empty OR `git diff HEAD -- Backlog.md` (the working-tree diff against `HEAD`) shows no added `[SHIPPED - YYYY-MM-DD]` tag this session, skip Step 4 entirely. Nothing shipped this session means feature-map has nothing to update.
+## Step 7: Commit
 
 ```bash
-if [ -z "$SESSION_RANGE" ] || ! git diff HEAD -- Backlog.md | grep -qE '^\+.*\[SHIPPED - [0-9]{4}-[0-9]{2}-[0-9]{2}\]'; then
-  echo "Step 4 skipped: no [SHIPPED] tags added this session."
-fi
+git add Backlog.md docs/ && git commit -m "docs: session end housekeeping — <what shipped>"
 ```
 
-When the gate does not skip:
-
-- Add any newly shipped items to the Shipped table
-- Move any roadmap items that shipped from the Roadmap section to the Shipped table
-- Update the `Last updated` date at the top
-
-## Step 5: Update agent-memory narrative + decisions/gotchas directories
-
-Decisions and gotchas live as one file per entry in `docs/agent-memory/decisions/` and `docs/agent-memory/gotchas/`. The narrative sections (In-Flight Work, Completed Work, Archived, Preferences) remain in `docs/agent-memory.md`.
-
-**Decision substance gate:** before writing any decision file, name the decision in one sentence using the form *"We chose X over Y because Z"*. If you cannot fill all three slots without padding, the session did not produce a real architectural decision — skip the decisions write for that candidate. Decisions about variable names, file layout, or task ordering are not decisions in the SOP sense; they are routine work. The gate exists because over-writing decisions floods `docs/agent-memory/decisions/` with low-signal entries that future sessions then have to skim past.
-
-The same gate applies to gotchas: name the surprise, the misleading prior expectation, and the rule that prevents a repeat. If any slot is empty, the discovery was probably routine debugging — note it in the recent-work entry instead.
-
-**For each architectural decision made this session that passes the gate above:**
-
-Create `docs/agent-memory/decisions/YYYY-MM-DD_${AGENT_ID}_<slug>.md`:
-
-```markdown
-# [Decision title]
-
-**Date:** YYYY-MM-DD
-**Agent:** <agent-id>
-
-[Decision body. Multi-paragraph is fine. Reference P-numbers where applicable.]
-```
-
-Slug convention: lowercase alphanumeric + hyphens, max ~50 chars, no underscores, no leading/trailing hyphen. Include P-number where relevant (e.g. `p43-rollup-derivation-idempotent`).
-
-**For each gotcha / data model invariant / named utility:**
-
-Create `docs/agent-memory/gotchas/YYYY-MM-DD_${AGENT_ID}_<slug>.md` with the same file format (swap "Decision" for "Gotcha" in the title).
-
-**Superseded entries:** do not delete. Edit the superseded file to add a trailing `*Superseded by:* <new-file-name>` line, then `git mv` the file into `archive/` subdirectory once the replacement lands.
-
-**Review the learnings folder** (skip if `docs/agent-memory/learnings/` does not exist):
-
-```bash
-ls -1 docs/agent-memory/learnings/*.md 2>/dev/null | grep -v '/README.md$' || true
-```
-
-For each file listed:
-- If it crystallised into a decision or gotcha this session: write the corresponding `decisions/` or `gotchas/` file as above, reference the learning slug in the body, then `git mv docs/agent-memory/learnings/<file> docs/agent-memory/learnings/archive/$(date +%Y-%m)/`.
-- If the surprise points at a real issue worth fixing: file a Backlog item (next available P-number), then archive the learning with the P-number in the commit message.
-- If it is no longer relevant or was already addressed: archive with a one-line trailing note explaining why.
-
-Never delete. Archive is `git mv` — same cost as decisions/gotchas archive, preserves the audit trail per CLAUDE.md Rule 2. The folder ends every `/update-sop` empty (or near-empty). Drift signal: files persisting across multiple `/update-sop` runs without action.
-
-**Narrative updates in `docs/agent-memory.md`:**
-
-- **In-Flight Work:** edit `docs/agent-memory/in-flight/${AGENT_ID}.md` only — one file per agent, never touch another agent's file. Format: one line per in-flight item, `(YYYY-MM-DD): description`, no leading dash. Remove lines whose work completed in this session; add lines for new work that did not finish. Then regenerate the agent-memory.md section:
-
-  ```bash
-  if [ -x scripts/refresh-in-flight.sh ]; then
-    bash scripts/refresh-in-flight.sh
-  elif [ -x ~/Projects/agent-sop/scripts/refresh-in-flight.sh ]; then
-    bash ~/Projects/agent-sop/scripts/refresh-in-flight.sh
-  fi
-  ```
-
-  The script is idempotent and conflict-free across parallel agents — each agent only writes its own per-agent file, and the rendered section is a pure function of the directory contents. See `docs/agent-memory/in-flight/README.md` for the file format and migration steps from flat lines.
-
-  **Pre-migration projects:** if `docs/agent-memory.md` lacks the `<!-- in-flight:start -->` sentinel block, fall back to the legacy flat-line edit ("update only your own line") and run `/update-agent-sop` to pick up the sentinel template at next sync.
-
-- **Completed Work:** append `- YYYY-MM-DD ${AGENT_ID}: description — commit [hash]` when work completes.
-- **Archived:** historical narrative content only (superseded decisions/gotchas move to their respective `archive/` subdirectories, not here).
-
-Skip this step if `docs/agent-memory.md` does not exist (optional for projects with fewer than 10 sessions).
-
-## Step 6: Update build plan Batch Log
-
-Find the current build plan file in `docs/build-plans/`. Append a new entry to the Batch Log:
-
-Format: `YYYY-MM-DD: Batch N.X — description. Commit [hash] or PR #N.`
-
-If no build plan exists for the current work, skip this step.
-
-## Step 7: Update project_resume_<agent-id>.md
-
-Resolve the write target with `scripts/resolve-resume-path.sh`. **Do not hand-construct this path and do not write into whichever memory directory the current session happens to own.** The directory is derived from the git repo root, so it is the same one `/restart-sop` and the drift validator read from.
-
-```bash
-# Project copy first; upstream checkout as fallback. The user-scope command is
-# updated by /update-agent-sop before the project-scope script is, so a project
-# that has not synced yet would otherwise hard-block here on a missing file.
-# Upstream location comes from agent-sop.config.json rather than a hardcoded
-# path, so this works on any machine.
-resolve_resolver() {
-  [ -f scripts/resolve-resume-path.sh ] && { printf 'scripts/resolve-resume-path.sh'; return 0; }
-  local upstream
-  upstream=$(sed -n 's/.*"local_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
-    agent-sop.config.json "$HOME/.claude/agent-sop.config.json" 2>/dev/null | head -1)
-  [ -n "$upstream" ] && [ -f "$upstream/scripts/resolve-resume-path.sh" ] && {
-    printf '%s' "$upstream/scripts/resolve-resume-path.sh"; return 0; }
-  return 1
-}
-
-RESOLVER=$(resolve_resolver) || {
-  echo "BLOCK: resolve-resume-path.sh not found in this project or upstream."
-  echo "  Run /update-agent-sop to sync it. Do not hand-construct the path — that is the P96 defect."
-  exit 1
-}
-[ "$RESOLVER" = "scripts/resolve-resume-path.sh" ] || echo "Note: using upstream resolver ($RESOLVER). Run /update-agent-sop to install it locally."
-
-RESUME=$(bash "$RESOLVER") || exit 1
-mkdir -p "$(dirname "$RESUME")"
-echo "Resume target: $RESUME"
-```
-
-Overwrite `$RESUME` with a fresh snapshot. Per-agent file — do not edit other agents' resume files.
-
-**Why this is resolved rather than written by hand (P96).** This step used to name `~/.claude/projects/[project-hash]/memory/project_resume_${AGENT_ID}.md` with no derivation for `[project-hash]`, while `/restart-sop` and the drift validator both derived it from the repo root. An agent with no rule writes into the directory the *session* owns, which for a session launched outside the project is the harness's catch-all bucket. Two failures followed:
-
-- **The write and the read landed in different directories.** The snapshot went somewhere Step 3d never looks, so drift detection degraded to `no project_resume file found — skipping` and silently no-opped.
-- **The catch-all bucket holds several projects' resume files, and every single-worktree project resolves to agent-id `solo`.** The legacy fallback below would then select another project's file. Overwriting it destroys unrelated state.
-
-If the resolver exits 2, the repo root is the home directory and no project-scoped directory can be derived. Stop and re-run the session from inside the project repo. Do not write into the shared directory.
-
-```
-# Session Resume — [Project Name] — Agent <agent-id>
-
-Last updated: [today's date]
-
-## What was done
-[2-4 lines summarising this session's work. Include commit hashes or PR numbers.]
-
-## What is next
-[Specific next action: file, function, or Backlog item.]
-
-## Blockers
-[(none) or specific blocker with context]
-```
-
-This file is a snapshot, not a log. Overwrite the entire content.
-
-**Legacy fallback is read-only.** Writes always go to the per-agent filename the resolver returns. The unsuffixed `project_resume.md` stays readable — `/restart-sop` and the drift validator fall back to it when no per-agent file exists yet — but nothing writes to it. A write-side fallback is what allowed one project's session to select and overwrite another project's file.
-
-When the resolved directory still holds a legacy unsuffixed `project_resume.md` after this step has written the per-agent file, mark the legacy file superseded rather than deleting it (Section 0 never-delete-without-a-trace):
-
-```
-**SUPERSEDED - YYYY-MM-DD.** Live resume is `project_resume_<agent-id>.md` in this
-directory. Kept for history only; do not treat as current state.
-```
-
-## Step 8: Write session entry to docs/recent-work/
-
-Create `docs/recent-work/YYYY-MM-DD_${AGENT_ID}_<slug>.md`:
-
-```markdown
-# [Session summary title]
-
-**Date:** YYYY-MM-DD
-**Agent:** <agent-id>
-**Commits:** [hash, hash, ...]
-
-[2-4 line summary of what shipped. Cross-reference Backlog P-numbers and build-plan batch numbers.]
-```
-
-Slug convention: same as Step 5 (lowercase alphanumeric + hyphens, no underscores, max ~50 chars). Include P-number and batch number where relevant (e.g. `p43-batch-1-2-directory-structure`).
-
-**Do not edit CLAUDE.md `## Recent Work (rollup)` by hand.** Step 8b regenerates that section from this directory.
-
-## Step 8b: Refresh CLAUDE.md Recent Work rollup
-
-The `## Recent Work (rollup)` section in CLAUDE.md is a derived summary of `docs/recent-work/*.md`. Regenerate it between the sentinel markers on every `/update-sop` run. The refresh is idempotent — two agents producing identical directory contents produce identical output, so the rollup converges regardless of merge order.
-
-**Skip predicate:** if Step 8 wrote no new file (no working-tree diff under `docs/recent-work/`), the rollup inputs are unchanged and re-running the script just rewrites the same bytes. Skip when:
-
-```bash
-if [ -z "$(git status --porcelain docs/recent-work/ 2>/dev/null)" ]; then
-  echo "Step 8b skipped: no new recent-work entry this session."
-fi
-```
-
-When the gate does not skip:
-
-```bash
-bash scripts/refresh-rollup.sh
-```
-
-The script lives at `scripts/refresh-rollup.sh` (installed by `setup.sh`; present in any project that ran `/update-agent-sop` after 2026-04-19). If the script is missing (pre-migration project), invoke it via the agent-sop upstream:
-
-```bash
-bash ~/Projects/agent-sop/scripts/refresh-rollup.sh
-```
-
-The script resolves its own target — `docs/RECENT-WORK.md` when that file carries the sentinels, otherwise `CLAUDE.md` — and prints the path it wrote. Verify against that path: `grep -A 20 'recent-work-rollup:start' <printed-path>`
-
-**Why a script, not inline:** the prior inline snippet used `local var=$(cmd)` inside a compound output group, which leaks assignment lines to stdout under zsh (macOS default). A script with an explicit `#!/usr/bin/env bash` shebang forces the right interpreter regardless of the caller's shell. See `docs/agent-memory/decisions/2026-04-19_solo_rollup-refresh-snippet-zsh-bug.md`.
-
-## Step 9: Update MEMORY.md index
-
-If any new memory files were created during this session, add them to the memory index. Resolve its directory the same way Step 7 does — the index lives beside the resume file and has the same collision exposure:
-
-```bash
-MEMORY_INDEX="$(bash scripts/resolve-resume-path.sh --dir)/MEMORY.md" || exit 1
-```
-
-Each entry should be one line under ~150 characters. Do not hand-construct `~/.claude/projects/[project-hash]/memory/MEMORY.md`; an unresolved placeholder here lands the index in whichever directory the session owns, which is the P96 defect applied to a different file.
-
-## Step 10: Commit
-
-Stage all modified docs/ files along with CLAUDE.md, Backlog.md, and any other changed files. Commit with a descriptive message:
-
-```
-docs: session end housekeeping — [brief description of what was updated]
-```
-
-## Step 10b: Prune merged local branches
-
-Local branches accumulate every session — `gh pr merge --delete-branch` only removes
-the *remote* copy, leaving the local one behind forever. After a few weeks the
-output of `git branch` becomes unreadable and `git fetch` slows down on the
-prune walk.
-
-Delete every local branch whose upstream remote was deleted:
-
-```bash
-git fetch --prune --quiet
-git branch -vv | awk '/: gone\]/ {print $1}' | grep -v "^$(git branch --show-current)$" | xargs -r git branch -D
-```
-
-Notes:
-- `[gone]` in `git branch -vv` means the branch tracked an upstream that has
-  since been deleted — that is the squash-merge-then-auto-delete-branch
-  signal. Safe to nuke locally.
-- Excluded: the current branch (can't delete what's checked out) and any
-  branch with no upstream (local-only experiments).
-- Does NOT catch worktree-isolated branches with stale local copies in the
-  parent repo; those need manual review (rare).
-
-If the pruning trips a hook denial, defer to the user — branch nukes are
-reversible via `git fsck --lost-found` but warrant explicit consent
-when the harness flags them.
-
-## Step 11: Report completion
-
-After completing all steps, report:
-- Which files were updated (including any secondary trackers touched in Step 3b)
-- Definition of Done self-evaluation result (all criteria met, or which gaps remain)
-- What the next session should pick up (from project_resume.md)
-- Whether any items need human attention (open questions, blockers, inconsistencies)
-
-**Reconciliation check (hard block):** before finalising Step 10 (commit), verify that every finding ID referenced in this session's commit messages is now marked `[SHIPPED - YYYY-MM-DD]` (or explicitly `[DEFERRED]` / `[BLOCKED]`) in its tracker. Any ID still `[OPEN]` means Step 3b missed it — return to Step 3b and reconcile before committing. Do not proceed to Step 10 with unreconciled IDs.
-
-Use `SESSION_RANGE` from Step 0a so the check partitions per-agent in parallel sessions — sibling agents' finding IDs in other branches do not count as this agent's drift.
-
-```bash
-if [ -n "$SESSION_RANGE" ]; then
-  IDS=$(git log "$SESSION_RANGE" --format='%s' | grep -oE '\b[A-Z]+-?[0-9]+\b' | sort -u)
-  # Read the tracker list line-by-line rather than iterating unquoted command
-  # substitution: `for t in $(...)` word-splits on IFS, so a tracker path
-  # containing a space is torn into fragments that match no file, grep fails on
-  # each, and the block silently never fires. Same fail-open class this gate
-  # exists to catch.
-  TRACKERS=$(bash scripts/detect-trackers.sh)  # same detection as Step 3b
-  for id in $IDS; do
-    while IFS= read -r tracker; do
-      [ -n "$tracker" ] || continue
-      if grep -qE "^##+ .*${id}.*\[OPEN\]" "$tracker"; then
-        echo "BLOCK: ${id} still [OPEN] in ${tracker}"
-        exit 1
-      fi
-    done <<EOF
-$TRACKERS
-EOF
-  done
-fi
-```
-
-When `SESSION_RANGE` is empty, the check is a no-op — correct for agents on the default branch directly.
+Name the files; never `git add -A` after a review. Report in one paragraph: what shipped, which validators ran, what remains.
