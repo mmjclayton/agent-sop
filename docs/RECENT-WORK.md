@@ -7,8 +7,9 @@ the sentinels.
 Moved out of `CLAUDE.md` on 2026-08-03 so it stops consuming context every session.
 
 <!-- recent-work-rollup:start -->
-*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-09-04.*
+*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-09-05.*
 
+- 2026-09-05 `solo`: P103 — Stop hook fires only on code projects
 - 2026-09-04 `solo`: P97 user-scope hooks automation + P98 digest review (10 Aug, 31 Aug)
 - 2026-09-04 `solo`: P102 — ship-sop gates fire only on code projects; one project-type rule; SOP commands stop outside SOP repos
 - 2026-08-07 `solo`: P96 — The write step never resolved the path the read steps derived

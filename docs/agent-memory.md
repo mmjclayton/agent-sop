@@ -29,7 +29,7 @@ See CLAUDE.md Key Documents table.
 Cleared 2026-08-03. The previous line tracked branch `fix/p66-p73-validator-and-gate-coherence` as unpushed; it merged as `4621b1b` via PR #11 on 2026-07-26, but the session that followed ended without `/update-sop`, so the line's own clear-on-merge instruction never ran and it read as in-flight for eight days. See Batch 0.29.
 
 <!-- in-flight:start -->
-*Auto-generated from `docs/agent-memory/in-flight/`. Last refreshed: 2026-09-04.*
+*Auto-generated from `docs/agent-memory/in-flight/`. Last refreshed: 2026-09-05.*
 
 *(none)*
 <!-- in-flight:end -->
