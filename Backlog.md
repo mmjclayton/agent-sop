@@ -2058,6 +2058,26 @@ First live run of `sop-session-context.sh` (the operator's first prompt after `i
 
 ---
 
+### P104 — Hook fixes from the token review: no Backlog filing in the gate demand, context block prints only non-default facts, superseded resume never served, three default gates
+`[IN PROGRESS] [Iteration]`
+
+Operator: "fix all of this" (2026-09-05), on the five-agent token review recorded in the memory note `project_sop_token_review_2026-09-05`. The hook-level items:
+
+- `sop_shipsop_gate` demand text: launch each agent with `isolation: "worktree"`, read-only; wait for every result; write the report after any fix commit; CRITICAL/HIGH at the top of the reply; **file nothing to Backlog.md** (the old text said the opposite of the operator's standing rule).
+- `sop-session-context.sh`: in-flight, in-progress, drift, dirty-tracker, ship-gate, worktree and sync lines print only when they are not the default; the closing line is one sentence. The audit measured roughly 700 of 1,322 bytes as "(none)" lines on a clean repo.
+- `resolve-resume-path.sh --read`: a legacy `project_resume.md` whose first line says SUPERSEDED is never served (the audit saw a 3,503-byte superseded snapshot injected when the agent-id had no per-agent file).
+- This repo's `ship-sop.config.json`: three default gates (security, silent-failure, code); compliance, pr-test-analyzer, diagram-builder disabled; dead keys removed (ship-sop P27 carries the template).
+
+**Acceptance criteria:**
+- Gate demand names the isolation flag and forbids Backlog filing - DONE (fixture)
+- Clean code repo prints none of the default-state lines; drift, dirty, gate and sibling lines still print when true - DONE (fixtures)
+- Superseded legacy resume not served - DONE (fixture)
+- Installed copies refreshed
+
+**Source:** operator instruction, 2026-09-05.
+
+---
+
 ### P103 — Stop hook's session-record and tracker demands fire only on code projects
 `[SHIPPED - 2026-09-05] [Iteration]`
 

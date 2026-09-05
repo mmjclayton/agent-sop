@@ -171,6 +171,12 @@ if [ -f "$PER_AGENT" ]; then
 fi
 
 if [ -f "$LEGACY" ]; then
+    # A legacy file that announces itself superseded is not a resume: serving
+    # it put a stale snapshot in front of a session whose agent-id had no
+    # per-agent file yet (found by the 2026-09-05 cost audit).
+    if head -1 "$LEGACY" 2>/dev/null | grep -qi 'SUPERSEDED'; then
+        exit 1
+    fi
     if [ "$AGENT_ID" != "solo" ]; then
         echo "resolve-resume-path: reading legacy unsuffixed resume file ($LEGACY). Run \`/migrate-to-multi-agent\` to move to per-agent format." >&2
     fi

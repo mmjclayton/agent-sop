@@ -119,8 +119,6 @@ if [ -f "$ROOT/ship-sop.config.json" ]; then
         GATE=$(sop_shipsop_gate "$ROOT")
         if [ -n "$GATE" ]; then
             GATE_LINE="outstanding — $(printf '%s\n' "$GATE" | head -1) The Stop hook will demand the report at your next stop; the push gate refuses until it exists."
-        else
-            GATE_LINE="none outstanding (covered, no code lines, below threshold, skipped branch, or mode not auto)"
         fi
     fi
 fi
@@ -170,19 +168,21 @@ LEGACY=""
 printf -- '--- Agent SOP context: %s (branch %s, agent-id %s, %s project) ---\n' "$NAME" "${BRANCH:-detached}" "$AGENT" "$PTYPE"
 [ -n "$PTYPE_NOTE" ] && printf 'Project type: %s — %s\n' "$PTYPE" "$PTYPE_NOTE"
 printf 'Resume snapshot: %s\n' "$RESUME_TEXT"
-printf 'In-flight (%s):\n%s\n' "$AGENT" "$(printf '%s\n' "$INFLIGHT" | sed 's/^/  /')"
+# Facts print only when they are not the default (P104): a block of "(none)"
+# lines is read by nobody, and the Stop hook enforces drift regardless.
+[ "$INFLIGHT" != "(none)" ] && printf 'In-flight (%s):\n%s\n' "$AGENT" "$(printf '%s\n' "$INFLIGHT" | sed 's/^/  /')"
 printf 'Recent sessions:\n%s\n' "$(printf '%s\n' "$RECENT" | sed 's/^/  /')"
-printf 'In progress in Backlog.md:\n%s\n' "$INPROG"
-printf 'Drift: %s\n' "$DRIFT_LINE"
-printf 'Uncommitted tracker files: %s\n' "$DIRTY_LINE"
+[ "$INPROG" != "  (none tagged [IN PROGRESS])" ] && printf 'In progress in Backlog.md:\n%s\n' "$INPROG"
+[ -n "$DRIFT" ] && printf 'Drift: %s\n' "$DRIFT_LINE"
+[ -n "$DIRTY" ] && printf 'Uncommitted tracker files: %s\n' "$DIRTY_LINE"
 [ -n "$GATE_LINE" ] && printf 'Ship gate: %s\n' "$GATE_LINE"
-printf 'Worktrees: %s\n' "$SIBLINGS"
-[ -n "$SYNC" ] && printf 'SOP sync: %s\n' "$SYNC"
+[ "$SIBLINGS" != "(single worktree)" ] && printf 'Worktrees: %s\n' "$SIBLINGS"
+case "$SYNC" in *stale*) printf 'SOP sync: %s\n' "$SYNC" ;; esac
 [ -n "$LEGACY" ] && printf '%s\n' "$LEGACY"
 if [ "$PTYPE" = "code" ]; then
-    printf 'This replaces /restart-sop Steps 0-4. Read the Backlog.md item for the task before starting it. Session-end is enforced by the Stop hook: when you stop with unrecorded commits or uncommitted trackers it tells you exactly what is missing.\n'
+    printf 'This replaces /restart-sop Steps 0-4. Read the Backlog.md item for the task before starting it.\n'
 else
-    printf 'This replaces /restart-sop Steps 0-4. Read the Backlog.md item for the task before starting it. Non-code project: the Stop hook enforces nothing here (P103); /update-sop is the deliberate close, and the drift facts above are for you to act on.\n'
+    printf 'This replaces /restart-sop Steps 0-4. Read the Backlog.md item for the task before starting it. Non-code project: the Stop hook enforces nothing here; /update-sop is the deliberate close.\n'
 fi
 printf -- '--- end Agent SOP context ---\n'
 exit 0

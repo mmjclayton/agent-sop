@@ -286,7 +286,14 @@ SESSION_ID=ctx-plainsop run_hook "$CTX" "$PLAINSOP" ''
 if grep -Eq "^Drift: [0-9]+ commit\(s\) since the last session record" "$HOOK_OUT" && grep -q "^Uncommitted tracker files: Backlog.md" "$HOOK_OUT" && grep -q "Non-code project: the Stop hook enforces nothing here" "$HOOK_OUT"; then ok "ctx-non-code-shows-drift-says-not-enforced"; else bad "ctx-non-code-shows-drift-says-not-enforced" "out='$(grep -E '^(Drift|Uncommitted|This replaces|Non-code)' "$HOOK_OUT")'"; fi
 git -C "$PLAINSOP" checkout -q -- Backlog.md
 SESSION_ID=ctx-sopcode run_hook "$CTX" "$SOP" ''
-if grep -q "Session-end is enforced by the Stop hook" "$HOOK_OUT"; then ok "ctx-code-says-enforced"; else bad "ctx-code-says-enforced" "out='$(tail -2 "$HOOK_OUT")'"; fi
+if grep -q "Read the Backlog.md item for the task" "$HOOK_OUT" && ! grep -q "enforces nothing here" "$HOOK_OUT"; then ok "ctx-code-closing-line"; else bad "ctx-code-closing-line" "out='$(tail -2 "$HOOK_OUT")'"; fi
+# A legacy project_resume.md that says SUPERSEDED on its first line is not
+# served as the resume snapshot (cost audit, 2026-09-05).
+SUPER="$TMP/super"; make_repo "$SUPER" with-code
+SUPER_DIR=$(dirname "$(bash "$SUPER/scripts/resolve-resume-path.sh" --root "$(git -C "$SUPER" rev-parse --show-toplevel)" --home "$HOME")")
+mkdir -p "$SUPER_DIR" && printf '**SUPERSEDED - 2026-08-07.** Use the per-agent file.\n\n## What is next\n- stale\n' > "$SUPER_DIR/project_resume.md"
+SESSION_ID=ctx-super run_hook "$CTX" "$SUPER" ''
+if grep -q "^Resume snapshot: (none found" "$HOOK_OUT" && ! grep -q "SUPERSEDED" "$HOOK_OUT"; then ok "ctx-superseded-legacy-resume-not-served"; else bad "ctx-superseded-legacy-resume-not-served" "out='$(grep -A1 'Resume snapshot' "$HOOK_OUT" | head -2)'"; fi
 
 # The notice's own "carry on" instruction — add a line to the in-flight file —
 # must not re-fire it (seen live on the first P103 run); any other tracker
@@ -383,6 +390,10 @@ commit_record "$RENAME" "recorded"
 NUMSTAT=$(git -C "$RENAME" diff --numstat origin/main..HEAD | grep -c '=>')
 run_hook "$STOP" "$RENAME" ''
 if [ "$NUMSTAT" -ge 1 ] && [ "$HOOK_EXIT" = 2 ] && grep -q "@security-reviewer" "$HOOK_ERR"; then ok "stop-rename-doc-to-code-counts"; else bad "stop-rename-doc-to-code-counts" "renames=$NUMSTAT exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+# The gate demand tells the session how to run the agents and never to file
+# findings to Backlog.md (operator rule; the old text said the opposite).
+run_hook "$PUSH" "$RENAME" "$(push_json 'git push -u origin feat/rename')"
+if [ "$HOOK_EXIT" = 2 ] && grep -q 'isolation: "worktree"' "$HOOK_ERR" && grep -q "file nothing to Backlog.md" "$HOOK_ERR" && ! grep -q "filed to Backlog" "$HOOK_ERR"; then ok "push-gate-demand-no-backlog-filing"; else bad "push-gate-demand-no-backlog-filing" "exit $HOOK_EXIT stderr='$(grep -i 'backlog\|isolation' "$HOOK_ERR")'"; fi
 
 CONTRA="$TMP/contra"; make_repo "$CONTRA" with-code
 cp "$SHIP/ship-sop.config.json" "$CONTRA/"
@@ -423,7 +434,7 @@ printf '# report\n\nCovers: %s\n' "$(head_of "$LOOSE")" > "$LOOSE/docs/reviews/2
 run_hook "$PUSH" "$LOOSE" "$(push_json 'git push -u origin feat/covered')"
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-covered-survives-docs-commit-skip-docs-false"; else bad "push-covered-survives-docs-commit-skip-docs-false" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
 SESSION_ID=ctx-loose run_hook "$CTX" "$LOOSE" ''
-if grep -q "^Ship gate: none outstanding (covered, no code lines" "$HOOK_OUT"; then ok "ctx-none-outstanding-reason-text"; else bad "ctx-none-outstanding-reason-text" "out='$(grep 'Ship gate' "$HOOK_OUT")'"; fi
+if ! grep -q "^Ship gate:" "$HOOK_OUT"; then ok "ctx-covered-gate-line-absent"; else bad "ctx-covered-gate-line-absent" "out='$(grep 'Ship gate' "$HOOK_OUT")'"; fi
 
 # ── Push gate ─────────────────────────────────────────────────────────────────
 
@@ -513,7 +524,13 @@ if grep -qi "sibling" "$HOOK_OUT" && grep -q "sop-sibling" "$HOOK_OUT"; then ok 
 # a config and a report covering its current HEAD; one more code commit leaves
 # the gate outstanding. SOP has no config, so no line at all.
 SESSION_ID=ctx-gate-1 run_hook "$CTX" "$GATED" ''
-if grep -q "^Ship gate: none outstanding" "$HOOK_OUT"; then ok "ctx-ship-gate-covered-shown"; else bad "ctx-ship-gate-covered-shown" "out='$(grep -i 'ship gate' "$HOOK_OUT")'"; fi
+if ! grep -q "^Ship gate:" "$HOOK_OUT"; then ok "ctx-covered-gate-line-absent-on-gated"; else bad "ctx-covered-gate-line-absent-on-gated" "out='$(grep 'Ship gate' "$HOOK_OUT")'"; fi
+# A clean code repo (record covers HEAD, nothing dirty, one worktree, no
+# config) prints none of the default-state lines (P104).
+CLEAN="$TMP/clean"; make_repo "$CLEAN" with-code
+commit_record "$CLEAN" "first-session"
+SESSION_ID=ctx-clean run_hook "$CTX" "$CLEAN" ''
+if grep -q "Agent SOP context" "$HOOK_OUT" && ! grep -qE "^(Ship gate|Drift|Uncommitted tracker|Worktrees|In-flight|In progress|SOP sync)" "$HOOK_OUT"; then ok "ctx-clean-repo-prints-no-default-facts"; else bad "ctx-clean-repo-prints-no-default-facts" "out='$(grep -E '^(Ship gate|Drift|Uncommitted|Worktrees|In-flight|In progress|SOP sync)' "$HOOK_OUT")'"; fi
 commit_code "$GATED" "feat: uncovered again"
 SESSION_ID=ctx-gate-2 run_hook "$CTX" "$GATED" ''
 if grep -q "^Ship gate: outstanding" "$HOOK_OUT" && grep -q "code lines" "$HOOK_OUT"; then ok "ctx-ship-gate-outstanding-shown"; else bad "ctx-ship-gate-outstanding-shown" "out='$(grep -i 'ship gate' "$HOOK_OUT")'"; fi

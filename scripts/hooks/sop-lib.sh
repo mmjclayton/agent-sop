@@ -364,5 +364,5 @@ sop_shipsop_gate() {
         "$lines" "${branch:-HEAD}" "$(sop_default_branch "$root")" "$(printf '%s' "$base" | cut -c1-7)" "$(printf '%s' "$head" | cut -c1-7)"
     printf '  Run these agents against that range, collect every result (they run in the background), then write %s containing the line `Covers: %s`:\n' "$report" "$head"
     printf '%s\n' "$agents"
-    printf '  Auto-mode rules: do not halt on findings; CRITICAL goes at the top of your next reply with file:line; HIGH/MEDIUM are filed to Backlog.md if it exists; LOW stays in the report.\n'
+    printf '  Rules: launch each agent with isolation: "worktree", read-only; wait for every result; write the report after any fix commit so it covers HEAD; CRITICAL/HIGH at the top of your next reply with file:line; file nothing to Backlog.md.\n'
 }
