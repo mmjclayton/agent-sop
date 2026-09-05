@@ -2058,6 +2058,26 @@ First live run of `sop-session-context.sh` (the operator's first prompt after `i
 
 ---
 
+### P103 — Stop hook's session-record and tracker demands fire only on code projects
+`[SHIPPED - 2026-09-05] [Iteration]`
+
+review: docs/reviews/2026-09-05_solo_P103.md (six gate agents against a detached worktree; one CRITICAL — an invalid byte in CLAUDE.md blanked the whole parse under BSD grep — one HIGH, two MEDIUM, two LOW, all fixed with discriminating fixtures; gate report `docs/reviews/20260905-100415-ship-auto.md` covers 650bb14)
+
+Follow-on to P102, operator decision 2026-09-04: the drift half of `sop-stop-drift.sh` (commits with no `docs/recent-work/` entry, uncommitted tracker files) is code-only too, like the ship gate. A prose project with SOP scaffolding (Meaningful, Resonate, SyncHive) gets no Stop notice at all; `/update-sop` stays the deliberate close there. The context block still prints the drift facts on every SOP project — it is read once and is not a nag — and its closing line says whether the Stop hook enforces anything here.
+
+**Acceptance criteria:**
+- Non-code SOP repo: unrecorded commit and dirty tracker both leave the Stop hook silent - DONE (also all three facts at once, with no throttle marker written)
+- Code repo: unchanged behaviour - DONE (drift fixtures moved to a code repo; a declared-code manifest-less repo still gets the notice)
+- Context block on a non-code repo still shows drift facts and says session-end is not enforced - DONE; a contradicted `non-code` declaration or a dangling CLAUDE.md is named in a `Project type:` line, config or not
+- Fixtures discriminate against the P102 library - DONE (85 cases; 3 fail against P102's library, 6 more against 4f7f153)
+- Installed copy refreshed - DONE
+- Found by review and fixed here: the library runs in the C locale (one invalid byte in CLAUDE.md read as "no declaration, no signals" under BSD grep and silenced every hook); in-flight edits no longer re-fire the notice
+- Incident, second time: a reviewer agent (pr-test-analyzer) wrote fixture stubs over the live tree despite the read-only instruction and a worktree path in its prompt; caught by the Backlog edit's anchor check, restored with `git checkout --`, nothing committed. Gotcha updated: the Agent tool's `isolation: "worktree"` is the control, a path in the prompt is not
+
+**Source:** operator reply to the P102 report, 2026-09-04.
+
+---
+
 ### P102 — ship-sop gates fire only on code projects; SOP commands stop early outside SOP repos
 `[SHIPPED - 2026-09-04] [Feature]`
 

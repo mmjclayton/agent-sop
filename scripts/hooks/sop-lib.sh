@@ -18,6 +18,14 @@
 
 set -u
 
+# Byte semantics for every grep/sed/awk below. In a UTF-8 locale BSD grep
+# aborts the whole file on one invalid byte ("Invalid multibyte sequence"),
+# and with stderr discarded that read as "no declaration, no signals": a
+# pasted smart quote in CLAUDE.md silently turned a code project into
+# non-code and switched off every hook (review finding, CRITICAL). All the
+# patterns here are ASCII, so the C locale loses nothing.
+export LC_ALL=C
+
 SOP_INPUT=""
 
 sop_have_jq() { command -v jq >/dev/null 2>&1; }
@@ -103,6 +111,16 @@ sop_repo_key() {
 
 # sop_claude_prose <file> — the file with fenced code blocks removed.
 sop_claude_prose() { awk '/^[[:space:]]*```/{f=!f; next} !f' "$1" 2>/dev/null; }
+
+# sop_claude_md_state <root> — "ok", "missing", or "dangling" (a symlink whose
+# target is gone: reads as missing, and the context block says so, since the
+# fall-through to non-code would otherwise be silent — review finding).
+sop_claude_md_state() {
+    local claude="$1/CLAUDE.md"
+    if [ -f "$claude" ]; then printf 'ok'
+    elif [ -L "$claude" ]; then printf 'dangling'
+    else printf 'missing'; fi
+}
 
 # sop_declared_project_type <root> — "code", "non-code", or empty.
 sop_declared_project_type() {

@@ -45,6 +45,16 @@ AGENT=$(sop_agent_id "$ROOT")
 PTYPE=$(sop_project_type "$ROOT")
 DECLARED=$(sop_declared_project_type "$ROOT")
 SIGNALS=$(sop_code_signals "$ROOT" | paste -sd, - | sed 's/,/, /g')
+# Anything that makes the type answer suspect is said once, whether or not
+# ship-sop is configured: the Stop hook's silence rides on this answer too
+# (P103), so a contradicted declaration or an unreadable CLAUDE.md must not
+# hide behind the gate line (review finding, HIGH).
+PTYPE_NOTE=""
+if [ "$DECLARED" = "non-code" ] && [ -n "$SIGNALS" ]; then
+    PTYPE_NOTE="CLAUDE.md declares non-code, but $SIGNALS say code; the declaration wins: the reviewer gate is off and the Stop hook enforces nothing here. Remove the line if that is not intended."
+elif [ "$(sop_claude_md_state "$ROOT")" = "dangling" ]; then
+    PTYPE_NOTE="CLAUDE.md is a symlink whose target is missing; nothing could be read from it, so the type fell through to the manifest check. Fix the link if this is a code project."
+fi
 
 # ── Resume snapshot ───────────────────────────────────────────────────────────
 RESUME_TEXT="(none found — first session on this project for agent-id $AGENT, or no resolver in scripts/)"
@@ -103,9 +113,7 @@ DIRTY=$(sop_tracker_dirty "$ROOT")
 # project says so instead of implying a gate that will never fire (P102).
 GATE_LINE=""
 if [ -f "$ROOT/ship-sop.config.json" ]; then
-    if [ "$PTYPE" != "code" ] && [ "$DECLARED" = "non-code" ] && [ -n "$SIGNALS" ]; then
-        GATE_LINE="none — CLAUDE.md declares non-code, but $SIGNALS say code; the declaration wins and the reviewer gate is off here. Remove the line if that is not intended."
-    elif [ "$PTYPE" != "code" ]; then
+    if [ "$PTYPE" != "code" ]; then
         GATE_LINE="none — non-code project; ship-sop's automatic gate fires only on code projects (declare \`**Project type:** code\` in CLAUDE.md to opt in)"
     else
         GATE=$(sop_shipsop_gate "$ROOT")
@@ -160,6 +168,7 @@ LEGACY=""
 
 # ── Print ─────────────────────────────────────────────────────────────────────
 printf -- '--- Agent SOP context: %s (branch %s, agent-id %s, %s project) ---\n' "$NAME" "${BRANCH:-detached}" "$AGENT" "$PTYPE"
+[ -n "$PTYPE_NOTE" ] && printf 'Project type: %s — %s\n' "$PTYPE" "$PTYPE_NOTE"
 printf 'Resume snapshot: %s\n' "$RESUME_TEXT"
 printf 'In-flight (%s):\n%s\n' "$AGENT" "$(printf '%s\n' "$INFLIGHT" | sed 's/^/  /')"
 printf 'Recent sessions:\n%s\n' "$(printf '%s\n' "$RECENT" | sed 's/^/  /')"
@@ -170,6 +179,10 @@ printf 'Uncommitted tracker files: %s\n' "$DIRTY_LINE"
 printf 'Worktrees: %s\n' "$SIBLINGS"
 [ -n "$SYNC" ] && printf 'SOP sync: %s\n' "$SYNC"
 [ -n "$LEGACY" ] && printf '%s\n' "$LEGACY"
-printf 'This replaces /restart-sop Steps 0-4. Read the Backlog.md item for the task before starting it. Session-end is enforced by the Stop hook: when you stop with unrecorded commits or uncommitted trackers it tells you exactly what is missing.\n'
+if [ "$PTYPE" = "code" ]; then
+    printf 'This replaces /restart-sop Steps 0-4. Read the Backlog.md item for the task before starting it. Session-end is enforced by the Stop hook: when you stop with unrecorded commits or uncommitted trackers it tells you exactly what is missing.\n'
+else
+    printf 'This replaces /restart-sop Steps 0-4. Read the Backlog.md item for the task before starting it. Non-code project: the Stop hook enforces nothing here (P103); /update-sop is the deliberate close, and the drift facts above are for you to act on.\n'
+fi
 printf -- '--- end Agent SOP context ---\n'
 exit 0

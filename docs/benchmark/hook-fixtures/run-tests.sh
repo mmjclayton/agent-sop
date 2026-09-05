@@ -105,6 +105,9 @@ commit_record() {
     local dir="$1" slug="$2"
     (
         cd "$dir" || exit 1
+        # git drops an empty directory on branch switch; recreate it so the
+        # record lands (a fixture on a fresh branch used to lose it silently).
+        mkdir -p docs/recent-work
         printf '# %s\n\n**Date:** 2026-09-04\n**Agent:** solo\n' "$slug" > "docs/recent-work/2026-09-04_solo_$slug.md"
         $GIT add -A >/dev/null
         $GIT commit -q -m "docs: session end housekeeping — $slug"
@@ -141,7 +144,9 @@ commit_code "$PLAIN" "feat: something"
 run_hook "$STOP" "$PLAIN" ''
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-repo-without-sop-silent"; else bad "stop-repo-without-sop-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
 
-SOP="$TMP/sop"; make_repo "$SOP" with-sop
+# The drift fixtures run on a code repo: since P103 the Stop hook is silent on
+# non-code projects entirely, and that silence has its own cases below.
+SOP="$TMP/sop"; make_repo "$SOP" with-code
 commit_record "$SOP" "first-session"
 run_hook "$STOP" "$SOP" ''
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-no-drift-silent"; else bad "stop-no-drift-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
@@ -228,7 +233,8 @@ if ! grep -q "@security-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-docs-only-n
 
 ptype() { bash "$PTYPE" "$1" 2>/dev/null; }
 
-if [ "$(ptype "$SOP")" = "non-code" ]; then ok "type-plain-sop-is-non-code"; else bad "type-plain-sop-is-non-code" "got '$(ptype "$SOP")'"; fi
+PLAINSOP="$TMP/plainsop"; make_repo "$PLAINSOP" with-sop
+if [ "$(ptype "$PLAINSOP")" = "non-code" ]; then ok "type-plain-sop-is-non-code"; else bad "type-plain-sop-is-non-code" "got '$(ptype "$PLAINSOP")'"; fi
 if [ "$(ptype "$SHIP")" = "code" ]; then ok "type-manifest-is-code"; else bad "type-manifest-is-code" "got '$(ptype "$SHIP")'"; fi
 if [ "$(ptype "$TMP/notrepo")" = "non-code" ]; then ok "type-not-a-repo-is-non-code"; else bad "type-not-a-repo-is-non-code" "got '$(ptype "$TMP/notrepo")'"; fi
 
@@ -264,11 +270,49 @@ if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-shipsop-non-code-
 SESSION_ID=ctx-prose run_hook "$CTX" "$PROSE" ''
 if grep -q "non-code project) ---" "$HOOK_OUT" && grep -q "^Ship gate: none — non-code project" "$HOOK_OUT"; then ok "ctx-non-code-project-says-why"; else bad "ctx-non-code-project-says-why" "out='$(grep -E 'Agent SOP context|Ship gate' "$HOOK_OUT")'"; fi
 
+# P103: the drift half is code-only too. Unrecorded commit and dirty tracker
+# on a non-code SOP repo leave the Stop hook silent; the context block still
+# shows the facts and says nothing is enforced. Both fail against the P102
+# library, which demanded the record.
+run_hook "$STOP" "$PLAINSOP" ''
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-non-code-initial-silent"; else bad "stop-non-code-initial-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+commit_code "$PLAINSOP" "feat: unrecorded work in a prose repo"
+run_hook "$STOP" "$PLAINSOP" ''
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-non-code-unrecorded-commit-silent"; else bad "stop-non-code-unrecorded-commit-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+echo "### P9 — Prose item" >> "$PLAINSOP/Backlog.md"
+run_hook "$STOP" "$PLAINSOP" ''
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-non-code-dirty-tracker-silent"; else bad "stop-non-code-dirty-tracker-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+SESSION_ID=ctx-plainsop run_hook "$CTX" "$PLAINSOP" ''
+if grep -Eq "^Drift: [0-9]+ commit\(s\) since the last session record" "$HOOK_OUT" && grep -q "^Uncommitted tracker files: Backlog.md" "$HOOK_OUT" && grep -q "Non-code project: the Stop hook enforces nothing here" "$HOOK_OUT"; then ok "ctx-non-code-shows-drift-says-not-enforced"; else bad "ctx-non-code-shows-drift-says-not-enforced" "out='$(grep -E '^(Drift|Uncommitted|This replaces|Non-code)' "$HOOK_OUT")'"; fi
+git -C "$PLAINSOP" checkout -q -- Backlog.md
+SESSION_ID=ctx-sopcode run_hook "$CTX" "$SOP" ''
+if grep -q "Session-end is enforced by the Stop hook" "$HOOK_OUT"; then ok "ctx-code-says-enforced"; else bad "ctx-code-says-enforced" "out='$(tail -2 "$HOOK_OUT")'"; fi
+
+# The notice's own "carry on" instruction — add a line to the in-flight file —
+# must not re-fire it (seen live on the first P103 run); any other tracker
+# edit is a new state and does.
+commit_code "$SOP" "feat: throttle probe"
+run_hook "$STOP" "$SOP" ''
+if [ "$HOOK_EXIT" = 2 ]; then ok "stop-fires-on-new-commit-before-inflight-probe"; else bad "stop-fires-on-new-commit-before-inflight-probe" "exit $HOOK_EXIT"; fi
+printf '(2026-09-05): probe\n' >> "$SOP/docs/agent-memory/in-flight/solo.md"
+run_hook "$STOP" "$SOP" ''
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-inflight-edit-does-not-refire"; else bad "stop-inflight-edit-does-not-refire" "exit $HOOK_EXIT stderr='$(head -3 "$HOOK_ERR")'"; fi
+echo "### P3 — Third thing" >> "$SOP/Backlog.md"
+run_hook "$STOP" "$SOP" ''
+if [ "$HOOK_EXIT" = 2 ] && grep -q "in-flight/solo.md" "$HOOK_ERR"; then ok "stop-other-tracker-edit-refires-and-lists-inflight"; else bad "stop-other-tracker-edit-refires-and-lists-inflight" "exit $HOOK_EXIT stderr='$(head -3 "$HOOK_ERR")'"; fi
+git -C "$SOP" checkout -q -- Backlog.md && rm -f "$SOP/docs/agent-memory/in-flight/solo.md"
+
 # The declaration opts a manifest-less repo in: same tree, one line added.
 printf '\n**Project type:** code\n' >> "$PROSE/CLAUDE.md"
 run_hook "$PUSH" "$PROSE" "$(push_json 'git push -u origin feat/prose')"
 if [ "$HOOK_EXIT" = 2 ] && grep -q "ship-auto.md" "$HOOK_ERR"; then ok "push-shipsop-declared-code-refused"; else bad "push-shipsop-declared-code-refused" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
-git -C "$PROSE" checkout -q -- CLAUDE.md
+# ...and the drift half follows the declaration too (P103): an unrecorded
+# commit on the declared-code, manifest-less repo gets the Stop notice.
+commit_code "$PROSE" "feat: unrecorded under a code declaration"
+SHORT=$(git -C "$PROSE" rev-parse --short HEAD)
+run_hook "$STOP" "$PROSE" ''
+if [ "$HOOK_EXIT" = 2 ] && grep -q "no session record" "$HOOK_ERR" && grep -q "$SHORT" "$HOOK_ERR"; then ok "stop-declared-code-without-manifest-fires"; else bad "stop-declared-code-without-manifest-fires" "exit $HOOK_EXIT stderr='$(head -3 "$HOOK_ERR")'"; fi
+git -C "$PROSE" reset -q --hard HEAD~1
 
 # Code lines only, whatever the config says: a docs-only branch in a code
 # project with skip_docs_only=false still gets no gate. Does not fail against
@@ -306,6 +350,18 @@ if [ "$(ptype "$TYPED")" = "non-code" ]; then ok "type-base-template-is-non-code
 cp "$REPO_ROOT/docs/templates/claude-md-template-code.md" "$TYPED/CLAUDE.md"
 if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-code-template-is-code"; else bad "type-code-template-is-code" "got '$(ptype "$TYPED")'"; fi
 
+# One invalid byte in CLAUDE.md must not blank the whole parse (BSD grep in a
+# UTF-8 locale aborts the file; the library now runs in the C locale).
+printf '# X\n\npasted quote: \xff\xfe\n\n**Project type:** code\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-invalid-byte-does-not-blank-declaration"; else bad "type-invalid-byte-does-not-blank-declaration" "got '$(ptype "$TYPED")'"; fi
+printf '# X\n\n\xff\n## Auth\n' > "$TYPED/CLAUDE.md"
+if [ "$(ptype "$TYPED")" = "code" ]; then ok "type-invalid-byte-does-not-blank-heuristics"; else bad "type-invalid-byte-does-not-blank-heuristics" "got '$(ptype "$TYPED")'"; fi
+# A dangling CLAUDE.md symlink reads as missing and the context block says so.
+DANGLE="$TMP/dangle"; make_repo "$DANGLE" with-sop
+rm -f "$DANGLE/CLAUDE.md" && ln -s ../nowhere/CLAUDE.md "$DANGLE/CLAUDE.md"
+SESSION_ID=ctx-dangle run_hook "$CTX" "$DANGLE" ''
+if grep -q "^Project type: non-code — CLAUDE.md is a symlink whose target is missing" "$HOOK_OUT"; then ok "ctx-dangling-claude-md-named"; else bad "ctx-dangling-claude-md-named" "out='$(grep -E 'Project type' "$HOOK_OUT")'"; fi
+
 # Silent-failure review: heuristics are case-insensitive like the declaration;
 # a hyphen after the declared value is not part of the value.
 printf '# X\n\n## AUTH\n\nx\n' > "$TYPED/CLAUDE.md"
@@ -333,12 +389,27 @@ cp "$SHIP/ship-sop.config.json" "$CONTRA/"
 printf '# CLAUDE\n\n**Project type:** non-code\n' > "$CONTRA/CLAUDE.md"
 (cd "$CONTRA" && $GIT add -A >/dev/null && $GIT commit -q -m "chore: declare non-code" && $GIT push -q origin main 2>/dev/null)
 SESSION_ID=ctx-contra run_hook "$CTX" "$CONTRA" ''
-if grep -q "non-code project) ---" "$HOOK_OUT" && grep -q "^Ship gate: none — CLAUDE.md declares non-code, but package.json say code" "$HOOK_OUT"; then ok "ctx-declared-non-code-over-manifest-named"; else bad "ctx-declared-non-code-over-manifest-named" "out='$(grep -E 'Agent SOP context|Ship gate' "$HOOK_OUT")'"; fi
+if grep -q "non-code project) ---" "$HOOK_OUT" && grep -q "^Project type: non-code — CLAUDE.md declares non-code, but package.json say code" "$HOOK_OUT" && grep -q "^Project type:.*the Stop hook enforces nothing here" "$HOOK_OUT"; then ok "ctx-declared-non-code-over-manifest-named"; else bad "ctx-declared-non-code-over-manifest-named" "out='$(grep -E 'Agent SOP context|Project type|Ship gate' "$HOOK_OUT")'"; fi
+# The same contradiction with no ship-sop config at all is still named (the
+# gate line does not print there, and the Stop hook's silence rides on this).
+rm -f "$CONTRA/ship-sop.config.json"
+SESSION_ID=ctx-contra-nocfg run_hook "$CTX" "$CONTRA" ''
+if grep -q "^Project type: non-code — CLAUDE.md declares non-code, but package.json say code" "$HOOK_OUT" && ! grep -q "^Ship gate:" "$HOOK_OUT"; then ok "ctx-contradiction-named-without-config"; else bad "ctx-contradiction-named-without-config" "out='$(grep -E 'Project type|Ship gate' "$HOOK_OUT")'"; fi
+git -C "$CONTRA" checkout -q -- ship-sop.config.json
 git -C "$CONTRA" checkout -q -b feat/c
 commit_code "$CONTRA" "feat: code under a non-code declaration"
 commit_record "$CONTRA" "recorded"
 run_hook "$STOP" "$CONTRA" ''
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "stop-declared-non-code-honoured"; else bad "stop-declared-non-code-honoured" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+# All three facts at once on the declared-non-code repo — unrecorded commit,
+# dirty tracker, auto config with a code diff — and still silence, with no
+# throttle marker written (the type check precedes the facts and the marker).
+commit_code "$CONTRA" "feat: unrecorded under a non-code declaration"
+echo "### P4 — Fourth thing" >> "$CONTRA/Backlog.md"
+run_hook "$STOP" "$CONTRA" ''
+CONTRA_KEY=$(printf '%s' "$(git -C "$CONTRA" rev-parse --show-toplevel)" | shasum -a 256 | cut -c1-12)
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ] && [ ! -e "$AGENT_SOP_STATE_DIR/repos/$CONTRA_KEY/stop.marker" ]; then ok "stop-declared-non-code-all-facts-silent-no-marker"; else bad "stop-declared-non-code-all-facts-silent-no-marker" "exit $HOOK_EXIT marker=$([ -e "$AGENT_SOP_STATE_DIR/repos/$CONTRA_KEY/stop.marker" ] && echo yes || echo no) stderr='$(head -2 "$HOOK_ERR")'"; fi
+git -C "$CONTRA" checkout -q -- Backlog.md
 
 # Coverage uses the same code-only count as the trigger: a covered code
 # branch stays covered through a later docs-only commit even with

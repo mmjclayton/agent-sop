@@ -16,6 +16,15 @@
 # facts change, so a session that ignores it pays one extra turn per commit
 # state, never a loop.
 #
+# Code projects only (P102 for the gate, P103 for the drift half): the
+# operator's rule is that agent-sop must not slow down prose projects, so a
+# non-code repository with SOP scaffolding gets no Stop notice at all and
+# /update-sop stays its deliberate close. The context block still shows the
+# drift facts there; it is read once and demands nothing. Note the
+# compounding: sop_project_type fails open to "non-code", so an environment
+# that cannot classify (no jq, unreadable CLAUDE.md) silences this hook and
+# the ship gate together — one rule, one failure mode.
+#
 # This replaces the need to type /update-sop for the minimum record. The full
 # checklist remains available and is still what a deliberate session end runs.
 #
@@ -34,6 +43,7 @@ CWD=$(sop_field '.cwd')
 [ -n "$CWD" ] || CWD="$PWD"
 ROOT=$(sop_repo_root "$CWD")
 sop_is_sop_repo "$ROOT" || exit 0
+sop_is_code_repo "$ROOT" || exit 0
 
 HEAD=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null) || exit 0
 [ -n "$HEAD" ] || exit 0
@@ -45,8 +55,13 @@ GATE=$(sop_shipsop_gate "$ROOT")
 [ -n "$DRIFT$DIRTY$GATE" ] || exit 0
 
 # ── Throttle ──────────────────────────────────────────────────────────────────
+# The in-flight file is left out of the signature: adding a line there is the
+# "work is still in progress" path this notice itself prescribes, and on the
+# first live P103 run that edit re-fired the notice as a new dirty set. The
+# fact still prints; it just does not count as a new state.
 GATE_FLAG="nogate"; [ -n "$GATE" ] && GATE_FLAG="gate"
-SIG=$(printf '%s|%s|%s' "$HEAD" "$(printf '%s' "$DIRTY" | sop_sha256)" "$GATE_FLAG")
+DIRTY_SIG=$(printf '%s\n' "$DIRTY" | grep -v -e '^docs/agent-memory/in-flight/' -e '^$' | sop_sha256)
+SIG=$(printf '%s|%s|%s' "$HEAD" "$DIRTY_SIG" "$GATE_FLAG")
 MARKER_DIR="$(sop_state_dir)/repos/$(sop_repo_key "$ROOT")"
 MARKER="$MARKER_DIR/stop.marker"
 if [ -f "$MARKER" ] && [ "$(cat "$MARKER" 2>/dev/null)" = "$SIG" ]; then
