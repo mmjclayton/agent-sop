@@ -732,6 +732,8 @@ The count also *under*-reports: the stated method excludes section headings, but
 ### P90 — Session-end step numbering incoherent across four files
 `[SHIPPED - 2026-09-05] [Bug]`
 
+review: docs/reviews/2026-09-05_solo_P105.md (shipped inside P105 under the self-modification trigger)
+
 Resolved by P105: the four files now carry one seven-step list.
 
 **Recommendation (2026-08-03, from the P83 audit close-out):**
@@ -949,7 +951,9 @@ First live run of `sop-session-context.sh` (the operator's first prompt after `i
 ---
 
 ### P105 — Prose trim, validator retarget, Backlog archive: the SOP keeps what a session reads
-`[IN PROGRESS] [Refactor]`
+`[SHIPPED - 2026-09-05] [Refactor]`
+
+review: docs/reviews/2026-09-05_solo_P105.md (three gates in isolated worktrees, all BLOCK at the first commit — five CRITICALs, nine HIGHs — all fixed in 465dbdf with fixtures; gate report covers 465dbdf)
 
 Operator: "fix all of this" (2026-09-05), on the five-agent token review (memory note `project_sop_token_review_2026-09-05`). The instruction-level lens classified 205 instructions: 61 ceremony, 32 duplicated by hooks; the consumer lens found feature-map.md, Batch Log lines, decision-file bodies, session-record bodies and the agent-memory Completed Work narrative write-only across six repos.
 
@@ -963,9 +967,9 @@ Operator: "fix all of this" (2026-09-05), on the five-agent token review (memory
 Resolves P77 and P90 (the trim and the one numbering); makes P82 and P89 moot.
 
 **Acceptance criteria:**
-- Every fixture suite green; validator suite exercises the entry-level citation
-- Core SOP, commands, templates and checklist agree on the seven steps and the citation rule
-- Installed copies and command replicas refreshed; consumers synced or listed as owed
+- Every fixture suite green; validator suite exercises the entry-level citation - DONE (28 cases, 9 new, 7 failing against the pre-P105 validator)
+- Core SOP, commands, templates and checklist agree on the seven steps and the citation rule - DONE (coherence gate; every stale step number grepped out)
+- Installed copies and command replicas refreshed; consumers synced or listed as owed - DONE (see the session record)
 
 **Source:** operator instruction, 2026-09-05.
 

@@ -42,7 +42,6 @@ Test: `bash docs/benchmark/hook-fixtures/run-tests.sh` (also `resume-path-fixtur
 - P79 — `sandboxing.md` treats the sandbox as protecting the host, never the reverse — [OPEN] [Iteration]
 - P80 — Benchmark rubric: pairwise scoring, and read judge reasoning not scores — [OPEN] [Iteration]
 - P81 — The MANDATORY lite benchmark rule fires on changes its instrument cannot measure — [OPEN] [Bug]
-- P105 — Prose trim, validator retarget, Backlog archive: the SOP keeps what a session reads — [IN PROGRESS] [Refactor]
 <!-- priority-items:end -->
 
 ---

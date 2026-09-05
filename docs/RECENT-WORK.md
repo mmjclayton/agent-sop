@@ -9,6 +9,7 @@ Moved out of `CLAUDE.md` on 2026-08-03 so it stops consuming context every sessi
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-09-05.*
 
+- 2026-09-05 `solo`: P105 — prose trim, validator retarget, Backlog archive
 - 2026-09-05 `solo`: P104 — hook fixes from the token review
 - 2026-09-05 `solo`: P103 — Stop hook fires only on code projects
 - 2026-09-04 `solo`: P97 user-scope hooks automation + P98 digest review (10 Aug, 31 Aug)
