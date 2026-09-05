@@ -2059,7 +2059,9 @@ First live run of `sop-session-context.sh` (the operator's first prompt after `i
 ---
 
 ### P104 — Hook fixes from the token review: no Backlog filing in the gate demand, context block prints only non-default facts, superseded resume never served, three default gates
-`[IN PROGRESS] [Iteration]`
+`[SHIPPED - 2026-09-05] [Iteration]`
+
+review: docs/reviews/2026-09-05_solo_P104.md (three gate agents in isolated worktrees; one CRITICAL and one HIGH in the first cut of the superseded guard, fixed with resolver fixtures; gate report covers ea2fdb0)
 
 Operator: "fix all of this" (2026-09-05), on the five-agent token review recorded in the memory note `project_sop_token_review_2026-09-05`. The hook-level items:
 
@@ -2074,7 +2076,7 @@ Operator: "fix all of this" (2026-09-05), on the five-agent token review recorde
 - Gate demand names the isolation flag and forbids Backlog filing - DONE (fixture)
 - Clean code repo prints none of the default-state lines; drift, dirty, gate and sibling lines still print when true - DONE (fixtures)
 - Superseded legacy resume not served - DONE (fixture)
-- Installed copies refreshed
+- Installed copies refreshed - DONE
 
 **Source:** operator instruction, 2026-09-05.
 
