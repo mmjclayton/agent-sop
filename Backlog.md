@@ -953,7 +953,7 @@ First live run of `sop-session-context.sh` (the operator's first prompt after `i
 ### P105 — Prose trim, validator retarget, Backlog archive: the SOP keeps what a session reads
 `[SHIPPED - 2026-09-05] [Refactor]`
 
-review: docs/reviews/2026-09-05_solo_P105.md (three gates in isolated worktrees, all BLOCK at the first commit — five CRITICALs, nine HIGHs — all fixed in 465dbdf with fixtures; gate report covers 465dbdf)
+review: docs/reviews/2026-09-05_solo_P105.md (three gates in isolated worktrees, all BLOCK at the first commit — five CRITICALs, nine HIGHs — all fixed in 465dbdf with fixtures; gate report covers 465dbdf; a post-gate SIGPIPE fix in 1bff70d is fixture-covered and pushed with the logged bypass)
 
 Operator: "fix all of this" (2026-09-05), on the five-agent token review (memory note `project_sop_token_review_2026-09-05`). The instruction-level lens classified 205 instructions: 61 ceremony, 32 duplicated by hooks; the consumer lens found feature-map.md, Batch Log lines, decision-file bodies, session-record bodies and the agent-memory Completed Work narrative write-only across six repos.
 
