@@ -171,6 +171,17 @@ if [ -f "$PER_AGENT" ]; then
 fi
 
 if [ -f "$LEGACY" ]; then
+    # A legacy file that announces itself superseded is not a resume: serving
+    # it put a stale snapshot in front of a session whose agent-id had no
+    # per-agent file yet (found by the 2026-09-05 cost audit).
+    # Anchored to the marker /update-sop writes (`**SUPERSEDED - <date>.**`),
+    # so prose that merely contains the word still resolves; read from the
+    # first non-blank line with a BOM or CR stripped, so a leading blank line
+    # or a Windows-edited file cannot slip a stale snapshot through (review).
+    if head -5 "$LEGACY" 2>/dev/null | LC_ALL=C sed 's/^\xEF\xBB\xBF//; s/\r$//' | grep -v '^[[:space:]]*$' | head -1 | grep -qi '^\*\*SUPERSEDED'; then
+        echo "resolve-resume-path: legacy resume file is marked superseded ($LEGACY); treating as absent." >&2
+        exit 1
+    fi
     if [ "$AGENT_ID" != "solo" ]; then
         echo "resolve-resume-path: reading legacy unsuffixed resume file ($LEGACY). Run \`/migrate-to-multi-agent\` to move to per-agent format." >&2
     fi

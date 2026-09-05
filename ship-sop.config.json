@@ -4,9 +4,11 @@
     "mode": "auto",
     "throttle": {
       "min_diff_lines": 10,
-      "skip_docs_only": true,
-      "cooldown_seconds": 300,
-      "skip_branch_patterns": ["^wip/", "^spike/", "^exp/"]
+      "skip_branch_patterns": [
+        "^wip/",
+        "^spike/",
+        "^exp/"
+      ]
     }
   },
   "agents": {
@@ -15,9 +17,8 @@
       "block_on": "CRITICAL"
     },
     "compliance-reviewer": {
-      "enabled": true,
-      "block_on": "CRITICAL",
-      "auto_file_backlog": true
+      "enabled": false,
+      "block_on": "CRITICAL"
     },
     "code-reviewer": {
       "enabled": true,
@@ -28,17 +29,12 @@
       "block_on": "HIGH"
     },
     "pr-test-analyzer": {
-      "enabled": true,
-      "block_on": "never",
-      "auto_file_backlog": false
+      "enabled": false,
+      "block_on": "never"
     },
     "diagram-builder": {
-      "enabled": true,
+      "enabled": false,
       "block_on": "never"
     }
-  },
-  "release": {
-    "auto_publish": false,
-    "default_branch": "main"
   }
 }

@@ -117,6 +117,21 @@ run "read-none-present-exits-1" 1 "" -- --root "$PROJ_A" --read
 printf '# legacy\n' > "$MEM_A/project_resume.md"
 run "read-falls-back-to-legacy" 0 "$MEM_A/project_resume.md" -- --root "$PROJ_A" --read
 
+# A legacy file that /update-sop marked superseded is not a resume (cost
+# audit 2026-09-05 saw one served); the match is anchored to the marker, so a
+# first line that merely contains the word still resolves.
+printf '**SUPERSEDED - 2026-08-07.** Use the per-agent file.\n' > "$MEM_A/project_resume.md"
+run "read-skips-superseded-legacy" 1 "" -- --root "$PROJ_A" --read
+printf '# Resume (the old plan was superseded in April)\n' > "$MEM_A/project_resume.md"
+run "read-serves-legacy-mentioning-superseded-in-prose" 0 "$MEM_A/project_resume.md" -- --root "$PROJ_A" --read
+printf '\n**SUPERSEDED - 2026-08-07.** Use the per-agent file.\n' > "$MEM_A/project_resume.md"
+run "read-skips-superseded-after-leading-blank-line" 1 "" -- --root "$PROJ_A" --read
+printf '**SUPERSEDED - 2026-08-07.**\r\nUse the per-agent file.\r\n' > "$MEM_A/project_resume.md"
+run "read-skips-superseded-crlf" 1 "" -- --root "$PROJ_A" --read
+printf '\xEF\xBB\xBF**SUPERSEDED - 2026-08-07.**\n' > "$MEM_A/project_resume.md"
+run "read-skips-superseded-with-bom" 1 "" -- --root "$PROJ_A" --read
+printf '# legacy\n' > "$MEM_A/project_resume.md"
+
 printf '# per-agent\n' > "$MEM_A/project_resume_solo.md"
 run "read-prefers-per-agent" 0 "$MEM_A/project_resume_solo.md" -- --root "$PROJ_A" --read
 
