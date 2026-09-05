@@ -951,7 +951,9 @@ First live run of `sop-session-context.sh` (the operator's first prompt after `i
 ---
 
 ### P106 — `/update-agent-sop` runs a script; a consumer file equal to any past upstream version is pristine
-`[IN PROGRESS] [Iteration]`
+`[SHIPPED - 2026-09-05] [Iteration]`
+
+review: docs/reviews/2026-09-05_solo_P106.md (three gates, all BLOCK at the first commit — four CRITICALs, path containment and manifest accounting among them — all fixed in 75688b4; gate report covers 75688b4)
 
 Operator: option 2 of the two offered after the 2026-09-05 consumer sync. The command's three-way diff keyed on `baseline_shas`, one set in the user-global config shared by every consumer on the machine; syncing any one consumer advanced the baseline for all, and a consumer that was merely older then looked locally modified and was left stale (repcanvas-marketing today).
 
@@ -960,9 +962,9 @@ Operator: option 2 of the two offered after the 2026-09-05 consumer sync. The co
 - Suite `docs/benchmark/sync-fixtures/run-tests.sh`: older pristine by history (project and user rows), a wrong baseline beaten by history, a local edit kept and flagged, exclusion, dry run writes nothing, missing created, idempotent second run, executable bit.
 
 **Acceptance criteria:**
-- Suite green
-- repcanvas-marketing synced by the new path with its locally modified files kept
-- Replica of the command refreshed in `~/.claude/commands`
+- Suite green - DONE (25 cases)
+- repcanvas-marketing synced by the new path with its locally modified files kept - DONE (see the session record)
+- Replica of the command refreshed in `~/.claude/commands` - DONE
 
 **Source:** operator instruction, 2026-09-05.
 
