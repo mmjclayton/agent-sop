@@ -1,6 +1,6 @@
 ---
-description: Sync pristine-replica Agent SOP files (SOP docs, guides, slash commands, reference agents) from the upstream agent-sop repo into this project and the user's ~/.claude directory. Three-way diff for locally modified files; never force-overwrites.
-sop_version: "2026-09-04"
+description: Sync pristine-replica Agent SOP files (SOP docs, guides, slash commands, reference agents) from the upstream agent-sop repo into this project and the user's ~/.claude directory. Runs scripts/sync-sop-files.sh: a consumer file that equals any past upstream version is pristine and updated; a local edit is kept or reconciled; never force-overwrites.
+sop_version: "2026-09-05"
 ---
 
 Keep Agent SOP artefacts up to date. Pulls the current pristine-replica files from upstream (local checkout if available, GitHub raw otherwise), diffs them against this project's copies, and applies updates only where safe. Locally modified files are surfaced for reconciliation rather than overwritten.
@@ -73,80 +73,35 @@ The hook scripts are registered in `~/.claude/settings.json` by `scripts/install
 
 ## Steps
 
-### Step 1: Resolve source
+### Step 1: Resolve source and run the classifier
 
-Check the config's `local_path`. If the path exists and contains `docs/sop/claude-agent-sop.md`, treat it as the source. Otherwise fall back to GitHub raw at `https://raw.githubusercontent.com/{github}/main/{path}`.
+The config's `local_path` names the upstream checkout. When it exists, the sync is a script, not prose:
 
-Report which source is being used.
+```bash
+UP=$(jq -r '.local_path' "${CFG:-$HOME/.claude/agent-sop.config.json}"); UP="${UP/#\~/$HOME}"
+git -C "$UP" pull -q --ff-only 2>/dev/null
+bash "$UP/scripts/sync-sop-files.sh"            # dry run: one line per file that is not in sync, then a summary
+```
 
-### Step 2: Build the diff report
+The script reads the manifest table above from the upstream copy of this file, so the table is the single source of what is synced. Per file it prints `MISSING`, `OLDER` (the consumer copy equals the baseline **or any past upstream version of the file in git history** — a copy upstream once shipped was never edited locally, whatever the shared baseline says), `modified` (kept), `RECONCILE` (a local edit and upstream moved since the baseline), or `excluded`. Files in sync print nothing.
 
-For each file in the pristine-replica set:
-1. **If the file appears in `config.exclude`, classify as EXCLUDED and skip the rest of this step.** No fetch, no SHA, no baseline lookup.
-2. Fetch upstream content (from local path or GitHub raw).
-3. Compute its SHA-256.
-4. Read the consumer's current copy (if it exists). Compute its SHA-256.
-5. Look up the `baseline_sha` for this file in the config.
+Without a local checkout (GitHub-raw only), fall back to the prose three-way: for each manifest file fetch `https://raw.githubusercontent.com/{github}/main/{path}`, compare its SHA-256 with the consumer copy and the baseline, and apply only where the consumer equals the baseline.
 
-Classify each non-excluded file into one of:
+### Step 2: Apply
 
-- **MISSING** — consumer has no copy. First-run case.
-- **IN SYNC** — consumer SHA == upstream SHA. No action.
-- **UPSTREAM CHANGED, LOCAL UNCHANGED** — upstream SHA != consumer SHA, and consumer SHA == baseline SHA. Safe to apply.
-- **LOCALLY MODIFIED, UPSTREAM UNCHANGED** — upstream SHA == baseline SHA, consumer SHA != baseline SHA. No action.
-- **LOCALLY MODIFIED + UPSTREAM CHANGED** — all three SHAs differ. Needs reconciliation.
-- **NO BASELINE** — `baseline_sha` entry missing for this file. First-ever run. Treat as IN SYNC + record upstream as new baseline only if consumer matches upstream; otherwise classify as LOCALLY MODIFIED + UPSTREAM CHANGED and surface the 3-way.
-- **EXCLUDED** — present in `config.exclude`. Skipped per project policy. Reported but not synced.
+```bash
+bash "$UP/scripts/sync-sop-files.sh" --apply    # writes MISSING and OLDER files, refreshes baseline_shas and last_update_check
+```
 
-Print a summary table: file, classification, one-line description.
+User-scope rows land under `~/.claude/`; the hook scripts among them are registered by `scripts/install-hooks.sh`, which this command does not run. Preserve nothing by hand: the script copies the executable bit with the file.
 
-### Step 3: Apply safe updates
+### Step 3: Reconcile
 
-For every file classified `MISSING` or `UPSTREAM CHANGED, LOCAL UNCHANGED`:
-- Write the upstream content to the destination (create parent directory if needed).
-- Update `baseline_shas[file]` to the new upstream SHA.
-- Report each file as `updated` or `created`.
+For every `RECONCILE` line: show the operator what changed upstream since the baseline and what this project changed locally (`git -C "$UP" log -p -- <path>` for the upstream side; `diff` for the local side), then ask: accept upstream, keep local, or merge. On accept or merge, write the file and set `baseline_shas[<upstream path>]` to the upstream SHA in the config. Never overwrite a locally modified file without that answer. A `modified` line (upstream unchanged) needs no action; if the edit is permanent, add the path to `config.exclude` so the report stops naming it.
 
-Do not touch `LOCALLY MODIFIED, UPSTREAM UNCHANGED`, `IN SYNC`, or `EXCLUDED` files.
+### Step 4: Report
 
-### Step 4: Reconcile locally modified files
-
-For every file classified `LOCALLY MODIFIED + UPSTREAM CHANGED` (or `NO BASELINE` where content differs):
-1. Read the three versions: baseline (if available — from a git show of the last known pristine, or skip if no baseline), local (consumer's current), upstream (fetched).
-2. Present a summary of:
-   - What changed upstream since baseline (upstream ← baseline diff)
-   - What this project changed locally (local ← baseline diff, or "no baseline, full local content is the customisation")
-3. Ask the user for each conflicted file: accept upstream, keep local, or merge (Claude proposes a merge).
-4. If merge chosen: Claude produces a merged file, user confirms, then write and update baseline SHA.
-
-Never overwrite a locally modified file without explicit user confirmation.
-
-### Step 5: Update config
-
-- Set `last_update_check` to today's ISO date.
-- Write updated `baseline_shas`.
-- Save the config to the same location it was loaded from (project-scope if present, else user-scope).
-
-### Step 6: Report
-
-Print a final summary:
-- N files in sync (no change)
-- N files updated
-- N files created (first-run MISSING)
-- N files reconciled (user confirmed each)
-- N files skipped (locally modified, upstream unchanged — kept as-is)
-- N files excluded (`config.exclude` — never synced; if any of these have stale baseline entries from before they were excluded, suggest the user remove them from `baseline_shas` to clean up the config)
-- Next reminder date based on `update_reminder` cadence
-
-## First-run bootstrap
-
-If `last_update_check` is `null` or the config was just auto-created:
-- Treat every `NO BASELINE` file as a first-sync candidate.
-- If consumer content matches upstream: record SHA, classify as IN SYNC.
-- If consumer content differs from upstream: classify as LOCALLY MODIFIED + UPSTREAM CHANGED (Option a — surface divergence immediately).
-- Files that don't exist in the consumer project at all are MISSING → fetched fresh.
-
-This path handles existing projects (like hst-tracker) that pre-date this command.
+The script's summary line plus, for each RECONCILE, what the operator chose. Mention the next reminder date from `update_reminder`.
 
 ## Notes
 
