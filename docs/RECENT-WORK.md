@@ -10,6 +10,7 @@ Moved out of `CLAUDE.md` on 2026-08-03 so it stops consuming context every sessi
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-09-05.*
 
 - 2026-09-05 `solo`: Session close — consumer sync, legacy hook retirement, ECC cleanup
+- 2026-09-05 `solo`: P106 — /update-agent-sop runs a script; pristine means any past upstream version
 - 2026-09-05 `solo`: P105 — prose trim, validator retarget, Backlog archive
 - 2026-09-05 `solo`: P104 — hook fixes from the token review
 - 2026-09-05 `solo`: P103 — Stop hook fires only on code projects

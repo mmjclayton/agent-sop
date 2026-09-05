@@ -207,7 +207,7 @@ Projects on the legacy narrative format migrate with `python3 scripts/migrate-to
 
 ## Keeping the SOP in sync
 
-Run `/update-agent-sop` from any project to pull upstream changes without losing local edits. The command does a three-way diff per file (upstream vs your copy vs the recorded baseline SHA stored in `~/.claude/agent-sop.config.json`). Files you haven't modified update automatically; files you have modified surface for reconciliation. No silent overwrites.
+The command runs `scripts/sync-sop-files.sh` from the upstream checkout. A consumer file that equals the recorded baseline or any past upstream version of that file (git history) is pristine and is updated; a file you have edited is kept, or surfaced for a one-time reconciliation when upstream has moved past it or no baseline exists yet; a manifest row that would write outside the project or `~/.claude/` is refused. Baselines and the last-check date are rewritten in the config only on `--apply`.
 
 `/restart-sop` warns when your last sync is over a week old (configurable via `update_reminder` in the config: `"weekly"`, `"manual"`, or `"off"`).
 
