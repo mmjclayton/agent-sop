@@ -5,7 +5,7 @@
 # A secondary tracker is any `.md` path named in CLAUDE.md's Key Documents &
 # Dispatch table whose headings carry a Backlog-style status tag — audit
 # findings, security scans, compliance checklists, migration punch-lists.
-# `Backlog.md` itself is excluded; Step 3 covers it.
+# `Backlog.md` and `docs/backlog-archive.md` are excluded; Step 3 covers them.
 #
 # Emits one bare path per line. Empty output means the project has no secondary
 # trackers, which is a normal state and exits 0 — not an error.
@@ -35,7 +35,8 @@ CLAUDE_MD="${1:-CLAUDE.md}"
   | tr -d '`' \
   | sort -u \
   | while read -r f; do
-        if [ "$f" = "Backlog.md" ]; then continue; fi
+        # Backlog.md is Step 3; its archive is the same entries moved verbatim (P105).
+        case "$f" in Backlog.md|docs/backlog-archive.md) continue ;; esac
         if [ ! -f "$f" ]; then continue; fi
         if grep -qE '^##+ .*\[(OPEN|IN PROGRESS|BLOCKED|DEFERRED|SHIPPED|VERIFIED|WON.T)' "$f"; then
             printf '%s\n' "$f"
