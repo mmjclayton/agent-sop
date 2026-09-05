@@ -53,35 +53,73 @@ MANIFEST="$UP/.claude/commands/update-agent-sop.md"
 [ -f "$MANIFEST" ] || { echo "sync-sop-files: manifest not found at $MANIFEST" >&2; exit 1; }
 
 sha() { shasum -a 256 "$1" | awk '{print $1}'; }
+# under <path> <base> — true when <path> sits inside <base>, decided WITHOUT
+# creating anything: the longest existing ancestor of <path> is resolved
+# physically (so a symlink inside the consumer cannot point out), and the
+# not-yet-existing tail may not contain a `..` component. A manifest row is
+# data from a checkout; a `..` or an absolute path in it must never write
+# outside the consumer or ~/.claude, nor read outside the upstream checkout
+# (review findings, CRITICAL: the first cut ran mkdir before this check).
+under() {
+    local p="$1" base="$2" anc tail b
+    b=$(cd "$base" 2>/dev/null && pwd -P) || return 1
+    anc="$p"; tail=""
+    while [ ! -d "$anc" ]; do
+        tail="$(basename "$anc")${tail:+/$tail}"
+        case "$(basename "$anc")" in ..|.) return 1 ;; esac
+        anc=$(dirname "$anc"); [ "$anc" != "/" ] && [ "$anc" != "." ] || break
+    done
+    anc=$(cd "$anc" 2>/dev/null && pwd -P) || return 1
+    p="$anc${tail:+/$tail}"
+    case "$p" in "$b"/*) return 0 ;; *) return 1 ;; esac
+}
+ROOT_R=$(cd "$ROOT" && pwd -P); CLAUDE_R="$HOME/.claude"; mkdir -p "$CLAUDE_R"; CLAUDE_R=$(cd "$CLAUDE_R" && pwd -P)
 # in_history <upstream-path> <sha> — true when some past upstream version of
 # the file hashes to <sha>. Bounded to the file's own log; stops at first hit.
 in_history() {
-    local path="$1" want="$2" rev
-    while read -r rev; do
+    local path="$1" want="$2" rev="" line
+    # --follow crosses renames; --name-only prints the path the file had at
+    # each commit, which is the name `git show` needs for pre-rename revisions.
+    while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        case "$line" in
+            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) [ "${#line}" -eq 40 ] && { rev="$line"; continue; } ;;
+        esac
         [ -n "$rev" ] || continue
-        [ "$(git -C "$UP" show "$rev:$path" 2>/dev/null | shasum -a 256 | awk '{print $1}')" = "$want" ] && return 0
-    done < <(git -C "$UP" log --format=%H -- "$path" 2>/dev/null)
+        [ "$(git -C "$UP" show "$rev:$line" 2>/dev/null | shasum -a 256 | awk '{print $1}')" = "$want" ] && return 0
+    done < <(git -C "$UP" log --follow --format=%H --name-only -- "$path" 2>/dev/null)
     return 1
 }
+if [ "$(git -C "$UP" rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
+    echo "sync-sop-files: upstream checkout at $UP is shallow; OLDER-by-history cannot see its full history, so an older pristine copy may be reported as a local edit" >&2
+fi
 
-n_sync=0; n_missing=0; n_older=0; n_modified=0; n_reconcile=0; n_excluded=0; n_applied=0
+n_sync=0; n_missing=0; n_older=0; n_modified=0; n_reconcile=0; n_excluded=0; n_applied=0; n_refused=0; n_unreadable=0; n_rows=0; n_seen=0; n_absent=0
 TODAY=$(date +%Y-%m-%d)
-NEWCFG=$(mktemp); cp "$CONFIG" "$NEWCFG"
+# The working copy lives beside the config so the final replace is a
+# same-device rename (atomic), and it is validated before it replaces anything.
+NEWCFG=$(mktemp "$(dirname "$CONFIG")/.agent-sop.config.XXXXXX") || { echo "sync-sop-files: cannot create a temp file beside $CONFIG" >&2; exit 1; }
+cp "$CONFIG" "$NEWCFG" || { rm -f "$NEWCFG"; echo "sync-sop-files: cannot read $CONFIG" >&2; exit 1; }
+trap 'rm -f "$NEWCFG" "$NEWCFG.tmp"' EXIT
 while IFS='|' read -r dest src scope; do
     dest=$(printf '%s' "$dest" | xargs); src=$(printf '%s' "$src" | xargs); scope=$(printf '%s' "$scope" | xargs)
     [ -n "$dest" ] && [ -n "$src" ] || continue
-    [ -f "$UP/$src" ] || { echo "  absent-upstream  $dest (upstream has no $src)"; continue; }
-    case "$scope" in
-        user) target="${dest/#\~/$HOME}" ;;
-        *)    target="$ROOT/$dest" ;;
-    esac
     if jq -e --arg d "$dest" '(.exclude // []) | index($d) != null' "$CONFIG" >/dev/null; then
         echo "  excluded         $dest"; n_excluded=$((n_excluded+1)); continue
     fi
+    if ! under "$UP/$src" "$UP"; then echo "  REFUSED          $dest (upstream path escapes the checkout: $src)"; n_refused=$((n_refused+1)); continue; fi
+    [ -f "$UP/$src" ] || { echo "  absent-upstream  $dest (upstream has no $src)"; n_absent=$((n_absent+1)); continue; }
+    case "$scope" in
+        user) target="${dest/#\~/$HOME}"; base_dir="$CLAUDE_R" ;;
+        *)    target="$ROOT/$dest"; base_dir="$ROOT_R" ;;
+    esac
+    if ! under "$target" "$base_dir"; then echo "  REFUSED          $dest (destination leaves $([ "$scope" = user ] && echo "$HOME/.claude" || echo 'the consumer root'))"; n_refused=$((n_refused+1)); continue; fi
     up_sha=$(sha "$UP/$src")
     base=$(jq -r --arg f "$src" '.baseline_shas[$f] // empty' "$CONFIG")
     if [ ! -f "$target" ]; then
         cls=MISSING; n_missing=$((n_missing+1))
+    elif [ ! -r "$target" ]; then
+        echo "  UNREADABLE       $dest (permission denied; not classified)"; n_unreadable=$((n_unreadable+1)); continue
     else
         cur=$(sha "$target")
         if [ "$cur" = "$up_sha" ]; then
@@ -91,15 +129,21 @@ while IFS='|' read -r dest src scope; do
         elif in_history "$src" "$cur"; then
             cls=OLDER; n_older=$((n_older+1))
         else
-            cls=MODIFIED; n_modified=$((n_modified+1))
-            if [ -n "$base" ] && [ "$base" != "$up_sha" ]; then cls=RECONCILE; n_reconcile=$((n_reconcile+1)); fi
+            # A local edit. With a baseline that upstream has moved past, or with
+            # no baseline at all (a first run onto a pre-customised project), the
+            # operator decides once: RECONCILE. With a baseline upstream has not
+            # moved past, the edit is a standing override: reported, kept.
+            if [ -z "$base" ] || [ "$base" != "$up_sha" ]; then cls=RECONCILE; n_reconcile=$((n_reconcile+1))
+            else cls=MODIFIED; n_modified=$((n_modified+1)); fi
         fi
     fi
     case "$cls" in
         IN-SYNC)
             # Record the baseline when it is missing or stale so the next run
             # can classify by baseline before touching history.
-            [ "$base" = "$up_sha" ] || jq --arg f "$src" --arg s "$up_sha" '.baseline_shas[$f] = $s' "$NEWCFG" > "$NEWCFG.tmp" && mv "$NEWCFG.tmp" "$NEWCFG" ;;
+            if [ "$base" != "$up_sha" ]; then
+                jq --arg f "$src" --arg s "$up_sha" '.baseline_shas[$f] = $s' "$NEWCFG" > "$NEWCFG.tmp" && mv "$NEWCFG.tmp" "$NEWCFG"
+            fi ;;
         MISSING|OLDER)
             echo "  $(printf '%-16s' "$cls") $dest"
             if [ "$APPLY" = 1 ]; then
@@ -108,16 +152,41 @@ while IFS='|' read -r dest src scope; do
                 n_applied=$((n_applied+1))
             fi ;;
         MODIFIED)  echo "  modified         $dest (kept; upstream unchanged since baseline)" ;;
-        RECONCILE) echo "  RECONCILE        $dest (local edit AND upstream moved: three-way, ask the operator)" ;;
+        RECONCILE) echo "  RECONCILE        $dest ($([ -n "$base" ] && echo 'local edit and upstream moved since the baseline' || echo 'local edit, no baseline yet'): ask the operator once, then set the baseline or exclude it)" ;;
     esac
 done < <(grep -E '^\| `[^`]+` \| `[^`]+` \| (project|user) \|' "$MANIFEST" | sed -E 's/^\| `([^`]+)` \| `([^`]+)` \| (project|user) \|.*/\1|\2|\3/')
 
+# Every table row that names two paths must have been classified: a row with
+# a scope the parser does not know would otherwise vanish from the report,
+# and a manifest that no longer parses at all would read as "all clear"
+# (review findings, CRITICAL). n_seen counts rows the loop handled.
+n_rows=$(grep -cE '^\| `[^`]+` \| `[^`]+` \|' "$MANIFEST")
+if [ "$n_rows" -eq 0 ]; then
+    echo "sync-sop-files: no manifest rows parsed from $MANIFEST — the table format may have changed; nothing was classified" >&2; exit 1
+fi
+n_seen=$((n_sync + n_missing + n_older + n_modified + n_reconcile + n_excluded + n_refused + n_unreadable + n_absent))
+if [ "$n_seen" -ne "$n_rows" ]; then
+    echo "sync-sop-files: $n_rows manifest rows but $n_seen classified — rows with an unrecognised scope (not project|user) were skipped:" >&2
+    grep -E '^\| `[^`]+` \| `[^`]+` \|' "$MANIFEST" | grep -vE '^\| `[^`]+` \| `[^`]+` \| (project|user) \|' | sed 's/^/    /' >&2
+    exit 1
+fi
+
 if [ "$APPLY" = 1 ]; then
     jq --arg d "$TODAY" '.last_update_check = $d' "$NEWCFG" > "$NEWCFG.tmp" && mv "$NEWCFG.tmp" "$NEWCFG"
-    cp "$CONFIG" "$CONFIG.bak" 2>/dev/null; mv "$NEWCFG" "$CONFIG"
-else
-    rm -f "$NEWCFG"
+    if ! [ -s "$NEWCFG" ] || ! jq empty "$NEWCFG" 2>/dev/null; then
+        echo "sync-sop-files: refusing to replace $CONFIG — the rewritten config is empty or not valid JSON; files were written but baselines were not" >&2; exit 1
+    fi
+    if ! cp "$CONFIG" "$CONFIG.bak"; then
+        echo "sync-sop-files: refusing to replace $CONFIG — could not write $CONFIG.bak" >&2; exit 1
+    fi
+    if [ -L "$CONFIG" ]; then
+        # A dotfiles-managed config is a symlink; a rename would sever it and
+        # leave the real file stale (review finding). Write through the link.
+        cat "$NEWCFG" > "$CONFIG" && rm -f "$NEWCFG"
+    else
+        mv "$NEWCFG" "$CONFIG"
+    fi
 fi
-printf 'sync-sop-files: %s in sync, %s missing, %s older (pristine), %s modified, %s to reconcile, %s excluded%s\n' \
-    "$n_sync" "$n_missing" "$n_older" "$n_modified" "$n_reconcile" "$n_excluded" "$([ "$APPLY" = 1 ] && printf ' — applied %s, baselines and last_update_check written to %s' "$n_applied" "$CONFIG" || printf ' — dry run; add --apply to write')"
+printf 'sync-sop-files: %s rows: %s in sync, %s missing, %s older (pristine), %s modified (kept), %s to reconcile, %s excluded, %s refused, %s unreadable%s\n' \
+    "$n_rows" "$n_sync" "$n_missing" "$n_older" "$n_modified" "$n_reconcile" "$n_excluded" "$n_refused" "$n_unreadable" "$([ "$APPLY" = 1 ] && printf ' — applied %s, baselines and last_update_check written to %s' "$n_applied" "$CONFIG" || printf ' — dry run; add --apply to write')"
 exit 0

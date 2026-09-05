@@ -34,6 +34,12 @@ printf '{ "local_path": "%s", "update_reminder": "weekly", "last_update_check": 
 out=$(bash "$SYNC" --root "$C" --config "$CFG")
 if printf '%s' "$out" | grep -q 'OLDER            docs/sop/claude-agent-sop.md' && printf '%s' "$out" | grep -q 'OLDER            ~/.claude/commands/thing.md'; then ok "older-pristine-detected-by-history"; else bad "older-pristine-detected-by-history" "$out"; fi
 if printf '%s' "$out" | grep -q 'RECONCILE        scripts/tool.sh'; then ok "local-edit-with-upstream-move-is-reconcile"; else bad "local-edit-with-upstream-move-is-reconcile" "$out"; fi
+# No baseline and content that upstream never shipped: a first-run local
+# customisation is RECONCILE (asked once), not a silent "modified".
+printf 'cmd customised\n' > "$HOME/.claude/commands/thing.md"
+out2=$(bash "$SYNC" --root "$C" --config "$CFG")
+if printf '%s' "$out2" | grep -q 'RECONCILE        ~/.claude/commands/thing.md (local edit, no baseline yet'; then ok "first-run-customisation-is-reconcile"; else bad "first-run-customisation-is-reconcile" "$out2"; fi
+printf 'cmd v1\n' > "$HOME/.claude/commands/thing.md"
 if printf '%s' "$out" | grep -q 'excluded         docs/sop/extra.md'; then ok "excluded-is-skipped"; else bad "excluded-is-skipped" "$out"; fi
 if grep -q '# SOP v1' "$C/docs/sop/claude-agent-sop.md" && ! [ -f "$CFG.bak" ] && [ "$(jq -r .last_update_check "$CFG")" = null ]; then ok "dry-run-writes-nothing"; else bad "dry-run-writes-nothing" "sop=$(cat "$C/docs/sop/claude-agent-sop.md") check=$(jq -r .last_update_check "$CFG")"; fi
 
@@ -62,6 +68,45 @@ printf '{ "local_path": "%s", "baseline_shas": {} }\n' "$UP" > "$HOME/.claude/ag
 printf '# SOP v1\n' > "$C/docs/sop/claude-agent-sop.md"
 out=$(cd "$C" && bash "$SYNC" 2>&1)
 if printf '%s' "$out" | grep -q 'OLDER            docs/sop/claude-agent-sop.md'; then ok "project-config-without-local-path-uses-user-config"; else bad "project-config-without-local-path-uses-user-config" "$out"; fi
+
+# Containment (security review, CRITICAL): a manifest row is data; `..` in a
+# destination, an absolute user-scope destination, or `..` in an upstream path
+# is refused, reported, and never written.
+(cd "$UP" && printf '| `../../escape.md` | `docs/sop/extra.md` | project |\n| `%s/anywhere/evil.md` | `docs/sop/extra.md` | user |\n| `docs/sop/leak.md` | `../leak-source.md` | project |\n' "$TMP" >> .claude/commands/update-agent-sop.md && printf 'secret\n' > "$TMP/leak-source.md" && $GIT add -A >/dev/null && $GIT commit -q -m adversarial)
+err=$(bash "$SYNC" --root "$C" --config "$CFG" --apply 2>&1 >/dev/null); out=$(bash "$SYNC" --root "$C" --config "$CFG" 2>/dev/null)
+if printf '%s' "$out" | grep -q 'REFUSED          ../../escape.md' && [ ! -e "$TMP/escape.md" ] && [ ! -e "$(dirname "$C")/escape.md" ]; then ok "traversal-destination-refused"; else bad "traversal-destination-refused" "$out"; fi
+if printf '%s' "$out" | grep -q "REFUSED          $TMP/anywhere/evil.md" && [ ! -e "$TMP/anywhere" ]; then ok "absolute-user-destination-refused-and-no-directory-created"; else bad "absolute-user-destination-refused-and-no-directory-created" "$out dir=$([ -e "$TMP/anywhere" ] && echo created)"; fi
+if printf '%s' "$out" | grep -q 'REFUSED          docs/sop/leak.md' && [ ! -e "$C/docs/sop/leak.md" ]; then ok "upstream-path-escape-refused"; else bad "upstream-path-escape-refused" "$out"; fi
+if [ -z "$err" ]; then ok "apply-run-writes-nothing-to-stderr"; else bad "apply-run-writes-nothing-to-stderr" "stderr='$err'"; fi
+if jq empty "$CFG" 2>/dev/null && [ -f "$CFG.bak" ] && jq empty "$CFG.bak" 2>/dev/null; then ok "config-and-backup-are-valid-json"; else bad "config-and-backup-are-valid-json" "$(ls -l "$CFG"* )"; fi
+
+# Silent-failure review: a row with an unknown scope is an error, not a
+# silent omission; a manifest with no rows is an error; a symlinked config is
+# written through; a renamed upstream file is still found in history; an
+# unreadable consumer file is named, not called a local edit.
+(cd "$UP" && printf '| `docs/sop/typo.md` | `docs/sop/extra.md` | Project |\n' >> .claude/commands/update-agent-sop.md && $GIT add -A >/dev/null && $GIT commit -q -m badscope)
+err=$(bash "$SYNC" --root "$C" --config "$CFG" 2>&1 >/dev/null); rc=$?
+if [ "$rc" = 1 ] && printf '%s' "$err" | grep -q 'unrecognised scope' && printf '%s' "$err" | grep -q 'docs/sop/typo.md'; then ok "unknown-scope-row-is-an-error-naming-the-row"; else bad "unknown-scope-row-is-an-error-naming-the-row" "rc=$rc err='$err'"; fi
+(cd "$UP" && $GIT revert -q --no-edit HEAD)
+mv "$UP/.claude/commands/update-agent-sop.md" "$UP/.claude/commands/update-agent-sop.md.keep"; printf 'no table here\n' > "$UP/.claude/commands/update-agent-sop.md"
+err=$(bash "$SYNC" --root "$C" --config "$CFG" 2>&1 >/dev/null); rc=$?
+if [ "$rc" = 1 ] && printf '%s' "$err" | grep -q 'no manifest rows parsed'; then ok "unparsable-manifest-is-an-error"; else bad "unparsable-manifest-is-an-error" "rc=$rc err='$err'"; fi
+mv "$UP/.claude/commands/update-agent-sop.md.keep" "$UP/.claude/commands/update-agent-sop.md"
+# symlinked config
+mkdir -p "$TMP/dotfiles"; cp "$CFG" "$TMP/dotfiles/real.json"; ln -sf "$TMP/dotfiles/real.json" "$TMP/link.json"
+printf '# SOP v1\n' > "$C/docs/sop/claude-agent-sop.md"
+bash "$SYNC" --root "$C" --config "$TMP/link.json" --apply >/dev/null 2>&1
+if [ -L "$TMP/link.json" ] && [ "$(jq -r '.baseline_shas["docs/sop/claude-agent-sop.md"]' "$TMP/dotfiles/real.json")" = "$V2_SOP" ]; then ok "symlinked-config-written-through"; else bad "symlinked-config-written-through" "link=$([ -L "$TMP/link.json" ] && echo kept || echo severed) real=$(jq -c .baseline_shas "$TMP/dotfiles/real.json")"; fi
+# renamed upstream file: consumer holds the pre-rename content
+(cd "$UP" && git mv docs/sop/extra.md docs/sop/renamed.md && sed -i.bak 's#`docs/sop/extra.md` | `docs/sop/extra.md` | project#`docs/sop/renamed.md` | `docs/sop/renamed.md` | project#' .claude/commands/update-agent-sop.md && rm -f .claude/commands/update-agent-sop.md.bak && $GIT add -A >/dev/null && $GIT commit -q -m rename)
+printf 'x v1\n' > "$C/docs/sop/renamed.md"
+printf '{ "local_path": "%s", "exclude": [], "baseline_shas": {} }\n' "$UP" > "$CFG"
+out=$(bash "$SYNC" --root "$C" --config "$CFG" 2>/dev/null)
+if printf '%s' "$out" | grep -q 'OLDER            docs/sop/renamed.md'; then ok "renamed-upstream-file-found-in-history"; else bad "renamed-upstream-file-found-in-history" "$out"; fi
+# unreadable consumer file
+chmod 000 "$C/docs/sop/renamed.md"
+out=$(bash "$SYNC" --root "$C" --config "$CFG" 2>/dev/null); chmod 644 "$C/docs/sop/renamed.md"
+if printf '%s' "$out" | grep -q 'UNREADABLE       docs/sop/renamed.md'; then ok "unreadable-file-is-named-not-called-modified"; else bad "unreadable-file-is-named-not-called-modified" "$out"; fi
 
 echo ""; echo "sync-fixtures: $pass passed, $fail failed"
 [ "$fail" -gt 0 ] && echo "Failed:$failed" && exit 1

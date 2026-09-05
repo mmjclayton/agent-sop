@@ -24,6 +24,8 @@ If neither exists, create `~/.claude/agent-sop.config.json` with:
 ```
 Inform the user, then proceed with first-run bootstrap behaviour (see Step 4).
 
+**`local_path` is the trust root of the sync.** The script copies whatever the checkout at that path holds into this project and into `~/.claude/`. A project-scope `.claude/agent-sop.config.json` that carries a `local_path` therefore decides what a machine executes; keep that key in the user-global config and do not commit a project config that sets it. Manifest rows are data: a destination that leaves the consumer root or `~/.claude/`, or an upstream path that leaves the checkout, is refused and reported, never written.
+
 **`exclude`** is an array of pristine-replica paths (relative to project root) that this project deliberately overrides locally and does not want synced. Excluded files are skipped in Steps 2/3/4/5 entirely — no classification, no baseline tracking, no fetch. Replaces the older workaround of freezing a baseline SHA and adding an explanatory note. Example: `"exclude": ["docs/sop/security.md"]` for a project that ships its own security doc.
 
 ## Pristine-replica file set
@@ -78,12 +80,13 @@ The hook scripts are registered in `~/.claude/settings.json` by `scripts/install
 The config's `local_path` names the upstream checkout. When it exists, the sync is a script, not prose:
 
 ```bash
-UP=$(jq -r '.local_path' "${CFG:-$HOME/.claude/agent-sop.config.json}"); UP="${UP/#\~/$HOME}"
-git -C "$UP" pull -q --ff-only 2>/dev/null
+CFG=.claude/agent-sop.config.json; [ -f "$CFG" ] || CFG="$HOME/.claude/agent-sop.config.json"
+UP=$(jq -r '.local_path // empty' "$CFG"); [ -n "$UP" ] || UP=$(jq -r '.local_path' "$HOME/.claude/agent-sop.config.json"); UP="${UP/#\~/$HOME}"
+git -C "$UP" pull --ff-only || echo "upstream checkout at $UP did not fast-forward; the classifier runs against what is there"
 bash "$UP/scripts/sync-sop-files.sh"            # dry run: one line per file that is not in sync, then a summary
 ```
 
-The script reads the manifest table above from the upstream copy of this file, so the table is the single source of what is synced. Per file it prints `MISSING`, `OLDER` (the consumer copy equals the baseline **or any past upstream version of the file in git history** — a copy upstream once shipped was never edited locally, whatever the shared baseline says), `modified` (kept), `RECONCILE` (a local edit and upstream moved since the baseline), or `excluded`. Files in sync print nothing.
+The script reads the manifest table above from the upstream copy of this file, so the table is the single source of what is synced. Per file it prints one of: `MISSING`; `OLDER` (the consumer copy equals the baseline **or any past upstream version of the file in git history** — a copy upstream once shipped was never edited locally, whatever the shared baseline says); `modified` (a local edit with upstream unchanged since the baseline: kept); `RECONCILE` (a local edit and either upstream moved since the baseline or there is no baseline yet, as on a first run onto a pre-customised project: the operator decides once); `excluded`; `absent-upstream` (a manifest row whose upstream file does not exist: fix the row); `UNREADABLE` (a consumer file the script cannot read: fix permissions, it is not classified); `REFUSED` (a destination that would leave the consumer root or `~/.claude/`, or an upstream path that would leave the checkout: treat the checkout as corrupted or compromised, write nothing, stop). Files in sync print nothing. The summary line counts manifest rows; a row with a scope other than `project` or `user`, or a manifest that no longer parses, is an error (exit 1), never a silent omission. The script itself runs from the upstream checkout and is deliberately not a manifest row, like `scripts/install-hooks.sh`.
 
 Without a local checkout (GitHub-raw only), fall back to the prose three-way: for each manifest file fetch `https://raw.githubusercontent.com/{github}/main/{path}`, compare its SHA-256 with the consumer copy and the baseline, and apply only where the consumer equals the baseline.
 
