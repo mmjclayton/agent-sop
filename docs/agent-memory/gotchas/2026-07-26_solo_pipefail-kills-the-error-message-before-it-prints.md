@@ -35,3 +35,6 @@ Worse: commit `66ee6a4` is titled "fix(validator): `|| true` pipefail guard arou
 4. **When fixing a shell idiom bug, grep the whole file for the same shape** before committing. `66ee6a4` fixed one of two instances and the second survived three months.
 
 Filed as P73. Not fixed in-session: it is a validator change, so `docs/sop/security.md` rule 11 requires it ship as its own declared, reviewed item rather than folded into an unrelated diff.
+
+**Recurred 2026-09-05 (P105).** The validator's new entry extraction piped the whole Backlog through `tr` into an awk that exited at the next heading; on the real 100 KB file `tr` took SIGPIPE, pipefail reported 141, errexit ended the script with no output. The fixture suite never saw it because every fixture is smaller than the pipe buffer. Fix: strip once to a temp file, no early exits in a pipeline that reads a large file; a generated large-file fixture now pins it. Same rule, third site.
+
