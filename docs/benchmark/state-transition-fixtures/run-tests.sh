@@ -211,6 +211,18 @@ for repl in "$SCRIPT_DIR"/*.repl; do
   fi
 done
 
+# A shipped Feature early in a Backlog larger than the pipe buffer must still
+# be validated: the first P105 extraction exited awk early and gave tr SIGPIPE,
+# which errexit turned into a silent exit 141 (P73 shape). Generated at run
+# time because the file has to be big.
+big=$(mktemp -d); mkdir -p "$big/docs/reviews"
+printf '# Review\n## Findings\n- `fixture.sh:1` anchor\n' > "$big/docs/reviews/fixture_P100.md"
+printf '# Backlog\n\n### P100 — Early feature\n`[IN PROGRESS] [Feature]`\n' > "$big/before.md"
+{ printf '# Backlog\n\n### P100 — Early feature\n`[SHIPPED - 2026-09-05] [Feature]`\n\nreview: docs/reviews/fixture_P100.md\n\n---\n\n'; for n in $(seq 200 1400); do printf '### P%s — Filler item number %s with a long enough title to make the file large\n`[OPEN] [Feature]`\n\nBody line one for the filler entry, padded so the file crosses sixty-four kilobytes with room to spare.\n\n---\n\n' "$n" "$n"; done; } > "$big/after.md"
+out=$(cd "$big" && bash "$VALIDATOR" --before-file before.md --after-file after.md 2>&1); rc=$?
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'OK'; then echo "PASS: legal-early-entry-in-large-backlog"; pass=$((pass+1)); else echo "FAIL: legal-early-entry-in-large-backlog — rc=$rc size=$(wc -c < "$big/after.md") out='$(printf '%s' "$out" | head -2)'"; fail=$((fail+1)); failed_cases="$failed_cases legal-early-entry-in-large-backlog"; fi
+rm -rf "$big"
+
 echo ""
 echo "Results: $pass passed, $fail failed"
 [ "$fail" -gt 0 ] && echo "Failed: $failed_cases" && exit 1

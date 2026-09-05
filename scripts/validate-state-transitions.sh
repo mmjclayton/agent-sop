@@ -653,7 +653,7 @@ resolve_before() {
 }
 
 TMP_BEFORE=$(mktemp)
-trap 'rm -f "$TMP_BEFORE"' EXIT
+trap 'rm -f "$TMP_BEFORE" "${AFTER_CLEAN:-}"' EXIT
 
 resolve_before > "$TMP_BEFORE"
 if [ ! -s "$TMP_BEFORE" ]; then
@@ -711,12 +711,21 @@ while IFS=$'\t' read -r p after_status; do
       # after the last entry must not lend it a citation), anchored the same
       # way extract_statuses anchors (`### P<n>` followed by a non-digit), and
       # CRLF-tolerant. An entry that cannot be located fails closed below.
-      entry_body=$(tr -d '\r' < "$AFTER_FILE" | awk -v p="### ${p}" '
+      # No early exit in the pipeline: an awk `exit` or `grep -q` that stops
+      # reading while `tr` is still writing a file larger than the pipe buffer
+      # gives tr SIGPIPE, pipefail reports 141, and errexit ends the script
+      # with no message — the P73 shape, reproduced on the real Backlog when
+      # the shipped entry sat early in the file. CR is stripped once, to a
+      # temp file, and awk reads it to the end.
+      if [ -z "${AFTER_CLEAN:-}" ]; then
+        AFTER_CLEAN=$(mktemp); tr -d '\r' < "$AFTER_FILE" > "$AFTER_CLEAN"
+      fi
+      entry_body=$(awk -v p="### ${p}" '
         $0 ~ "^"p"([^0-9]|$)" { found=1; next }
-        found && /^(### |## )/ { exit }
+        found && /^(### |## )/ { found=0 }
         found { print }
-      ')
-      if ! tr -d '\r' < "$AFTER_FILE" | grep -qE "^### ${p}([^0-9]|$)"; then
+      ' "$AFTER_CLEAN")
+      if ! grep -qE "^### ${p}([^0-9]|$)" "$AFTER_CLEAN"; then
         echo "BLOCK: $p transitioned to [SHIPPED] but its entry heading could not be located in Backlog.md (expected a line starting \"### ${p}\")."
         violations=$((violations + 1))
         continue
@@ -727,12 +736,12 @@ while IFS=$'\t' read -r p after_status; do
       # it, so `..` cannot reach a file that is not a review (review: CRITICAL).
       review_lines=$(printf '%s\n' "$entry_body" | awk '/^[[:space:]]*```/{f=!f; next} !f' | grep -E '^[[:space:]]*review( skipped)?[: (]' || true)
       item_type=$(printf '%s\n' "$entry_body" | awk '
-        /^`\[/ {
+        !done && /^`\[/ {
           line=$0
           gsub(/`/, "", line)
           sub(/^\[[^]]+\][[:space:]]*/, "", line)
           if (match(line, /^\[[^]]+\]/)) { print substr(line, RSTART+1, RLENGTH-2) }
-          exit
+          done=1
         }')
       # Trigger (b), P87. Resolve once per run, not per item.
       if [ -z "${SELF_MOD_CHECKED:-}" ]; then
