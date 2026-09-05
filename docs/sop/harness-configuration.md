@@ -75,7 +75,7 @@ File-backed persistent notes. The API primitive behind `docs/agent-memory.md`. F
 
 ### a. SessionStart + UserPromptSubmit — context load (shipped: `scripts/hooks/sop-session-context.sh`)
 
-Installed user-scope by `scripts/install-hooks.sh`. Prints, once per session and project, the resume snapshot, in-flight lines, recent sessions, `[IN PROGRESS]` Backlog items, commits since the last session record, dirty sibling worktrees, and upstream-sync staleness. Covers Steps 0-4 of the session start checklist; the Backlog item for the task is still a deliberate read.
+Installed user-scope by `scripts/install-hooks.sh`. Prints, once per session and project, the resume snapshot and recent sessions, plus — only when not the default — in-flight lines, `[IN PROGRESS]` Backlog items, commits since the last session record, dirty trackers, an outstanding ship gate, dirty sibling worktrees, and a stale upstream sync (P104: a clean repo prints no "(none)" lines). Covers Steps 0-4 of the session start checklist; the Backlog item for the task is still a deliberate read.
 
 Registered on both events because Claude Code adds hook stdout to the model's context only for `SessionStart`, `UserPromptSubmit`, `UserPromptExpansion` and `PostModelSwitch`, and because sessions launched outside the project only reach it after a `cd` — the first prompt inside the project is what loads it. `SessionStart` with `source` `compact` or `clear` reprints, since the earlier context is gone.
 

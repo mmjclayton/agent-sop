@@ -268,8 +268,21 @@ sop_is_push_command() {
         rest="${rest#*"${BASH_REMATCH[0]}"}"
     done
 
-    stripped=$(printf '%s' "$cmd" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
+    stripped=$(printf '%s\n' "$cmd" | sop_strip_heredocs | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
     sop_cmd_matches_push "$stripped"
+}
+
+# sop_strip_heredocs — drops the body of every here-document on stdin. A
+# command that writes a file whose text mentions a push verb is not a push
+# (the gate refused a scratchpad write of a command doc, 2026-09-05).
+sop_strip_heredocs() {
+    awk '
+        skip { if ($0 == tag) { skip = 0 } ; next }
+        match($0, /<<-?[[:space:]]*["'"'"']?[A-Za-z_][A-Za-z0-9_]*["'"'"']?/) {
+            t = substr($0, RSTART, RLENGTH); sub(/^<<-?[[:space:]]*/, "", t); gsub(/["'"'"']/, "", t)
+            tag = t; skip = 1; print; next
+        }
+        { print }'
 }
 
 # sop_code_lines <root> <from> <to> <skip-docs> — added+deleted lines in the
@@ -364,5 +377,5 @@ sop_shipsop_gate() {
         "$lines" "${branch:-HEAD}" "$(sop_default_branch "$root")" "$(printf '%s' "$base" | cut -c1-7)" "$(printf '%s' "$head" | cut -c1-7)"
     printf '  Run these agents against that range, collect every result (they run in the background), then write %s containing the line `Covers: %s`:\n' "$report" "$head"
     printf '%s\n' "$agents"
-    printf '  Rules: launch each agent with isolation: "worktree", read-only; wait for every result; write the report after any fix commit so it covers HEAD; CRITICAL/HIGH at the top of your next reply with file:line; file nothing to Backlog.md.\n'
+    printf '  Rules: launch each agent with isolation: "worktree", read-only; wait for every result; write the report after any fix commit so it covers HEAD; CRITICAL/HIGH at the top of your next reply with file:line, MEDIUM/LOW stay in the report; file nothing to Backlog.md.\n'
 }

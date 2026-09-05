@@ -286,7 +286,7 @@ SESSION_ID=ctx-plainsop run_hook "$CTX" "$PLAINSOP" ''
 if grep -Eq "^Drift: [0-9]+ commit\(s\) since the last session record" "$HOOK_OUT" && grep -q "^Uncommitted tracker files: Backlog.md" "$HOOK_OUT" && grep -q "Non-code project: the Stop hook enforces nothing here" "$HOOK_OUT"; then ok "ctx-non-code-shows-drift-says-not-enforced"; else bad "ctx-non-code-shows-drift-says-not-enforced" "out='$(grep -E '^(Drift|Uncommitted|This replaces|Non-code)' "$HOOK_OUT")'"; fi
 git -C "$PLAINSOP" checkout -q -- Backlog.md
 SESSION_ID=ctx-sopcode run_hook "$CTX" "$SOP" ''
-if grep -q "Read the Backlog.md item for the task" "$HOOK_OUT" && ! grep -q "enforces nothing here" "$HOOK_OUT"; then ok "ctx-code-closing-line"; else bad "ctx-code-closing-line" "out='$(tail -2 "$HOOK_OUT")'"; fi
+if grep -qx "This replaces /restart-sop Steps 0-4. Read the Backlog.md item for the task before starting it." "$HOOK_OUT"; then ok "ctx-code-closing-line"; else bad "ctx-code-closing-line" "out='$(tail -2 "$HOOK_OUT")'"; fi
 # A legacy project_resume.md that says SUPERSEDED on its first line is not
 # served as the resume snapshot (cost audit, 2026-09-05).
 SUPER="$TMP/super"; make_repo "$SUPER" with-code
@@ -470,6 +470,10 @@ run_hook "$PUSH" "$GATED" "$(push_json 'echo done && `git push`')"
 if [ "$HOOK_EXIT" = 2 ]; then ok "push-backtick-refused"; else bad "push-backtick-refused" "exit $HOOK_EXIT"; fi
 run_hook "$PUSH" "$GATED" "$(push_json 'echo \"remember to run git push after this\"')"
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-verb-in-quoted-prose-silent"; else bad "push-verb-in-quoted-prose-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+run_hook "$PUSH" "$GATED" "$(push_json "cat > notes.md <<EOF\nRemember to run git push and then gh pr create.\nEOF")"
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-verb-in-heredoc-body-silent"; else bad "push-verb-in-heredoc-body-silent" "exit $HOOK_EXIT stderr='$(head -1 "$HOOK_ERR")'"; fi
+run_hook "$PUSH" "$GATED" "$(push_json "cat > notes.md <<EOF\nplain notes\nEOF\ngit push -u origin feat/push")"
+if [ "$HOOK_EXIT" = 2 ]; then ok "push-after-heredoc-still-refused"; else bad "push-after-heredoc-still-refused" "exit $HOOK_EXIT"; fi
 run_hook "$PUSH" "$GATED" "$(push_json "git commit -m 'then git push'")"
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-verb-in-commit-message-silent"; else bad "push-verb-in-commit-message-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
 
@@ -536,6 +540,16 @@ SESSION_ID=ctx-gate-2 run_hook "$CTX" "$GATED" ''
 if grep -q "^Ship gate: outstanding" "$HOOK_OUT" && grep -q "code lines" "$HOOK_OUT"; then ok "ctx-ship-gate-outstanding-shown"; else bad "ctx-ship-gate-outstanding-shown" "out='$(grep -i 'ship gate' "$HOOK_OUT")'"; fi
 SESSION_ID=ctx-gate-3 run_hook "$CTX" "$SOP" ''
 if ! grep -q "^Ship gate:" "$HOOK_OUT"; then ok "ctx-ship-gate-absent-without-config"; else bad "ctx-ship-gate-absent-without-config" "out='$(grep -i 'ship gate' "$HOOK_OUT")'"; fi
+
+# SOP sync line prints only when stale (P104): a fresh check is silent, an old one is named.
+mkdir -p "$HOME/.claude"
+printf '{ "last_update_check": "2026-01-01", "update_reminder": "weekly" }\n' > "$HOME/.claude/agent-sop.config.json"
+SESSION_ID=ctx-stale run_hook "$CTX" "$SOP" ''
+if grep -q "^SOP sync: .*stale" "$HOOK_OUT"; then ok "ctx-stale-sync-named"; else bad "ctx-stale-sync-named" "out='$(grep 'SOP sync' "$HOOK_OUT")'"; fi
+printf '{ "last_update_check": "%s", "update_reminder": "weekly" }\n' "$(date +%Y-%m-%d)" > "$HOME/.claude/agent-sop.config.json"
+SESSION_ID=ctx-fresh run_hook "$CTX" "$SOP" ''
+if ! grep -q "^SOP sync:" "$HOOK_OUT"; then ok "ctx-fresh-sync-silent"; else bad "ctx-fresh-sync-silent" "out='$(grep 'SOP sync' "$HOOK_OUT")'"; fi
+rm -f "$HOME/.claude/agent-sop.config.json"
 
 # Legacy ship-sop directive is called out as superseded.
 mkdir -p "$SOP/.ship" && echo "# stale" > "$SOP/.ship/.pending-auto-fire.md"
