@@ -38,14 +38,11 @@ Test: `bash docs/benchmark/hook-fixtures/run-tests.sh` (also `resume-path-fixtur
 - P8 — Web app domain variant — [OPEN] [Feature] [has-open-questions]
 - P9 — Marketing domain variant — [OPEN] [Feature] [has-open-questions]
 - P10 — Data/analytics domain variant — [OPEN] [Feature] [has-open-questions]
-- P77 — Finish the P32 instruction-budget trim; the soft cap has been breached since April — [OPEN] [Refactor]
 - P78 — Automate `cross-layer-rules.md` Tier 0 across instruction files — [OPEN] [Feature]
 - P79 — `sandboxing.md` treats the sandbox as protecting the host, never the reverse — [OPEN] [Iteration]
 - P80 — Benchmark rubric: pairwise scoring, and read judge reasoning not scores — [OPEN] [Iteration]
 - P81 — The MANDATORY lite benchmark rule fires on changes its instrument cannot measure — [OPEN] [Bug]
-- P82 — Step 2a's collision check fails open when its awk call errors — [OPEN] [Bug]
-- P89 — Rule 5 instruction budget is breached and unenforced — [OPEN] [Iteration] [has-open-questions]
-- P90 — Session-end step numbering incoherent across four files — [OPEN] [Bug] [has-open-questions]
+- P105 — Prose trim, validator retarget, Backlog archive: the SOP keeps what a session reads — [IN PROGRESS] [Refactor]
 <!-- priority-items:end -->
 
 ---

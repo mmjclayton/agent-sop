@@ -50,7 +50,7 @@ DRIFT_THRESHOLD_FILES=""    # override the files threshold (skip config lookup)
 REPL_CONFIG_FILE=""         # override for --check-replication fixture mode
 REPL_CHANGED_FILE=""        # fixture: file listing this session's changed paths
 REPL_HOME=""                # fixture: stand-in for $HOME when resolving mirrors
-SELF_MOD_CHANGED_FILE=""    # fixture: file listing changed paths for the Step 1b trigger (b) check
+SELF_MOD_CHANGED_FILE=""    # fixture: file listing changed paths for the review trigger (b) check
 
 print_help() {
   # Print the leading comment block, stopping at the first non-comment line.
@@ -108,7 +108,7 @@ if [ "$MODE" = "assert-review" ]; then
   #    file path with line number (`foo.ts:42`) or a backticked symbol/path
   #    (`processOrder`, `scripts/foo.sh`). Sycophancy gate (P55): reviews
   #    that pass structurally but cite nothing concrete are blocked here.
-  #    Reasoning lives in claude-agent-sop.md §6 Step 1b — Anthropic's
+  #    Reasoning lives in claude-agent-sop.md §3 step 2 — Anthropic's
   #    30 April 2026 personal-guidance research measured 9% baseline /
   #    25-38% emotional-domain validation rates even in frontier models
   #    trained against sycophancy. Reviewer-as-peer-agent carries the
@@ -151,7 +151,7 @@ if [ "$MODE" = "assert-review" ]; then
   if [ -n "$missing" ]; then
     echo "BLOCK: review artifact $ASSERT_REVIEW_FILE missing:$missing" >&2
     echo "Required: diff summary heading, Severity: <enum>, Findings section (or reasoned 'No issues — <reason>'), and at least one concrete anchor inside findings/no-issues — a file path with line number (e.g. \`foo.ts:42\`) or a backticked symbol or path (e.g. \`processOrder\`, \`scripts/foo.sh\`)." >&2
-    echo "Sycophancy gate: reviews that pass structurally but cite nothing concrete are blocked. See SOP §6 Step 1b for rationale." >&2
+    echo "Sycophancy gate: reviews that pass structurally but cite nothing concrete are blocked. See SOP §3 step 2 for rationale." >&2
     exit 1
   fi
   exit 0
@@ -172,7 +172,7 @@ if [ "$MODE" = "check-drift" ]; then
   if [ -z "$resume_file" ]; then
     # Delegated to scripts/resolve-resume-path.sh (P96). This block previously
     # inlined the agent-id and memory-dir derivation, which /restart-sop
-    # duplicated verbatim and /update-sop Step 7 did not implement at all —
+    # duplicated verbatim and /update-sop Step 6 did not implement at all —
     # so the writer and the two readers could target different directories.
     # One implementation now serves all three; see the script header and
     # docs/guides/cross-layer-rules.md Tier A.
@@ -349,7 +349,7 @@ if [ "$MODE" = "check-drift" ]; then
   echo "Resolve by one of:" >&2
   echo "  1) If you changed scope deliberately: add a '## Scope Change' block to $resume_file with a one-line reason." >&2
   echo "  2) If you drifted unintentionally: amend the commit message(s) to reference the in-flight P-number, or split the work so the declared item ships." >&2
-  echo "  3) If the prior resume file is stale: update it (Step 7 of /update-sop) and re-run." >&2
+  echo "  3) If the prior resume file is stale: update it (Step 6 of /update-sop) and re-run." >&2
   exit 1
 fi
 
@@ -358,7 +358,7 @@ fi
 #
 # Every existing gate asks "was this change declared?". None asks "did this
 # change reach the surface that enforces it?". A session can edit a
-# pristine-replica file, pass Step 3c and 3d, merge, and leave the user-scope
+# pristine-replica file, pass Step 4, merge, and leave the user-scope
 # copy that actually executes untouched — observed twice, in both directions
 # (Batch 0.27 left user scope stale for eight days; Batch 0.26 found a
 # project-specific step that had leaked the other way).
@@ -591,7 +591,7 @@ legal_paths_from() {
 # revalidated with `--before <merge-base>` explicitly.
 #
 # Override precedence: --before-file > --before <ref> > HEAD (default).
-# ── Step 1b trigger (b): SOP self-modification ────────────────────────────────
+# ── Review trigger (b): SOP self-modification ────────────────────────────────
 #
 # claude-agent-sop.md states this as the SOP's one unconditional gate: edits to
 # files the SOP itself executes or instructs are load-bearing "regardless of
@@ -707,11 +707,25 @@ while IFS=$'\t' read -r p after_status; do
     # on a Batch Log line in docs/build-plans/; a measured review found the
     # Batch Log read by nothing else, so the entry is now the single place.
     if [ "$after_status" = "[SHIPPED]" ] && [ "$before_status" != "[SHIPPED]" ]; then
-      entry_body=$(awk -v p="### ${p}" '
-        $0 ~ "^"p"( |$)" { found=1; next }
-        found && /^### / { exit }
+      # Bounded at the next `### ` or `## ` heading (a `## Shipped Archive`
+      # after the last entry must not lend it a citation), anchored the same
+      # way extract_statuses anchors (`### P<n>` followed by a non-digit), and
+      # CRLF-tolerant. An entry that cannot be located fails closed below.
+      entry_body=$(tr -d '\r' < "$AFTER_FILE" | awk -v p="### ${p}" '
+        $0 ~ "^"p"([^0-9]|$)" { found=1; next }
+        found && /^(### |## )/ { exit }
         found { print }
-      ' "$AFTER_FILE")
+      ')
+      if ! tr -d '\r' < "$AFTER_FILE" | grep -qE "^### ${p}([^0-9]|$)"; then
+        echo "BLOCK: $p transitioned to [SHIPPED] but its entry heading could not be located in Backlog.md (expected a line starting \"### ${p}\")."
+        violations=$((violations + 1))
+        continue
+      fi
+      # Only labelled lines outside code fences count (review: HIGH): a path
+      # quoted as an example, or a skip token in prose, is not a declaration.
+      # The citation is a bare filename under docs/reviews/ — no slash after
+      # it, so `..` cannot reach a file that is not a review (review: CRITICAL).
+      review_lines=$(printf '%s\n' "$entry_body" | awk '/^[[:space:]]*```/{f=!f; next} !f' | grep -E '^[[:space:]]*review( skipped)?[: (]' || true)
       item_type=$(printf '%s\n' "$entry_body" | awk '
         /^`\[/ {
           line=$0
@@ -742,19 +756,20 @@ while IFS=$'\t' read -r p after_status; do
           if [ -n "${SELF_MOD_FILES:-}" ]; then
             skip_re="review skipped \(${p}\): *(test-only|dep-bump)\b"
           fi
-          if printf '%s' "$entry_body" | grep -qE 'docs/reviews/'; then
+          if printf '%s' "$review_lines" | grep -qE '^[[:space:]]*review:[[:space:]]*docs/reviews/'; then
             # A citation is not evidence until the path resolves (P95).
             missing_reviews=""
-            for cited in $(printf '%s' "$entry_body" | grep -oE 'docs/reviews/[A-Za-z0-9._/-]+\.md'); do
+            for cited in $(printf '%s' "$review_lines" | grep -oE '^[[:space:]]*review:[[:space:]]*docs/reviews/[A-Za-z0-9._-]+\.md' | sed -E 's/^[[:space:]]*review:[[:space:]]*//'); do
               [ -f "$cited" ] || missing_reviews="$missing_reviews $cited"
             done
+            [ -n "$missing_reviews" ] || [ -n "$(printf '%s' "$review_lines" | grep -oE '^[[:space:]]*review:[[:space:]]*docs/reviews/[A-Za-z0-9._-]+\.md')" ] || missing_reviews=" (a review: line with a path that is not a bare filename under docs/reviews/)"
             if [ -n "$missing_reviews" ]; then
               echo "BLOCK: $p ([${item_type}]) cites a review artifact that does not exist:${missing_reviews}"
               echo "  A cited path that does not resolve is not a review. Either write the artifact,"
               echo "  or declare the skip on the entry as: review skipped (${p}): <docs-only|test-only|dep-bump|below-threshold>"
               violations=$((violations + 1))
             fi
-          elif printf '%s' "$entry_body" | grep -qEi "$skip_re"; then
+          elif printf '%s' "$review_lines" | grep -qEi "$skip_re"; then
             : # enumerated skip, bound to this P-number — gate satisfied
           else
             if [ -n "${SELF_MOD_FILES:-}" ]; then
@@ -765,7 +780,7 @@ while IFS=$'\t' read -r p after_status; do
               violations=$((violations + 1))
               continue
             fi
-            echo "BLOCK: $p ([${item_type}]) shipped but its Backlog entry neither cites a docs/reviews/ artifact nor declares an enumerated Step 1b skip."
+            echo "BLOCK: $p ([${item_type}]) shipped but its Backlog entry neither cites a docs/reviews/ artifact nor declares an enumerated review skip."
             echo "  Add a line under the status line: review: docs/reviews/<file>.md"
             echo "  or declare the skip there as: review skipped (${p}): <docs-only|test-only|dep-bump|below-threshold>"
             violations=$((violations + 1))

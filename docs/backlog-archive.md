@@ -18,8 +18,6 @@ Document that the SOP body, compliance scoring, and reviewer-substance gates wer
 
 ---
 
----
-
 ### P59 — Step 1b reviewer-gate tightening + cross-layer rules guide
 `[SHIPPED - 2026-05-28] [Iteration]`
 
@@ -41,8 +39,6 @@ Two upstream tightenings prompted by hst-tracker 2026-05-28 evidence (composer f
 
 ---
 
----
-
 ### P58 — Karpathy before/after pattern (extend across SOP)
 `[SHIPPED - 2026-05-04] [Iteration]`
 
@@ -54,8 +50,6 @@ Extend the "show one bad example next to one good example" pedagogy across addit
 - Net token cost stays under +500 bytes for the core SOP body (Rule 5 instruction budget unaffected — examples don't count as instructions but bytes still cost)
 - User-scope mirrors updated where reference agents change
 - Baselines refreshed
-
----
 
 ---
 
@@ -74,8 +68,6 @@ Add an `exclude: []` array field to `agent-sop.config.json`. Files listed are sk
 
 ---
 
----
-
 ### P55 — Sycophantic reviewer detection: tighten substance assertion
 `[SHIPPED - 2026-05-04] [Iteration]`
 
@@ -90,8 +82,6 @@ Tighten `scripts/validate-state-transitions.sh --assert-review` to flag reviews 
 - New fixture under `docs/benchmark/state-transition-fixtures/` covering the slippery sycophancy-style review (passes today, must fail after the change)
 
 **Why filed not built now:** filed alongside P56 from the 2026-05-04 digest; build order is P56 then P24, P55 deferred.
-
----
 
 ---
 
@@ -119,8 +109,6 @@ Originally shipped as `/go`; renamed to `/finish` later the same day — `/go` c
 
 ---
 
----
-
 ### P28 — Research digest implementation (v2.1.97, context management, evolution loop)
 `[SHIPPED - 2026-04-09] [Feature]`
 
@@ -130,8 +118,6 @@ Originally shipped as `/go`; renamed to `/finish` later the same day — `/go` c
 3. Memory API note in SOP Section 1
 4. SOP Section 18: Evolution loop with benchmark-proven principles
 5. docs/guides/sop-hill-climbing.md: iterative improvement methodology
-
----
 
 ---
 
@@ -145,8 +131,6 @@ Integrated Claude Managed Agents API patterns into the SOP. Six components:
 4. Managed Agents benchmark harness design — isolated containers, mounted repos, user.define_outcome scoring
 5. Section 17 Managed Agents Integration Guide — memory store mapping, skills guidance, session lifecycle mapping, outcome rubrics
 6. Reference notes for low-impact items (memory stores, skills as lazy context, append-only events)
-
----
 
 ---
 
@@ -165,8 +149,6 @@ Applied all optimisations derived from benchmark data analysis:
 
 ---
 
----
-
 ### P25 — Incorporate benchmark findings into SOP
 `[SHIPPED - 2026-04-09] [Iteration]`
 
@@ -180,8 +162,6 @@ Update all SOP documents to incorporate benchmark-proven practices: Common Mista
 - Implementation guide updated to reference Common Mistakes as required - DONE
 - README updated with benchmark results section and findings - DONE
 - SOP section index updated - DONE
-
----
 
 ---
 
@@ -205,8 +185,6 @@ Standalone guide at `docs/sop/multi-agent.md` for multiple agents working the sa
 - Both templates updated with multi-agent section scaffold
 - Compliance checklist updated with multi-agent checks
 - All tracking files updated (Backlog, feature-map, agent-memory, CLAUDE.md)
-
----
 
 ---
 
@@ -240,8 +218,6 @@ Fires fallback **only when agent-id is literally `solo`**. On a multi-worktree p
 
 ---
 
----
-
 ### P54 — Multi-agent hardening + perf gates + worktree advisory
 `[SHIPPED - 2026-05-02] [Iteration]`
 
@@ -268,8 +244,6 @@ Tightens parallel-session safety and `/update-sop` perf, prompted by a hst-track
 **Files touched:** `.claude/commands/restart-sop.md`, `.claude/commands/update-sop.md`, `.claude/commands/update-agent-sop.md`, `docs/guides/multi-agent-parallel-sessions.md`, `docs/templates/agent-memory-template.md`, `docs/agent-memory/gotchas/2026-05-02_solo_worktree-uncommitted-wipe.md` (new), `docs/agent-memory/in-flight/README.md` (new), `scripts/refresh-in-flight.sh` (new), `setup.sh`, `README.md`, `~/.claude/commands/update-agent-sop.md` (user-scope mirror).
 
 **Commits:** `1f105b6` (feat: machinery), `da279f6` (docs: README + manifest + setup.sh).
-
----
 
 ---
 
@@ -301,8 +275,6 @@ Inspired by CodeLeash's session-end learnings capture. Adapted for agent-sop:
 
 **Follow-up (deferred, not this item):** if dogfood across 2-3 sessions shows real signal volume from the capture flow, file a fresh P-number to install the hook via `setup.sh` (mirroring ship-sop's consent-prompt + idempotent jq merge pattern). Until then, doc-only. Measurement-led, P49-style. *(Corrected 2026-08-03: this read "file P53", which was allocated to the `/finish` skill on 2026-04-29. Following it would have produced a P-number collision.)*
 **Reopens when:** two or three consecutive sessions produce learnings entries with real signal rather than noise.
-
----
 
 ---
 
@@ -339,8 +311,6 @@ Surfaced 2026-04-24 while analysing why `/restart-sop` and `/update-sop` feel sl
 
 ---
 
----
-
 ### P49 — Instrument `/update-sop` step timing before any trim refactor
 `[SHIPPED - 2026-04-24] [Iteration]`
 
@@ -366,8 +336,6 @@ Surfaced 2026-04-20. Commands feel slow; first-pass estimate claimed ~35-40% lin
 
 ---
 
----
-
 ### P48 — Reviewer voice rules + Backlog item-sizing pedagogy
 `[SHIPPED - 2026-04-20] [Iteration]`
 
@@ -383,8 +351,6 @@ Source: direct review of `levu304/claude-code-boilerplate` (2026-04-20). Two tra
 - `code-reviewer.md` gains a "Finding Voice" section with format, drop/keep lists, examples; severity taxonomy and output template unchanged.
 - `backlog-template.md` gains ~6 lines of item-sizing guidance with one BAD/GOOD pair.
 - No net increase in core SOP instruction count (templates and agents are not counted against the ceiling).
-
----
 
 ---
 
@@ -412,8 +378,6 @@ External feedback (2026-04-19) named mid-session state drift as the central fail
 **Files shipped:** `scripts/validate-state-transitions.sh` (new `--check-drift` subcommand, project-hash normalization fix, pipefail-safe config parsing), `docs/benchmark/drift-fixtures/` (3 fixtures + run-tests.sh), `.claude/commands/update-sop.md` (Step 3d), `.claude/commands/restart-sop.md` (Step 0d in-flight reassertion), `docs/sop/claude-agent-sop.md` (Section 6 note on Step 3d), `docs/sop/compliance-checklist.md` (D1 check + summary totals).
 
 **Source:** Reddit feedback 2026-04-19 — drift after tool calls / edits / context resets. Reframed from initial print-hook proposal after user challenge: "tell me why each item will add value, and not simply add more text and markup without any action or result."
-
----
 
 ---
 
@@ -458,8 +422,6 @@ Status tags have semantics but no enforcement. Nothing prevents an agent writing
 
 ---
 
----
-
 ### P44 — Required reviewer turn before ship (with substance assertion)
 `[SHIPPED - 2026-04-19] [Feature]`
 
@@ -487,8 +449,6 @@ Close the gap identified in external feedback (2026-04-19): `/update-sop` Step 1
 **Source:** Reddit feedback 2026-04-19 — state drift / required reviewer turns / human gate concerns. Substance-assertion caveat added during assessment after being challenged on action-vs-ceremony. P44 wording tightened 2026-04-19 to make the no-human-in-loop property explicit.
 
 **Depends on:** P45 (validator infrastructure shared — `--assert-review` subcommand).
-
----
 
 ---
 
@@ -535,8 +495,6 @@ Enforced Section 0 Rule 5 by auditing and trimming the SOP instruction set. Pre-
 
 ---
 
----
-
 ### P34 — Rule 1 extended; Rule 6 added; failure-mode annotations
 `[SHIPPED - 2026-04-17] [Iteration]`
 
@@ -554,8 +512,6 @@ Applied three findings from the karpathy-skills review (P32 follow-up):
 
 ---
 
----
-
 ### P35 — Section 4 Versioning Rules removed (pure duplicate)
 `[SHIPPED - 2026-04-17] [Refactor]`
 
@@ -566,8 +522,6 @@ Section 4 consisted of an opening sentence literally stating "See Section 0" plu
 **Verification:** grep confirmed no external references to "Section 4" by number. Every versioning directive remains reachable via Rule 1's existing bullets. No directive silently removed — all rules live in Section 0 Rule 1.
 
 Lowest-risk cut from the P32 candidate list. Self-declared duplicate.
-
----
 
 ---
 
@@ -606,8 +560,6 @@ Added a distribution and update mechanism so downstream projects can keep their 
 
 ---
 
----
-
 ### P37 — claude-mem review findings applied
 `[SHIPPED - 2026-04-17] [Iteration]`
 
@@ -622,8 +574,6 @@ Three portable patterns harvested from the claude-mem review (2026-04-17) and ap
 **Patterns explicitly NOT adopted:** DB-backed memory, auto-capture by default, MCP server, web UI. Would compromise Agent SOP's plain-markdown / git-committed / human-authored philosophy.
 
 Core SOP instruction count unchanged (edits landed in guides + security + harness, not `claude-agent-sop.md`).
-
----
 
 ---
 
@@ -664,8 +614,6 @@ Ran a directional pilot benchmark (R5) to validate the P32-P36 trim did not comp
 
 ---
 
----
-
 ### P39 — Measurement gap closed: hygiene rubric + continuity benchmark + longitudinal exhibit
 `[SHIPPED - 2026-04-17] [Feature]`
 
@@ -687,8 +635,6 @@ The R1/R2/R5 code-quality benchmarks measure single-task quality. They end at "c
 - `README.md` (new "What the benchmarks don't measure" section)
 
 **Deferred:** actually running the continuity benchmark (would be R7, requires dependent task pair execution on fresh CLI sessions). Methodology shipped now; execution when warranted.
-
----
 
 ---
 
@@ -721,8 +667,6 @@ Mechanical trim batch flagged from the P32-P39 session. Two SOP-content moves an
 
 ---
 
----
-
 ### P41 — README rewrite, License section, Acknowledgements removed, GitHub About refresh
 `[SHIPPED - 2026-04-17] [Iteration]`
 
@@ -748,8 +692,6 @@ README aligned to popular reference-repo aesthetic (claude-code-action, superpow
 - Tracking files updated (Backlog, feature-map, agent-memory, build plan) - DONE
 
 **Commits:** 38a3476 (rewrite), e36cb53 (badge removal), session-end housekeeping commit pending.
-
----
 
 ---
 
@@ -783,8 +725,6 @@ Close a gap surfaced by hst-tracker: `/update-sop` treated `Backlog.md` as the s
 - Compliance checklist B4 accepts `[DEFERRED]`; new X6 check added; summary table totals corrected - DONE
 - Version markers bumped on all touched pristine-replica files - DONE
 - Tracking files updated (Backlog, feature-map, agent-memory, build plan, CLAUDE.md, project_resume) - DONE
-
----
 
 ---
 
@@ -829,8 +769,6 @@ Enable 3-5 Claude Code terminal instances on separate git worktrees to run `/upd
 
 ---
 
----
-
 ### P30 — Research digest review (2026-04-13) — verdict only, no implementation bundle
 `[SHIPPED - 2026-04-13] [Iteration]`
 
@@ -853,8 +791,6 @@ proposing changes from future digests.
 
 ---
 
----
-
 ### P29 — Pre-launch README polish + LICENSE + minimum version note
 `[SHIPPED - 2026-04-13] [Infra]`
 
@@ -870,8 +806,6 @@ Also added Requirements section recommending Claude Code v2.1.101+ (memory leak,
 permission, --resume fixes), with non-blocking version check in setup.sh.
 
 Commits be449ac (version note) and 605cf60 (README polish + LICENSE).
-
----
 
 ---
 
@@ -891,8 +825,6 @@ A/B testing framework to measure Agent SOP effectiveness. Runs identical tasks a
 
 ---
 
----
-
 ### P22 — Session slash commands (/restart-sop, /update-sop)
 `[SHIPPED - 2026-04-08] [Feature]`
 
@@ -905,8 +837,6 @@ Two Claude Code slash commands that automate the session start and end checklist
 - setup.sh copies commands into target projects - DONE
 - README, core SOP, both templates, and implementation guide reference commands as mandatory - DONE
 - Commands installed at user level (`~/.claude/commands/`) for all projects - DONE
-
----
 
 ---
 
@@ -926,8 +856,6 @@ Bash onboarding script (`setup.sh`) that copies the standard file set into a tar
 
 ---
 
----
-
 ### P20 — Compliance checklist update (security, hooks, quality, agents)
 `[SHIPPED - 2026-04-08] [Feature]`
 
@@ -938,8 +866,6 @@ Added 6 new compliance checks across a new Section 9: S1 (no secrets, Critical),
 - Summary table updated with new totals - DONE
 - sop-checker agent updated to know about new checks - DONE
 - S1 is Critical (10pts), S2/Q1/Q2 are Important (5pts), H1/G1 are Recommended (2pts) - DONE
-
----
 
 ---
 
@@ -957,8 +883,6 @@ Added continuous learning as an optional pattern in SOP Section 12. Covers what 
 
 ---
 
----
-
 ### P18 — Expand code template sections
 `[SHIPPED - 2026-04-08] [Feature]`
 
@@ -969,8 +893,6 @@ Fleshed out Auth (provider, token type, middleware, protected routes), Database 
 - Database has 8 fields including ORM, migration tool, schema change protocol - DONE
 - Key Commands has example entries for all required categories - DONE
 - Design System has 10 fields including component library, spacing, typography, icons - DONE
-
----
 
 ---
 
@@ -989,8 +911,6 @@ Created 4 reference agents in `.claude/agents/`: code-reviewer.md, security-revi
 
 ---
 
----
-
 ### P16 — Code quality rules in code template
 `[SHIPPED - 2026-04-08] [Feature]`
 
@@ -1000,8 +920,6 @@ Added Code Quality Rules section to `docs/templates/claude-md-template-code.md` 
 - Section exists in `docs/templates/claude-md-template-code.md` - DONE
 - Language-agnostic defaults with note to add language-specific rules - DONE
 - Covers all 8 areas from spec - DONE
-
----
 
 ---
 
@@ -1019,8 +937,6 @@ Hooks guidance at `docs/sop/hooks.md`. Explains hook types and provides 6 refere
 
 ---
 
----
-
 ### P14 — Security guidance document
 `[SHIPPED - 2026-04-08] [Feature]`
 
@@ -1032,8 +948,6 @@ Agent security guidance at `docs/sop/security.md`. Covers prompt injection aware
 - Includes detection scan commands - DONE
 - Australian English, no em-dashes - DONE
 - Adapted from ECC security guide, not copied - DONE
-
----
 
 ---
 
@@ -1051,8 +965,6 @@ Agent that audits any project folder against the Claude Code Agent SOP and produ
 - Agent is read-only — never modifies target project files - DONE
 - Checklist covers: file existence, section presence, tag format, date format, P-number sequencing, cross-file consistency, memory system separation - DONE
 - Scoring uses Critical/Important/Recommended tiers with critical-failure cap at 49 - DONE
-
----
 
 ---
 
@@ -1074,8 +986,6 @@ Apply project owner feedback from multi-session usage. 10 changes:
 
 ---
 
----
-
 ### P7 — Existing project migration guide
 `[SHIPPED - 2026-04-08] [Feature]`
 
@@ -1088,8 +998,6 @@ Write migration guide at `docs/examples/existing-project-migration.md`.
 
 ---
 
----
-
 ### P6 — New project walkthrough
 `[SHIPPED - 2026-04-08] [Feature]`
 
@@ -1099,8 +1007,6 @@ Write example guide at `docs/examples/new-project-walkthrough.md`.
 - Covers: directory setup, git init, creating each standard file, first Claude Code session - DONE
 - Uses a concrete example project (Taskflow — task management API) - DONE
 - References templates by path - DONE
-
----
 
 ---
 
@@ -1117,8 +1023,6 @@ Publish phase build plan template as `docs/templates/build-plan-template.md`.
 
 ---
 
----
-
 ### P4 — Backlog template
 `[SHIPPED - 2026-04-08] [Feature]`
 
@@ -1129,8 +1033,6 @@ Publish Backlog.md template as `docs/templates/backlog-template.md`.
 - Includes tag taxonomy header - DONE
 - Includes example P-numbered item with all fields: status, type, description, ACs, out of scope, open questions - DONE
 - Includes Shipped Archive section - DONE
-
----
 
 ---
 
@@ -1146,8 +1048,6 @@ Publish agent-memory.md template as `docs/templates/agent-memory-template.md`.
 
 ---
 
----
-
 ### P11 — CLAUDE.md code project template
 `[SHIPPED - 2026-04-07] [Feature]`
 
@@ -1159,8 +1059,6 @@ Publish the code-project variant as `docs/templates/claude-md-template-code.md`.
 - Adds Auth, Database, Design System sections - DONE
 - Build rules include test, ORM, migration, and PR description requirements - DONE
 - Note at top points back to base template - DONE
-
----
 
 ---
 
@@ -1179,8 +1077,6 @@ Publish the base CLAUDE.md template as `docs/templates/claude-md-template.md`. U
 
 ---
 
----
-
 ### P1 — Core SOP document
 `[SHIPPED - 2026-04-07] [Feature]`
 
@@ -1193,6 +1089,30 @@ Publish the main Claude Code Agent SOP as `docs/sop/claude-agent-sop.md`.
 - Australian English, no em-dashes - DONE
 
 ---
+
+### P33 — Managed Agents integration guide (deferred)
+`[WON'T - 2026-05-04] [Feature]`
+
+**Reason (2026-05-04):** Removed from active priorities — speculative without a project consumer. The guide at `docs/guides/managed-agents-integration.md` continues to exist as reference material (extracted from SOP Section 17 on 2026-04-17 in P40). If a future project actually uses `api.anthropic.com/v1/agents`, file a fresh P-number with the validation work scoped to the API state at that time, rather than reviving this entry — the API surface and beta status will have moved.
+
+---
+
+**Original entry below (kept per Rule 1):**
+
+Bring `docs/guides/managed-agents-integration.md` back into active use when a project transitions from Claude Code sessions to the Managed Agents API.
+
+**Why parked:** No current project uses Managed Agents. Content lives at `docs/guides/managed-agents-integration.md` (extracted from SOP Section 17 on 2026-04-17).
+
+**Trigger to revive:**
+- First project uses `api.anthropic.com/v1/agents`
+- Managed Agents API leaves beta
+- User explicitly requests integration work
+
+**Acceptance criteria when revived:**
+- Validate memory store mapping against current Managed Agents API
+- Validate session lifecycle mapping
+- Validate `user.define_outcome` event reference
+- Decide whether content returns to main SOP or stays as a standalone guide
 
 ---
 

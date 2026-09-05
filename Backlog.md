@@ -43,32 +43,6 @@ Close or trigger. `[has-open-questions]` and untouched since 2026-04-07 — four
 
 ---
 
-### P33 — Managed Agents integration guide (deferred)
-`[WON'T - 2026-05-04] [Feature]`
-
-**Reason (2026-05-04):** Removed from active priorities — speculative without a project consumer. The guide at `docs/guides/managed-agents-integration.md` continues to exist as reference material (extracted from SOP Section 17 on 2026-04-17 in P40). If a future project actually uses `api.anthropic.com/v1/agents`, file a fresh P-number with the validation work scoped to the API state at that time, rather than reviving this entry — the API surface and beta status will have moved.
-
----
-
-**Original entry below (kept per Rule 1):**
-
-Bring `docs/guides/managed-agents-integration.md` back into active use when a project transitions from Claude Code sessions to the Managed Agents API.
-
-**Why parked:** No current project uses Managed Agents. Content lives at `docs/guides/managed-agents-integration.md` (extracted from SOP Section 17 on 2026-04-17).
-
-**Trigger to revive:**
-- First project uses `api.anthropic.com/v1/agents`
-- Managed Agents API leaves beta
-- User explicitly requests integration work
-
-**Acceptance criteria when revived:**
-- Validate memory store mapping against current Managed Agents API
-- Validate session lifecycle mapping
-- Validate `user.define_outcome` event reference
-- Decide whether content returns to main SOP or stays as a standalone guide
-
----
-
 ### P60 — Facts correction: Sonnet 5 tokenizer, `/usage` measurement, external citations
 `[SHIPPED - 2026-07-06] [Iteration]`
 
@@ -1139,6 +1113,7 @@ Reported by a peer session (opportunity-scan, launched from `~`, first real cons
 ---
 
 ## Archived items
+- P33 — archived: Managed Agents integration guide (deferred) (see docs/backlog-archive.md)
 
 Closed more than 90 days ago; full entries in `docs/backlog-archive.md`, moved verbatim by `scripts/archive-backlog.sh`.
 

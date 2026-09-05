@@ -234,9 +234,9 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 ---
 
-## 10. Benchmark-Proven Practices
+## 9. Benchmark-Proven Practices
 
-*These checks verify the patterns from SOP Section 15. A/B benchmarks measured those patterns at +8% to +33% across rounds R1-R5 at k=1 per arm — directional, not a measured effect size. See SOP Section 15's opening note for the citation caveat on the +33% figure specifically.*
+*These checks verify the patterns the core SOP §5 requires (Common Mistakes, intent-based dispatch). A/B benchmarks measured those patterns at +8% to +33% across rounds R1-R5 at k=1 per arm — directional, not a measured effect size. See SOP Section 15's opening note for the citation caveat on the +33% figure specifically.*
 
 ### Important (code projects only)
 
@@ -254,7 +254,7 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 ---
 
-## 11. Multi-Agent Parallel Sessions
+## 10. Multi-Agent Parallel Sessions
 
 *These checks apply only when the project is in parallel-agent mode (`multi_agent: auto` and worktree count > 1, OR `multi_agent: on`). Non-applicable when `multi_agent: off` or the project has never added per-agent directories.*
 
@@ -285,22 +285,21 @@ If none match: non-code project. Code-only checks are marked below and scored as
 
 | Category | Critical | Important | Recommended | Total |
 |----------|----------|-----------|-------------|-------|
-| File Existence | 5 | 5 | 0 | 10 |
-| CLAUDE.md Structure | 5 | 12 (+5 code) | 2 | 19 (+5) |
-| Backlog.md Structure | 2 | 7 | 3 | 12 |
-| agent-memory.md Structure | 1 | 4 | 1 | 6 |
-| feature-map.md Structure | 0 | 3 | 1 | 4 |
-| Build Plans Structure | 0 | 4 | 1 | 5 |
+| File Existence | 3 | 6 | 0 | 9 |
+| CLAUDE.md Structure | 3 | 9 (+4 code) | 2 | 14 (+4) |
+| Backlog.md Structure | 2 | 8 | 3 | 13 |
+| docs/agent-memory.md Structure | 0 | 4 | 2 | 6 |
+| docs/build-plans/phase-*.md Structure | 0 | 3 | 0 | 3 |
 | project_resume.md Structure | 0 | 3 | 0 | 3 |
-| Cross-File Consistency | 0 | 3 | 3 | 6 |
-| Security, Hooks, Quality, Agents | 2 | 5 (+2 code) | 5 | 12 (+2) |
+| Cross-File Consistency | 0 | 2 | 3 | 5 |
+| Security, Hooks, and Agents | 2 | 5 | 5 | 12 |
 | Benchmark-Proven Practices | 0 | 0 (+2 code) | 2 | 2 (+2) |
 | Multi-Agent Parallel Sessions | 1 | 3 | 2 | 6 |
 | **Total (non-code)** | **11** | **43** | **19** | **73** |
 | **Total (code)** | **11** | **49** | **19** | **79** |
 
 **Maximum deductions:**
-- Non-code: 16 x 10 + 49 x 5 + 20 x 2 = 160 + 245 + 40 = 445
-- Code: 16 x 10 + 58 x 5 + 20 x 2 = 160 + 290 + 40 = 490
+- Non-code: 11 x 10 + 43 x 5 + 19 x 2 = 110 + 215 + 38 = 363
+- Code: 11 x 10 + 49 x 5 + 19 x 2 = 110 + 245 + 38 = 393
 
 **Normalisation:** Score = max(0, 100 - (total deductions / max possible deductions * 100)). Then apply critical cap (49 max) if any critical check fails.

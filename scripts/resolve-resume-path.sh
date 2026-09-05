@@ -3,12 +3,12 @@
 # Resolve the machine-local resume-file path for the current project.
 #
 # Single source of truth for the derivation. Three callers consume it:
-#   /update-sop  Step 7                        — write target
+#   /update-sop  Step 6                        — write target
 #   /restart-sop Step 0d + Step 2              — read target
 #   validate-state-transitions.sh --check-drift — read target
 #
 # Why this script exists (P96). The two readers already derived the memory
-# directory from the git repo root, but the writer — /update-sop Step 7 —
+# directory from the git repo root, but the writer — /update-sop Step 6 —
 # carried an unresolved `[project-hash]` placeholder and no derivation at all.
 # An agent with no rule writes into whichever memory directory the *session*
 # owns, which for a session launched outside the project is the harness's

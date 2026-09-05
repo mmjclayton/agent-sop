@@ -56,7 +56,6 @@ Status: [Planning / In Progress / Shipped YYYY-MM-DD]
 - [ ] [Verification step 2]
 - [ ] All tests passing
 - [ ] Backlog.md statuses updated for all shipped items
-- [ ] docs/feature-map.md updated with shipped items
 
 ---
 

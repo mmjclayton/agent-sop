@@ -9,7 +9,7 @@
 
 ## Summary
 
-[1-3 sentences describing what the diff does. Concrete: "adds state-transition validator at scripts/validate-state-transitions.sh; wires into /update-sop Step 3c; adds 6 fixtures; +3 core SOP instructions in Section 8." Not marketing copy.]
+[1-3 sentences describing what the diff does. Concrete: "adds state-transition validator at scripts/validate-state-transitions.sh; wires into /update-sop Step 4; adds 6 fixtures; +3 core SOP instructions in Section 8." Not marketing copy.]
 
 Severity: CRITICAL | HIGH | MEDIUM | LOW | NONE
 

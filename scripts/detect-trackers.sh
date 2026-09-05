@@ -13,12 +13,12 @@
 # Usage:
 #   bash scripts/detect-trackers.sh [claude-md-path]
 #
-# Called by /update-sop Step 3b (reconciliation) and Step 11 (the reconciliation
+# Called by /update-sop Step 4 (reconciliation; formerly Steps 3b and 11, the reconciliation
 # hard block).
 #
 # Why this lives in a script rather than inline in the slash command: those two
-# steps run in separate bash blocks, so a function defined in Step 3b does not
-# survive to Step 11. Step 11 called `detect_trackers` with no definition
+# steps run in separate bash blocks, so a function defined in one block does not
+# survive to another. The old Step 11 called `detect_trackers` with no definition
 # anywhere in the repo, so its `exit 1` hard block could never fire — the loop
 # body was unreachable. One definition, two callers, no drift.
 

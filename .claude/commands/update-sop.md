@@ -61,6 +61,7 @@ Update status tags in place; add new items with acceptance criteria; never remov
 
 ```bash
 bash scripts/refresh-priorities.sh          # rewrites CLAUDE.md priority block from Backlog tags where the sentinels exist
+bash scripts/archive-backlog.sh             # closed items older than 90 days move to docs/backlog-archive.md; a no-op most sessions
 ```
 
 ## Step 4: Validators

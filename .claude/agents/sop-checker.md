@@ -77,7 +77,7 @@ Both are valid. The table must contain file paths with purposes.
 
 **B11 — State-transition validator present:**
 Two-part check:
-1. Tooling presence: `scripts/validate-state-transitions.sh` exists and is executable, AND `.claude/commands/update-sop.md` references it (grep for `validate-state-transitions`). If either is missing, WARN with fix: "Run `/update-agent-sop` to sync the state-transition validator and Step 3c reference."
+1. Tooling presence: `scripts/validate-state-transitions.sh` exists and is executable, AND `.claude/commands/update-sop.md` references it (grep for `validate-state-transitions`). If either is missing, WARN with fix: "Run `/update-agent-sop` to sync the state-transition validator and Step 4 reference."
 2. Retrospective audit (best-effort, skippable): if the validator script exists, run it against a synthetic before/after pair using `HEAD~20` as the before-ref and current working tree as after. Any illegal transitions detected are flagged as drift that predated or bypassed the live gate. Skip this part if the script does not exist (no retrospective possible).
 
 B11 is Recommended — do not fail the project if either part is missing. Emit a constructive note.
@@ -117,8 +117,8 @@ Either condition is a PASS. Both absent is FAIL with fix: "Create `docs/sop/secu
 
 **S3 — No `--dangerously-skip-permissions` usage (Important):**
 Grep `.claude/settings.json`, `CLAUDE.md`, and any shell scripts (`*.sh`, CI configs) for the literal flag `--dangerously-skip-permissions`. Any occurrence outside a prohibition sentence (e.g. security guidance saying "never use") is a FAIL with fix: "Remove the flag; use explicit permission rules (`allowedTools`, `permissions.deny`) in `.claude/settings.json` instead. Hardened in Claude Code v2.1.97."
-**S4 — Context-file integrity flag present (Important):**
-Grep `.claude/commands/restart-sop.md` for the pattern `memory-poisoning`. The Step 4 guard must check `git status --porcelain` against CLAUDE.md, `Backlog.md`, and `docs/agent-memory*` before the agent acts on their contents, and `docs/sop/security.md` must name the project's own persistent context files as injection surfaces. Projects predating P61 (before 2026-07-06) are exempt — note the exemption rather than failing. FAIL fix: "Sync `/update-agent-sop` to pull the P61 memory-poisoning guard into restart-sop.md and security.md."
+**S4 — Context-file integrity surfaced (Important):**
+PASS when `~/.claude/settings.json` registers `sop-session-context.sh` (the hook prints uncommitted edits to CLAUDE.md, `Backlog.md` and `docs/agent-memory*` before the session acts on them), or when `.claude/commands/restart-sop.md` Step 1's no-hooks branch runs `git status --porcelain` on those files. FAIL when neither is present.
 
 **S5 — CI workflows invoking Claude Code are hardened (Critical, conditional):**
 List `.github/workflows/*.yml` (and equivalent CI configs). If none invoke Claude Code or a Claude action, mark N/A. For each that does: FAIL if `allowed_non_write_users` is set to `"*"`, or any third-party action is referenced by floating tag (`@v1`, `@main`, `@latest`) rather than a full commit SHA. FAIL fix: "Pin actions to commit SHAs and remove wildcard trigger permissions — Comment-and-Control class, CVE-2025-66032."
@@ -137,33 +137,12 @@ No output → PASS. Output → read the corresponding Backlog entry:
 - **PASS** if the entry is a declared item that carries a `docs/reviews/` artifact, or whose entry declares the skip with the token `review skipped (P<n>): <docs-only|test-only|dep-bump|below-threshold>`, naming its own P-number. Either way the change was declared and accounted for. The token is the same one `scripts/validate-state-transitions.sh` matches (P66) — if you find yourself accepting a free-text skip reason, that is a FAIL, not a judgement call.
 - **FAIL** if a watched file changed and nothing declares it — no matching Backlog entry, no artifact, no skip token on the entry.
 
-Do not condition PASS on the tag alone. Step 1b exempts `[Bug]` and `[Iteration]` from the reviewer turn, so requiring an artifact from a tag that cannot produce one leaves the common case in an undefined state.
+Do not condition PASS on the tag alone. Step 2 exempts `[Bug]` and `[Iteration]` from the reviewer turn, so requiring an artifact from a tag that cannot produce one leaves the common case in an undefined state.
 
 FAIL fix: "Declare the validator change as its own Backlog item and either run the reviewer turn on it or record the skip token on its Backlog entry — a gate that moves inside the range it is gating cannot be trusted to have gated it. See `docs/sop/security.md` rule 11." Ship commits before 2026-07-26 are exempt — note the exemption rather than failing. The exemption is commit-scoped, not project-scoped: every project alive today predates P69, so a project-scoped exemption would make this check inert everywhere and permanently.
 
-**Q1 — File size limits specified (Important, code projects only):**
-Search `CLAUDE.md` for mentions of file line limits. Look for patterns like:
-- "800 lines" or "800 max"
-- "file size" near a number
-- A `## Code Quality` section containing line count guidance
-
-Also check for a `## Code Quality Rules` section or similar. If found with file size guidance, PASS. If code project and no mention of file size limits, FAIL with fix: "Add file size limits to CLAUDE.md (recommended: 200-400 lines typical, 800 max). See the code template's Code Quality Rules section."
-
-**Q2 — Test coverage threshold specified (Important, code projects only):**
-Search `CLAUDE.md` for test coverage mentions. Look for:
-- "80%" or "coverage" near a percentage
-- "minimum coverage"
-- A Code Quality section mentioning coverage thresholds
-
-If found, PASS. If code project and no coverage threshold, FAIL with fix: "Add test coverage threshold to CLAUDE.md (recommended: 80% minimum). See the code template's Code Quality Rules section."
-
-**H1 — Session hooks documented or configured (Recommended):**
-Check in order:
-1. Does `docs/sop/harness-configuration.md` exist in the target project?
-2. Does `.claude/settings.json` exist and contain a `"hooks"` key?
-3. Does `CLAUDE.md` mention "hooks" in the context of SessionStart, SessionEnd, or automation?
-
-Any one of these is a PASS. All absent is FAIL with fix: "Document hook usage in CLAUDE.md or create `.claude/settings.json` with at least SessionStart and SessionEnd hooks. See the SOP hooks guidance for reference implementations."
+**H1 — User-scope hooks installed (Recommended):**
+`jq '.hooks' ~/.claude/settings.json` names `sop-session-context.sh`, `sop-stop-drift.sh` and `sop-push-gate.sh`; no `Stop` entry anywhere in the project's `.claude/settings.json` names the retired `auto-ship-hook.sh`. Installed by `scripts/install-hooks.sh`.
 
 **G1 — At least 2 review agents available (Recommended):**
 List files in `.claude/agents/` directory. Count markdown files (`.md`). If 2 or more exist, PASS. If 0 or 1, FAIL with fix: "Add agent definitions to `.claude/agents/`. Recommended minimum: a code-reviewer and a security-reviewer. See the SOP reference agents for templates."
@@ -194,7 +173,7 @@ Grep `.claude/commands/update-sop.md` for the pattern `background`. The pre-flig
 
 ### Phase 5: Cross-File Consistency Checks
 
-Run the checks from checklist Section 8. These require reading multiple files and comparing:
+Run the checks from checklist Section 7. These require reading multiple files and comparing:
 
 - Extract In-Flight Work lines from agent-memory.md (per-agent `- <agent-id> (YYYY-MM-DD): ...`), verify each has a matching `[IN PROGRESS]` entry in Backlog.md
 - Verify agent-memory.md Key Documents section references CLAUDE.md rather than duplicating
