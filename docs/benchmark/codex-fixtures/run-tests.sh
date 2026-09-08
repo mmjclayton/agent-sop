@@ -153,3 +153,10 @@ if (cd "$WORK/repl-project" && AGENT_SOP_RUNTIME=codex AGENT_SOP_USER_HOME="$WOR
 fi
 grep -q 'content differs' "$WORK/repl-result"
 printf 'PASS: project exclusions cannot disable native replication checks\n'
+
+rm "$WORK/repl-user/.codex/agent-sop.config.json"
+if (cd "$WORK/repl-project" && AGENT_SOP_RUNTIME=codex AGENT_SOP_USER_HOME="$WORK/repl-user" bash "$SOURCE/scripts/validate-state-transitions.sh" --check-replication) > "$WORK/missing-repl-config" 2>&1; then
+    echo 'FAIL: missing user configuration became an unconfigured skip'; exit 1
+fi
+grep -q 'user configuration is missing' "$WORK/missing-repl-config"
+printf 'PASS: project replication config requires its user-owned baseline config\n'

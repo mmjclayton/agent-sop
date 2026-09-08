@@ -382,6 +382,10 @@ if [ "$MODE" = "check-replication" ]; then
     done
   fi
   if [ -z "$config" ] || [ ! -f "$config" ]; then
+    if [ "$SOP_RUNTIME" = codex ] && [ -f .codex/agent-sop.config.json ]; then
+      echo "BLOCK: project Codex replication configuration exists, but user configuration is missing: $config" >&2
+      exit 1
+    fi
     echo "check-replication: no agent-sop.config.json found — skipping (project does not track pristine replicas)"
     exit 0
   fi
