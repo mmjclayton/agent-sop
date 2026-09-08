@@ -31,5 +31,5 @@ Cleared 2026-08-03. The previous line tracked branch `fix/p66-p73-validator-and-
 <!-- in-flight:start -->
 *Auto-generated from `docs/agent-memory/in-flight/`.*
 
-- solo (2026-09-08): P110 implemented and verified locally on fix/review-continuity-hardening. Review: docs/reviews/20260908-hardening-ship-auto.md. Next: publish/merge when authorised; native-model pilot awaits an AUD cap. No implementation blocker remains.
+- solo (2026-09-08): P110 implemented and verified locally on fix/review-continuity-hardening. Review: docs/reviews/20260908-hardening-ship-auto.md. Next: publish/merge when authorised; native-model pilot deferred at user direction (AUD 0 budget). No implementation blocker remains.
 <!-- in-flight:end -->

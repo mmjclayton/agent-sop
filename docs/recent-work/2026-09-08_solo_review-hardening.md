@@ -29,3 +29,10 @@ Review: [final evidence](../reviews/20260908-hardening-ship-auto.md). Full-range
 source analysis and fresh correction reviews form contiguous pinned ranges in the
 validated receipt. All configured correction reviews passed; no findings remain
 unresolved. Close-out records are committed locally. Publication is not authorised.
+
+## Budget update
+
+The user declined any further spending. Recorded an AUD 0 budget and deferred the
+comparison pilot. Future work must use existing evidence and local deterministic
+checks unless the user explicitly changes this constraint. No paid calls were
+made for this documentation update.

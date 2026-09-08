@@ -39,3 +39,9 @@ corrected and the final corrections reviewed by every configured reviewer.
 Evidence: `docs/reviews/20260908-hardening-ship-auto.md` and its validated JSON receipt.
 Performance comparison follows Agent SOP docs/benchmark/evaluation-protocol.md.
 A new paid model benchmark is not implied by passing mechanical fixtures.
+
+## Budget decision - 2026-09-08
+
+The user set a zero additional spending budget. The native-model comparison pilot
+is deferred. Do not launch further paid model or reviewer calls. Use existing
+evidence and local deterministic checks; no further spending approval is pending.
