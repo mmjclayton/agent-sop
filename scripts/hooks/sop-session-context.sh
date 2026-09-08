@@ -39,13 +39,19 @@ PRESENCE="$COMMON/agent-sop/sessions"
 SESSION_KEY=$(printf '%s' "$SESSION" | sop_sha256)
 NOW=$(date +%s)
 PRESENCE_WARNING=''
-if mkdir -p "$PRESENCE" 2>/dev/null; then
+if mkdir -p "$PRESENCE" 2>/dev/null && mkdir "$PRESENCE/.lock" 2>/dev/null; then
+    trap 'rmdir "$PRESENCE/.lock" 2>/dev/null || true' EXIT
     TEMP=$(mktemp "$PRESENCE/.presence.XXXXXX") || TEMP=''
     if [ -n "$TEMP" ] && jq -n --arg root "$ROOT" --arg session "$SESSION_KEY" --argjson updated "$NOW" \
       '{root:$root,session:$session,updated:$updated}' > "$TEMP" && mv "$TEMP" "$PRESENCE/$SESSION_KEY.json"; then :
     else PRESENCE_WARNING='unavailable: could not publish this session presence'; fi
     [ -z "$TEMP" ] || rm -f "$TEMP"
-else PRESENCE_WARNING='unavailable: presence directory is not writable'; fi
+    # Every publisher takes this lock: pruning cannot delete a concurrent refresh.
+    find "$PRESENCE" -maxdepth 1 -type f -name '*.json' -mmin +30 -delete 2>/dev/null || \
+      PRESENCE_WARNING='unavailable: expired presence cleanup failed'
+    rmdir "$PRESENCE/.lock" || PRESENCE_WARNING='unavailable: presence lock could not be released'
+    trap - EXIT
+else PRESENCE_WARNING='unavailable: presence directory is not writable or busy'; fi
 OTHER=$(sop_registry_read "$PRESENCE" 2>/dev/null) || OTHER='[{"status":"unavailable: invalid or unreadable session registry"}]'
 OTHER=$(printf '%s' "$OTHER" | jq -c --arg session "$SESSION_KEY" --argjson cutoff "$((NOW - 1800))" \
   '[.[] | select(.status != null or (.session != $session and .updated > $cutoff)) | del(.updated)] | sort_by(.root,.session)')

@@ -40,6 +40,9 @@ Inspect `--legacy-dir` and confirm ownership before `--migrate-legacy`; old path
 slugs can collide. Migration copies snapshots and rejects conflicting destinations.
 The reader can recover a migrated older main-worktree hash snapshot. A repository
 move still requires explicit migration. Do not guess machine-local memory paths.
+If solo and the old main-path hash contain different snapshots, migration and read
+stop for reconciliation. Merge the relevant content into solo, preserve both
+originals in an archive, and remove the archived hash from the active memory directory.
 
 ## 5. Handoff
 

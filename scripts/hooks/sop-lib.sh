@@ -213,18 +213,21 @@ sop_range_base() {
 
 # Read each registry record explicitly; unreadable/malformed state is not empty.
 sop_registry_read() {
-    local dir="$1" file item contents=''
+    local dir="$1" file
+    local files=()
     if [ ! -e "$dir" ]; then printf '[]'; return 0; fi
     [ -d "$dir" ] && [ -r "$dir" ] && [ -x "$dir" ] || { echo "Registry unavailable: $dir" >&2; return 1; }
     for file in "$dir"/*.json; do
         [ -e "$file" ] || [ -L "$file" ] || continue
-        item=$(jq -cse 'if length == 1 and (.[0] | type == "object") then .[0] else error("one record required") end' "$file" 2>/dev/null) || {
-            echo "Registry record unreadable or invalid: $file" >&2; return 1;
-        }
-        contents="$contents
-$item"
+        [ -f "$file" ] && [ -r "$file" ] || { echo "Registry record unreadable: $file" >&2; return 1; }
+        files+=("$file")
     done
-    printf '%s\n' "$contents" | jq -sc .
+    [ "${#files[@]}" -gt 0 ] || { printf '[]'; return 0; }
+    jq -nce --argjson expected "${#files[@]}" '
+      [inputs | {file:input_filename,value:.}] | group_by(.file) |
+      if length == $expected and all(.[]; length == 1 and (.[0].value | type == "object"))
+      then map(.[0].value) else error("one object per registry file required") end
+    ' "${files[@]}"
 }
 
 # Resolve only a trusted package asset, never an executable in a target repository.
@@ -340,6 +343,10 @@ sop_instruction_pattern() {
     printf '%s' '^([.]agents/|[.]claude/|[.]codex/|docs/sop/|docs/guides/sop-)|(^|/)(AGENTS|CLAUDE|SKILL)[.]md$'
 }
 
+sop_instructions_changed() {
+    git -C "$1" diff --no-renames --name-only "$2..$3" | grep -Eq "$(sop_instruction_pattern)"
+}
+
 sop_code_lines() {
     git -C "$1" diff --numstat "$2..$3" 2>/dev/null | awk -F'\t' -v skip="$4" -v instructions="$(sop_instruction_pattern)" '
         function isdoc(p) {
@@ -442,6 +449,7 @@ sop_shipsop_covered() {
         sop_receipt_valid "$root" "$receipt" || continue
         sha=$(jq -r .head "$receipt")
         git -C "$root" merge-base --is-ancestor "$sha" "$head" 2>/dev/null || continue
+        sop_instructions_changed "$root" "$sha" "$head" && continue
         [ "$(sop_code_lines "$root" "$sha" "$head" true)" = "0" ] && return 0
     done
     return 1
@@ -490,7 +498,7 @@ sop_shipsop_gate() {
     # Documentation extensions are excluded from the count, always, so a
     # docs-heavy branch never summons reviewers for prose.
     lines=$(sop_code_lines "$root" "$base" "$head" true)
-    if ! git -C "$root" diff --name-only "$base..$head" | grep -Eq "$(sop_instruction_pattern)"; then
+    if ! sop_instructions_changed "$root" "$base" "$head"; then
         [ "${lines:-0}" -ge "${min:-10}" ] 2>/dev/null || { printf ''; return; }
     fi
 

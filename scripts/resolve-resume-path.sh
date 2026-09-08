@@ -144,10 +144,23 @@ LEGACY_DIR="$HOME_DIR/.claude/projects/-$PROJECT_HASH/memory"
 ROOT_DIGEST=$(printf '%s' "$ROOT" | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)
 [[ "$ROOT_DIGEST" =~ ^[0-9a-f]{64}$ ]] || { echo 'resolve-resume-path: root hashing failed; no safe storage path' >&2; exit 2; }
 MEMORY_DIR="$HOME_DIR/.claude/agent-sop/projects/$ROOT_DIGEST/memory"
+OLD_HASH=$(printf '%s' "$ROOT_DIGEST" | cut -c1-6)
+check_main_conflict() {
+    local dir="$1"
+    if [ "$AGENT_ID" = solo ] && [ -d "$ROOT/.git" ] &&
+       [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ] &&
+       [ -f "$dir/project_resume_solo.md" ] && [ -f "$dir/project_resume_$OLD_HASH.md" ] &&
+       ! cmp -s "$dir/project_resume_solo.md" "$dir/project_resume_$OLD_HASH.md"; then
+        echo "Resume conflict: $dir contains differing solo and $OLD_HASH snapshots. Reconcile their content into solo and archive the hash snapshot before resuming; preserve originals." >&2
+        return 1
+    fi
+}
 if [ "$MODE" = legacy-dir ]; then printf '%s\n' "$LEGACY_DIR"; exit 0; fi
 if [ "$MODE" = migrate ]; then
     # Explicit operator action: legacy slugs can collide, so never auto-claim them.
     [ -d "$LEGACY_DIR" ] || { echo 'No legacy directory to migrate.' >&2; exit 1; }
+    check_main_conflict "$LEGACY_DIR" || exit 2
+    check_main_conflict "$MEMORY_DIR" || exit 2
     mkdir -p "$MEMORY_DIR"
     for source in "$LEGACY_DIR"/project_resume*.md; do
         [ -f "$source" ] || continue
@@ -156,6 +169,7 @@ if [ "$MODE" = migrate ]; then
             cmp -s "$source" "$target" || { echo "Migration conflict: $target" >&2; exit 2; }
         else cp "$source" "$target" || exit 1; fi
     done
+    check_main_conflict "$MEMORY_DIR" || exit 2
     printf '%s\n' "$MEMORY_DIR"
     exit 0
 fi
@@ -167,10 +181,10 @@ fi
 
 PER_AGENT="$MEMORY_DIR/project_resume_${AGENT_ID}.md"
 LEGACY="$MEMORY_DIR/project_resume.md"
+if [ "$MODE" = read ]; then check_main_conflict "$MEMORY_DIR" || exit 2; fi
 # Pre-hardening main worktrees could switch from solo to their path hash.
 if [ "$MODE" = read ] && [ "$AGENT_ID" = solo ] && [ ! -f "$PER_AGENT" ] &&
    [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ]; then
-    OLD_HASH=$(printf '%s' "$ROOT_DIGEST" | cut -c1-6)
     [ ! -f "$MEMORY_DIR/project_resume_$OLD_HASH.md" ] || PER_AGENT="$MEMORY_DIR/project_resume_$OLD_HASH.md"
 fi
 

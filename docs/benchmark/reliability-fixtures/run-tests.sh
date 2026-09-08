@@ -84,6 +84,20 @@ git -C "$WORK/repo" add docs/reviews
 git -C "$WORK/repo" commit -qm evidence
 sop_shipsop_covered "$WORK/repo" "$(git -C "$WORK/repo" rev-parse HEAD)"
 echo 'PASS: committing receipt and report preserves valid coverage'
+printf 'Previously inert instruction\n' > "$WORK/repo/notes.md"
+git -C "$WORK/repo" add notes.md && git -C "$WORK/repo" commit -qm notes
+mkdir -p "$WORK/repo/src"
+git -C "$WORK/repo" mv notes.md src/AGENTS.md
+git -C "$WORK/repo" commit -qm rename-into-instructions
+if sop_shipsop_covered "$WORK/repo" HEAD; then echo 'FAIL: rename into instructions retained coverage'; exit 1; fi
+instruction_head=$(git -C "$WORK/repo" rev-parse HEAD)
+jq --arg head "$instruction_head" --arg tree "$(git -C "$WORK/repo" rev-parse 'HEAD^{tree}')" '.head=$head | .tree=$tree' "$WORK/valid.json" > "$WORK/repo/docs/reviews/valid-ship-auto.json"
+git -C "$WORK/repo" mv src/AGENTS.md notes.md
+git -C "$WORK/repo" commit -qm rename-out-of-instructions
+if sop_shipsop_covered "$WORK/repo" HEAD; then echo 'FAIL: rename out of instructions retained coverage'; exit 1; fi
+test -n "$(sop_shipsop_gate "$WORK/repo")"
+cp "$WORK/valid.json" "$WORK/repo/docs/reviews/valid-ship-auto.json"
+echo 'PASS: content-preserving instruction renames invalidate receipts in both directions'
 
 # Main identity remains stable when returning to one worktree.
 git -C "$WORK/repo" worktree remove "$WORK/sibling"
@@ -97,6 +111,18 @@ fi
 bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/user" --migrate-legacy >/dev/null
 test "$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/user" --read)" = "$before"
 echo 'PASS: explicit legacy migration preserves the snapshot and identity'
+old_hash=$(printf '%s' "$WORK/repo" | shasum -a 256 | cut -c1-6)
+printf '# Newer main-worktree resume\n' > "$legacy/project_resume_$old_hash.md"
+if bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/user" --migrate-legacy >/dev/null 2>&1; then
+    echo 'FAIL: migrated conflicting main snapshots without reconciliation'; exit 1
+fi
+test -f "$legacy/project_resume_solo.md" && test -f "$legacy/project_resume_$old_hash.md"
+cp "$legacy/project_resume_$old_hash.md" "$(dirname "$before")/project_resume_$old_hash.md"
+if bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/user" --read >/dev/null 2>&1; then
+    echo 'FAIL: silently selected stale solo from conflicting migrated snapshots'; exit 1
+fi
+rm "$(dirname "$before")/project_resume_$old_hash.md"
+echo 'PASS: conflicting main snapshot generations require explicit reconciliation'
 
 # Real linked worktrees share ownership, but permit disjoint tasks and paths.
 git -C "$WORK/repo" worktree add -qb other "$WORK/other"
@@ -137,6 +163,13 @@ context "$WORK/repo" session-a > "$WORK/context-delta"
 grep -q 'Context changed' "$WORK/context-delta"
 grep -q 'Other active sessions' "$WORK/context-delta"
 echo 'PASS: sibling handoffs load and presence changes produce a compact delta'
+presence="$WORK/repo/.git/agent-sop/sessions"
+printf '{"session":"expired","root":"old","updated":1}\n' > "$presence/expired.json"
+touch -t 202001010000 "$presence/expired.json"
+context "$WORK/repo" session-a >/dev/null
+test ! -e "$presence/expired.json"
+test "$(find "$presence" -name '*.json' | wc -l | tr -d ' ')" = 2
+echo 'PASS: presence pruning removes expired records and preserves active peers'
 
 mkdir -p "$WORK/repo/nested" "$WORK/other/nested"
 (cd "$WORK/repo/nested" && bash "$CLAIM" claim owner task src) >/dev/null
