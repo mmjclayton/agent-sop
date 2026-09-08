@@ -215,7 +215,7 @@ sop_range_base() {
 sop_registry_read() {
     local dir="$1" file
     local files=()
-    if [ ! -e "$dir" ]; then printf '[]'; return 0; fi
+    if [ ! -e "$dir" ] && [ ! -L "$dir" ]; then printf '[]'; return 0; fi
     [ -d "$dir" ] && [ -r "$dir" ] && [ -x "$dir" ] || { echo "Registry unavailable: $dir" >&2; return 1; }
     for file in "$dir"/*.json; do
         [ -e "$file" ] || [ -L "$file" ] || continue

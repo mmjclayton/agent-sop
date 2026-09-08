@@ -99,12 +99,13 @@ if [ "$ROOT" = "$HOME_DIR" ]; then
 fi
 
 IS_MAIN=false
-GIT_DIR=$(git -C "$ROOT" rev-parse --absolute-git-dir 2>/dev/null) || GIT_DIR=''
-COMMON_DIR=$(git -C "$ROOT" rev-parse --git-common-dir 2>/dev/null) || COMMON_DIR=''
-if [ -n "$GIT_DIR" ] && [ -n "$COMMON_DIR" ]; then
-    COMMON_DIR=$(cd "$ROOT" && cd "$COMMON_DIR" && pwd -P) || COMMON_DIR=''
-    GIT_DIR=$(cd "$GIT_DIR" && pwd -P) || GIT_DIR=''
-    [ -z "$GIT_DIR" ] || [ "$GIT_DIR" != "$COMMON_DIR" ] || IS_MAIN=true
+if [ "$MODE" != dir ] && [ "$MODE" != legacy-dir ] &&
+   [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ]; then
+    GIT_DIR=$(git -C "$ROOT" rev-parse --absolute-git-dir) || { echo 'resolve-resume-path: Git identity lookup failed' >&2; exit 2; }
+    COMMON_DIR=$(git -C "$ROOT" rev-parse --git-common-dir) || { echo 'resolve-resume-path: common Git directory lookup failed' >&2; exit 2; }
+    COMMON_DIR=$(cd "$ROOT" && cd "$COMMON_DIR" && pwd -P) || { echo 'resolve-resume-path: common Git directory unavailable' >&2; exit 2; }
+    GIT_DIR=$(cd "$GIT_DIR" && pwd -P) || { echo 'resolve-resume-path: private Git directory unavailable' >&2; exit 2; }
+    [ "$GIT_DIR" != "$COMMON_DIR" ] || IS_MAIN=true
 fi
 
 resolve_agent_id() {
@@ -167,7 +168,8 @@ check_main_conflict() {
 if [ "$MODE" = legacy-dir ]; then printf '%s\n' "$LEGACY_DIR"; exit 0; fi
 if [ "$MODE" = migrate ]; then
     MIGRATION_TEMP=''
-    trap '[ -z "$MIGRATION_TEMP" ] || rm -f "$MIGRATION_TEMP"' EXIT
+    MIGRATION_LIST=''
+    trap '[ -z "$MIGRATION_TEMP" ] || rm -f "$MIGRATION_TEMP"; [ -z "$MIGRATION_LIST" ] || rm -f "$MIGRATION_LIST"' EXIT
     copy_new_snapshot() {
         local source="$1" destination="$2"
         MIGRATION_TEMP=$(mktemp "${destination}.migrate.XXXXXX") || return 1
@@ -183,9 +185,14 @@ if [ "$MODE" = migrate ]; then
     }
     # Explicit operator action: legacy slugs can collide, so never auto-claim them.
     [ -d "$LEGACY_DIR" ] || { echo 'No legacy directory to migrate.' >&2; exit 1; }
+    [ -r "$LEGACY_DIR" ] && [ -x "$LEGACY_DIR" ] || { echo "Legacy storage unreadable: $LEGACY_DIR" >&2; exit 2; }
+    MIGRATION_LIST=$(mktemp) || { echo 'Migration enumeration storage unavailable' >&2; exit 2; }
+    find "$LEGACY_DIR" -maxdepth 1 -name 'project_resume*.md' -print0 > "$MIGRATION_LIST" || {
+        echo "Legacy snapshot enumeration failed: $LEGACY_DIR" >&2; exit 2;
+    }
     check_main_conflict "$LEGACY_DIR" || exit 2
     check_main_conflict "$MEMORY_DIR" || exit 2
-    mkdir -p "$MEMORY_DIR"
+    mkdir -p "$MEMORY_DIR" || { echo "Migration destination unavailable: $MEMORY_DIR" >&2; exit 2; }
     # Preflight all destinations before copying, so a failed repeat migration
     # cannot reintroduce a stale hash snapshot beside an updated canonical file.
     incoming_solo="$LEGACY_DIR/project_resume_solo.md"
@@ -197,18 +204,18 @@ if [ "$MODE" = migrate ]; then
         echo 'Migration conflict: differing main snapshot generations require reconciliation before copying.' >&2
         exit 2
     fi
-    for source in "$LEGACY_DIR"/project_resume*.md; do
+    while IFS= read -r -d '' source; do
         [ -f "$source" ] || continue
         target="$MEMORY_DIR/$(basename "$source")"
         [ ! -e "$target" ] || cmp -s "$source" "$target" || { echo "Migration conflict: $target" >&2; exit 2; }
-    done
-    for source in "$LEGACY_DIR"/project_resume*.md; do
+    done < "$MIGRATION_LIST"
+    while IFS= read -r -d '' source; do
         [ -f "$source" ] || continue
         target="$MEMORY_DIR/$(basename "$source")"
         if [ -e "$target" ]; then
             cmp -s "$source" "$target" || { echo "Migration conflict: $target" >&2; exit 2; }
         else copy_new_snapshot "$source" "$target" || exit 2; fi
-    done
+    done < "$MIGRATION_LIST"
     check_main_conflict "$MEMORY_DIR" || exit 2
     if [ "$AGENT_ID" = solo ] && [ "$IS_MAIN" = true ] &&
        [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ] &&
@@ -235,7 +242,13 @@ fi
 
 PER_AGENT="$MEMORY_DIR/project_resume_${AGENT_ID}.md"
 LEGACY="$MEMORY_DIR/project_resume.md"
-if [ "$MODE" = read ]; then check_main_conflict "$MEMORY_DIR" || exit 2; fi
+if [ "$MODE" = read ]; then
+    if { [ -e "$MEMORY_DIR" ] || [ -L "$MEMORY_DIR" ]; } &&
+       { [ ! -d "$MEMORY_DIR" ] || [ ! -r "$MEMORY_DIR" ] || [ ! -x "$MEMORY_DIR" ]; }; then
+        echo "Resume storage unavailable: $MEMORY_DIR" >&2; exit 2
+    fi
+    check_main_conflict "$MEMORY_DIR" || exit 2
+fi
 # Pre-hardening main worktrees could switch from solo to their path hash.
 if [ "$MODE" = read ] && [ "$AGENT_ID" = solo ] && [ ! -f "$PER_AGENT" ] &&
    [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ]; then
@@ -256,6 +269,12 @@ fi
 # `project_resume.md` inside it belongs to this project. The same fallback
 # against a session-owned directory is what let a foreign project's file be
 # selected before P96.
+for snapshot in "$PER_AGENT" "$LEGACY"; do
+    if { [ -e "$snapshot" ] || [ -L "$snapshot" ]; } &&
+       { [ ! -f "$snapshot" ] || [ ! -r "$snapshot" ]; }; then
+        echo "Resume snapshot unreadable: $snapshot" >&2; exit 2
+    fi
+done
 if [ -f "$PER_AGENT" ]; then
     printf '%s\n' "$PER_AGENT"
     exit 0
@@ -280,5 +299,14 @@ if [ -f "$LEGACY" ]; then
     exit 0
 fi
 
-[ ! -d "$LEGACY_DIR" ] || echo "Legacy snapshots require explicit ownership confirmation: inspect $LEGACY_DIR then run --migrate-legacy for this root." >&2
+if { [ -e "$LEGACY_DIR" ] || [ -L "$LEGACY_DIR" ]; } &&
+   { [ ! -d "$LEGACY_DIR" ] || [ ! -r "$LEGACY_DIR" ] || [ ! -x "$LEGACY_DIR" ]; }; then
+    echo "Legacy storage unavailable: $LEGACY_DIR" >&2
+    exit 2
+fi
+for source in "$LEGACY_DIR"/project_resume*.md; do
+    [ -f "$source" ] || continue
+    echo "Legacy snapshots require explicit ownership confirmation: inspect $LEGACY_DIR then run --migrate-legacy for this root." >&2
+    exit 2
+done
 exit 1

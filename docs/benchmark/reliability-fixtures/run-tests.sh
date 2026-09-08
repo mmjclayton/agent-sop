@@ -3,6 +3,7 @@
 set -euo pipefail
 SOURCE=${SOURCE:-$(cd "$(dirname "$0")/../../.." && pwd)}
 WORK=$(mktemp -d)
+WORK=$(cd "$WORK" && pwd -P)
 trap 'rm -rf "$WORK"' EXIT
 unset CLAUDE_AGENT_ID AGENT_SOP_AGENT_ID
 git init -q -b main "$WORK/repo"
@@ -160,6 +161,38 @@ if PATH="$WORK/failing-copy-bin:$PATH" bash "$SOURCE/scripts/resolve-resume-path
 fi
 test -z "$(find "$failed_memory" -type f)"
 echo 'PASS: failed migration copy leaves no active or temporary partial snapshot'
+if (cd "$WORK/repo" && HOME="$WORK/failed-user" bash "$SOURCE/scripts/validate-state-transitions.sh" --check-drift) > "$WORK/legacy-drift-error" 2>&1; then
+    echo 'FAIL: unmigrated legacy snapshot bypassed drift checking'; exit 1
+fi
+grep -q 'ownership confirmation' "$WORK/legacy-drift-error"
+mkdir -p "$WORK/failing-git-bin"
+printf '#!/bin/sh\necho "fixture Git metadata failure" >&2\nexit 2\n' > "$WORK/failing-git-bin/git"
+chmod +x "$WORK/failing-git-bin/git"
+if PATH="$WORK/failing-git-bin:$PATH" bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --agent-id > "$WORK/git-id" 2> "$WORK/git-error"; then
+    echo 'FAIL: Git metadata failure selected a successful identity'; exit 1
+fi
+test ! -s "$WORK/git-id"
+grep -q 'fixture Git metadata failure' "$WORK/git-error"
+echo 'PASS: unmigrated snapshots and failed Git identity lookup cannot silently disable continuity'
+mkdir -p "$WORK/failing-find-bin"
+printf '#!/bin/sh\nexit 1\n' > "$WORK/failing-find-bin/find"
+chmod +x "$WORK/failing-find-bin/find"
+if PATH="$WORK/failing-find-bin:$PATH" bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/failed-user" --migrate-legacy >/dev/null 2>&1; then
+    echo 'FAIL: failed enumeration reported a successful migration'; exit 1
+fi
+ln -s "$WORK/absent-registry" "$WORK/broken-registry"
+if sop_registry_read "$WORK/broken-registry" >/dev/null 2>&1; then
+    echo 'FAIL: broken registry directory appeared empty'; exit 1
+fi
+echo 'PASS: failed migration enumeration and broken registry directories are explicit errors'
+broken_memory=$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/broken-memory-user" --dir)
+mkdir -p "$(dirname "$broken_memory")"
+ln -s "$WORK/absent-memory" "$broken_memory"
+if bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/broken-memory-user" --read > "$WORK/broken-memory-result" 2>&1; then
+    echo 'FAIL: broken current storage resolved successfully'; exit 1
+fi
+grep -q 'Resume storage unavailable' "$WORK/broken-memory-result"
+echo 'PASS: unavailable current storage is distinguished from absent snapshots'
 
 # Real linked worktrees share ownership, but permit disjoint tasks and paths.
 git -C "$WORK/repo" worktree add -qb other "$WORK/other"
