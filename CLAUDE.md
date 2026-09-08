@@ -42,9 +42,7 @@ Test: `bash docs/benchmark/hook-fixtures/run-tests.sh` (also `resume-path-fixtur
 - P79 — `sandboxing.md` treats the sandbox as protecting the host, never the reverse — [OPEN] [Iteration]
 - P80 — Benchmark rubric: pairwise scoring, and read judge reasoning not scores — [OPEN] [Iteration]
 - P81 — The MANDATORY lite benchmark rule fires on changes its instrument cannot measure — [OPEN] [Bug]
-- P107 — Native Codex support alongside Claude — [IN PROGRESS] [Feature]
 - P108 — Codex compatibility follow-ups from native-runtime review — [OPEN] [Iteration]
-- P109 — Port shared enforcement surfaces to Codex — [IN PROGRESS] [Refactor]
 <!-- priority-items:end -->
 
 ---
