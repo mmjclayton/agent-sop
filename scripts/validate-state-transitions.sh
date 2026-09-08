@@ -31,7 +31,7 @@
 #     copy that actually executes. Upstream only, also reports stale baseline
 #     SHAs. Silent no-op when the session touched no manifest file.
 #
-# Zero-dependency bash 3.2 (macOS default). No associative arrays.
+# Bash 3.2 (macOS default). Replication checks require jq; no associative arrays.
 
 set -euo pipefail
 SOP_RUNTIME="${AGENT_SOP_RUNTIME:-claude}"
@@ -394,12 +394,17 @@ if [ "$MODE" = "check-replication" ]; then
     fi
   }
 
-  # Manifest = keys of baseline_shas. Zero-dep extraction: isolate the block,
-  # then pull "path": "sha" pairs. Restricted to the tracked extensions so a
-  # nested object cannot inject a false key.
-  manifest=$(sed -n '/"baseline_shas"[[:space:]]*:[[:space:]]*{/,/^[[:space:]]*}/p' "$config" \
-    | grep -oE '"[^"]+\.(md|sh|py|toml|yaml)"[[:space:]]*:[[:space:]]*"[a-f0-9]{64}"' \
-    | sed 's/"[[:space:]]*:[[:space:]]*"/|/; s/^"//; s/"$//' || true)
+  # Parse JSON structurally: an inline empty exclude array must not consume
+  # subsequent baseline keys. Invalid or unavailable configuration fails closed.
+  command -v jq >/dev/null || { echo 'BLOCK: replication checks require jq' >&2; exit 1; }
+  jq -e 'type == "object" and ((.baseline_shas // {}) | type == "object") and
+    ((.exclude // []) | type == "array" and all(.[]; type == "string"))' "$config" >/dev/null || {
+    echo "BLOCK: invalid replication configuration: $config" >&2; exit 1;
+  }
+  manifest=$(jq -r '(.baseline_shas // {}) | to_entries[] |
+    select(.key | test("\\.(md|sh|py|toml|yaml)$")) |
+    select(.value | type == "string") | select(.value | test("^[a-f0-9]{64}$")) |
+    "\(.key)|\(.value)"' "$config") || { echo 'BLOCK: cannot parse replication baselines' >&2; exit 1; }
 
   if [ -z "$manifest" ]; then
     echo "check-replication: baseline_shas is empty — skipping (nothing tracked yet)"
@@ -407,8 +412,9 @@ if [ "$MODE" = "check-replication" ]; then
   fi
 
   # Excluded files are never synced, so they can never be out of sync.
-  excluded=$(sed -n '/"exclude"[[:space:]]*:[[:space:]]*\[/,/\]/p' "$config" \
-    | grep -oE '"[^"]+\.(md|sh|py|toml|yaml)"' | tr -d '"' || true)
+  excluded=$(jq -r '(.exclude // [])[]' "$config") || {
+    echo 'BLOCK: cannot parse replication exclusions' >&2; exit 1;
+  }
 
   # Session-changed files: committed in range plus working tree. Fixture mode
   # supplies the list directly so the check is testable without a repo.
@@ -695,7 +701,7 @@ while IFS=$'\t' read -r p after_status; do
           # only check when we have a real git range (not fixture mode)
           range_ref="${BEFORE_REF:-}"
           if [ -z "$range_ref" ]; then
-            range_ref=$(git merge-base HEAD @{upstream} 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || echo "")
+            range_ref=$(git merge-base HEAD '@{upstream}' 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || echo "")
           fi
           if [ -n "$range_ref" ]; then
             if ! git log "${range_ref}..HEAD" --name-only --format= 2>/dev/null | grep -qE "docs/agent-memory/decisions/.*${p}[^0-9]"; then

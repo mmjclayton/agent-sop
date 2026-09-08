@@ -1220,7 +1220,7 @@ Non-blocking review follow-ups to P107:
 - Reconcile `agent-sop.install.json` ownership hashes after `sync-sop-files.sh` updates, so later uninstall recognizes untouched synced assets.
 - Preserve an `AGENTS.md` symlink when refreshing priorities instead of replacing the link.
 - Support AGENTS-only projects in the legacy multi-agent migration script; the skill now names this limitation explicitly.
-- Fix the replication validator's empty inline `exclude: []` parsing: its sed range can consume subsequent manifest keys and skip all checks. Independently compare installed hashes until corrected.
+- Replication empty-array parsing was escalated to HIGH and fixed under P109: structural JSON parsing now preserves an empty exclusion list, with a stale-mirror fixture.
 
 Source: configured Codex reviews and parent verification, 2026-09-08.
 
