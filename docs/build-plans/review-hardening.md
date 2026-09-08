@@ -1,6 +1,6 @@
 # Review and continuity hardening
 
-Status: In progress on fix/review-continuity-hardening. Work item P110.
+Status: Implemented and verified locally on fix/review-continuity-hardening. P110 remains IN PROGRESS until merge.
 
 ## Delivered contract
 
@@ -33,8 +33,9 @@ Local receipts are not an adversarial security boundary against their own author
 
 ## Verification and remaining measurement
 
-Run all Agent SOP fixture suites, ship-sop installation fixtures, lint and a
-cross-package receipt smoke test. Independently review both committed diffs in
-read-only clones. Record findings and fixes before claiming completion.
+All nine Agent SOP fixture suites, ship-sop installation/receipt checks, lint and
+the real cross-package receipt test pass. Independent full-range findings were
+corrected and the final corrections reviewed by every configured reviewer.
+Evidence: `docs/reviews/20260908-hardening-ship-auto.md` and its validated JSON receipt.
 Performance comparison follows Agent SOP docs/benchmark/evaluation-protocol.md.
 A new paid model benchmark is not implied by passing mechanical fixtures.

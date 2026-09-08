@@ -9,6 +9,7 @@ Moved out of `CLAUDE.md` on 2026-08-03 so it stops consuming context every sessi
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-09-08.*
 
+- 2026-09-08 `solo`: Review evidence and parallel-session continuity hardening
 - 2026-09-08 `solo`: Native Codex runtime support
 - 2026-09-08 `solo`: Codex merge and automatic-cycle verification
 - 2026-09-05 `solo`: Session close — consumer sync, legacy hook retirement, ECC cleanup

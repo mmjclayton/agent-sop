@@ -1,1 +1,1 @@
-
+(2026-09-08): P110 implemented and verified locally on fix/review-continuity-hardening. Review: docs/reviews/20260908-hardening-ship-auto.md. Next: publish/merge when authorised; native-model pilot awaits an AUD cap. No implementation blocker remains.

@@ -1248,6 +1248,10 @@ Merged to main in PR #26 (`999b31c`) on 2026-09-08.
 
 `[IN PROGRESS] [Refactor]`
 
+review: docs/reviews/20260908-hardening-ship-auto.md
+
 Validate structured ship receipts and invalid policy; classify executable instructions; preserve worktree identity and migrate resume lookup; improve concurrent context, derived writes, CI and health reporting. Remove obsolete rules and replace the stale benchmark mandate with a current evaluation protocol.
 
 Authorised by the user following the 2026-09-08 full review. This explicitly changes enforcement policy. Acceptance: discriminating regression fixtures, complete existing suites, independent isolated review, preserved consumer customisations and documented migration.
+
+Implemented and verified locally on `fix/review-continuity-hardening`. All nine fixture suites pass; full-range findings were corrected and all three configured reviewers passed the pinned correction range. Validated receipt recorded. Claude/Codex installations and resume snapshots updated. Remains IN PROGRESS until merge; publication and a budgeted native-model comparison are separate decisions.

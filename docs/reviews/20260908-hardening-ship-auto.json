@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "base": "20927997f2428613ef9896d74ef97a67cb5d5030",
+  "head": "9e6b192b1c4583d8d9b085af37b9854e3891cf29",
+  "tree": "5709827dc776a671279134a2b5dc50025abc96e2",
+  "policy_sha256": "2bf3e7532a015bebf17f7553468f92f27d5b777be7d19cb8aca33e5e8b07e494",
+  "tests": {
+    "status": "PASS",
+    "evidence": "PASS: all nine docs/benchmark/*-fixtures/run-tests.sh suites; ShellCheck warning level for hooks, resolver, validator and synchroniser; five simultaneous overlapping claim races each yielded one owner; state transitions and Claude/Codex replication checks; pre-change validator accepted the declared transitions."
+  },
+  "reviewers": [
+    {
+      "name": "code-reviewer",
+      "version": "818f7d0046ac7ef125596d5e757d7f894f527b29837700c67b35182e402ab1aa",
+      "model": "runtime-default-unresolved",
+      "verdict": "PASS",
+      "findings": [],
+      "review_chain": [
+        {
+          "stage": "full-range",
+          "base": "20927997f2428613ef9896d74ef97a67cb5d5030",
+          "head": "a6d947dbf9c68d4e78fd6e7ecdac7de6d4858250"
+        },
+        {
+          "stage": "reviewed-corrections",
+          "base": "a6d947dbf9c68d4e78fd6e7ecdac7de6d4858250",
+          "head": "9e6b192b1c4583d8d9b085af37b9854e3891cf29"
+        }
+      ]
+    },
+    {
+      "name": "security-reviewer",
+      "version": "2da4c0641ed7a0a07c9cf1e1337d5fab9299dea2e3d4220c5deb08a8a7c85476",
+      "model": "runtime-default-unresolved",
+      "verdict": "PASS",
+      "findings": [],
+      "review_chain": [
+        {
+          "stage": "full-range",
+          "base": "20927997f2428613ef9896d74ef97a67cb5d5030",
+          "head": "a6d947dbf9c68d4e78fd6e7ecdac7de6d4858250"
+        },
+        {
+          "stage": "reviewed-corrections",
+          "base": "a6d947dbf9c68d4e78fd6e7ecdac7de6d4858250",
+          "head": "9e6b192b1c4583d8d9b085af37b9854e3891cf29"
+        }
+      ]
+    },
+    {
+      "name": "silent-failure-hunter",
+      "version": "abdcd09023740e476942b9286ac176d46dd0aecfd630963621dfd0e7891bd7e6",
+      "model": "runtime-default-unresolved",
+      "verdict": "PASS",
+      "findings": [],
+      "review_chain": [
+        {
+          "stage": "full-range",
+          "base": "20927997f2428613ef9896d74ef97a67cb5d5030",
+          "head": "a6d947dbf9c68d4e78fd6e7ecdac7de6d4858250"
+        },
+        {
+          "stage": "reviewed-corrections",
+          "base": "a6d947dbf9c68d4e78fd6e7ecdac7de6d4858250",
+          "head": "9e6b192b1c4583d8d9b085af37b9854e3891cf29"
+        }
+      ]
+    }
+  ]
+}
