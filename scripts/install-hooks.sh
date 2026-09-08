@@ -129,7 +129,13 @@ if [ "$UNINSTALL" = true ]; then
         fi
     fi
     if [ "$DRY_RUN" = false ]; then
-        for f in $FILES; do rm -f "$DEST/$f"; done
+        for f in $FILES; do
+            if [ "$SRC/$f" -ef "$DEST/$f" ]; then continue; fi
+            if [ "$RUNTIME" = codex ] && [ -f "$DEST/$f" ] && ! cmp -s "$SRC/$f" "$DEST/$f"; then
+                echo "keep $DEST/$f (modified; reconcile manually)"; continue
+            fi
+            rm -f "$DEST/$f" || exit 1
+        done
         rmdir "$DEST" 2>/dev/null || true
     fi
     echo "install-hooks: agent-sop hooks removed from $SETTINGS and $DEST"
@@ -140,8 +146,12 @@ fi
 if [ "$DRY_RUN" = false ]; then
     mkdir -p "$DEST"
     for f in $FILES; do
-        cp "$SRC/$f" "$DEST/$f"
-        chmod +x "$DEST/$f"
+        # Existing Codex scripts update through sync-sop-files baseline checks.
+        if [ "$RUNTIME" = codex ] && [ -f "$DEST/$f" ]; then
+            echo "keep $DEST/$f (use Codex sync for safe updates)"; continue
+        fi
+        cp "$SRC/$f" "$DEST/$f" || exit 1
+        chmod +x "$DEST/$f" || exit 1
     done
 fi
 

@@ -117,3 +117,13 @@ cp "$WORK/custom-user/.agents/skills/source-command-restart-sop/SKILL.md" "$WORK
 AGENT_SOP_USER_HOME="$WORK/custom-user" bash "$SOURCE/scripts/install-codex.sh" > "$WORK/custom-install"
 cmp "$WORK/custom-before" "$WORK/custom-user/.agents/skills/source-command-restart-sop/SKILL.md"
 printf 'PASS: customized legacy aliases survive installation\n'
+
+# Registering hooks must not reset custom user-wide script contents.
+AGENT_SOP_USER_HOME="$WORK/hook-user" bash "$SOURCE/scripts/install-hooks.sh" --runtime codex > "$WORK/hook-install"
+printf '\n# Custom policy\n' >> "$WORK/hook-user/.codex/scripts/hooks/agent-sop/sop-lib.sh"
+cp "$WORK/hook-user/.codex/scripts/hooks/agent-sop/sop-lib.sh" "$WORK/hook-before"
+AGENT_SOP_USER_HOME="$WORK/hook-user" bash "$SOURCE/scripts/install-hooks.sh" --runtime codex > "$WORK/hook-reinstall"
+cmp "$WORK/hook-before" "$WORK/hook-user/.codex/scripts/hooks/agent-sop/sop-lib.sh"
+AGENT_SOP_USER_HOME="$WORK/hook-user" bash "$SOURCE/scripts/install-hooks.sh" --runtime codex --uninstall > "$WORK/hook-remove"
+cmp "$WORK/hook-before" "$WORK/hook-user/.codex/scripts/hooks/agent-sop/sop-lib.sh"
+printf 'PASS: hook reinstallation and removal preserve customized scripts\n'
