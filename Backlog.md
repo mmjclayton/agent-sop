@@ -1210,4 +1210,4 @@ Acceptance criteria:
 
 Implementation complete locally (2026-09-08). Existing and new fixtures pass.
 review: docs/reviews/2026-09-08_codex-port.md
-Awaiting commit and final configured ship gate; no publication performed.
+Implementation committed on `feat/codex-support`; final review and branch publication in progress. Keep IN PROGRESS until merged to main.

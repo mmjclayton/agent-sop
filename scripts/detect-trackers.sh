@@ -2,7 +2,7 @@
 #
 # List this project's secondary tracker files.
 #
-# A secondary tracker is any `.md` path named in CLAUDE.md's Key Documents &
+# A secondary tracker is any `.md` path named in the project instructions' Key Documents &
 # Dispatch table whose headings carry a Backlog-style status tag — audit
 # findings, security scans, compliance checklists, migration punch-lists.
 # `Backlog.md` and `docs/backlog-archive.md` are excluded; Step 3 covers them.
@@ -11,7 +11,7 @@
 # trackers, which is a normal state and exits 0 — not an error.
 #
 # Usage:
-#   bash scripts/detect-trackers.sh [claude-md-path]
+#   bash scripts/detect-trackers.sh [instructions-path]
 #
 # Called by /update-sop Step 4 (reconciliation; formerly Steps 3b and 11, the reconciliation
 # hard block).
@@ -32,7 +32,15 @@ else
     done
 fi
 [ "${#INSTRUCTIONS[@]}" -gt 0 ] || exit 0
-{ grep -hoE '`[^`]+\.md`' "${INSTRUCTIONS[@]}" 2>/dev/null || true; } \
+for input in "${INSTRUCTIONS[@]}"; do
+    [ -f "$input" ] && [ -r "$input" ] || { echo "Cannot read instructions: $input" >&2; exit 1; }
+done
+PATHS=$(mktemp)
+trap 'rm -f "$PATHS"' EXIT
+status=0
+grep -hoE '`[^`]+\.md`' "${INSTRUCTIONS[@]}" > "$PATHS" || status=$?
+[ "$status" -le 1 ] || { echo 'Tracker discovery failed reading project instructions' >&2; exit "$status"; }
+cat "$PATHS" \
   | tr -d '`' \
   | sort -u \
   | while read -r f; do

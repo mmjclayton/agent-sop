@@ -36,9 +36,13 @@ if [ "$AUDIT" = false ]; then git -C "$WORK/repo" cat-file -e "$BASE^{commit}"; 
     else printf '\nScope: git diff %s..%s. Read surrounding code as needed.\n' "$BASE" "$HEAD_SHA"; fi
     printf 'Finish with exactly Verdict: PASS, Verdict: BLOCK or Verdict: INCOMPLETE on its own line without trailing punctuation. Include severity, file:line, evidence and suggested fix for each finding. Missing tools are not passes.\n'
 } > "$WORK/prompt"
-# No model override: inherit the user's model selection. Hook recursion is off.
+# Keep normal authentication, but exclude operator MCP/plugin configuration.
+# The fresh clone is untrusted, so project configuration is not loaded.
 # Explicit read-only sandbox is the boundary; a prompt/worktree path is not.
-if ! codex exec --sandbox read-only --disable hooks -C "$WORK/repo" --ephemeral \
+if ! codex exec --sandbox read-only --ignore-user-config --ignore-rules \
+    --disable hooks --disable plugins --disable apps --disable multi_agent \
+    --disable browser_use --disable computer_use --disable in_app_browser \
+    --disable in_app_local_automation --disable image_generation -C "$WORK/repo" --ephemeral \
     --output-last-message "$WORK/result" - < "$WORK/prompt" > "$WORK/events" 2>&1; then
     tail -40 "$WORK/events" >&2
     echo 'INCOMPLETE: Codex reviewer process failed' >&2
@@ -46,7 +50,9 @@ if ! codex exec --sandbox read-only --disable hooks -C "$WORK/repo" --ephemeral 
 fi
 [ -s "$WORK/result" ] || { echo 'INCOMPLETE: reviewer produced no result' >&2; exit 1; }
 cat "$WORK/result"
-if ! grep -Eq '^Verdict: (PASS|BLOCK|INCOMPLETE)[[:space:]]*$' "$WORK/result"; then
-    echo 'INCOMPLETE: missing structured reviewer verdict' >&2; exit 1
+verdict_count=$(grep -Ec '^Verdict: (PASS|BLOCK|INCOMPLETE)[[:space:]]*$' "$WORK/result" || true)
+last_line=$(awk 'NF { line=$0 } END { print line }' "$WORK/result")
+if [ "$verdict_count" != 1 ] || ! printf '%s\n' "$last_line" | grep -Eq '^Verdict: (PASS|BLOCK|INCOMPLETE)[[:space:]]*$'; then
+    echo 'INCOMPLETE: require one verdict on the final non-empty line' >&2; exit 1
 fi
-if grep -Eq '^Verdict: INCOMPLETE[[:space:]]*$' "$WORK/result"; then exit 1; fi
+if printf '%s\n' "$last_line" | grep -q '^Verdict: INCOMPLETE'; then exit 1; fi

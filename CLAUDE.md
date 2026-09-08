@@ -1,6 +1,6 @@
-# Agent SOP — Standard Operating Procedure Library for Claude Code
+# Agent SOP — Standard Operating Procedure Library for Claude Code and Codex
 
-> The reference implementation for consistent, productive Claude Code agent sessions.
+> The reference implementation for consistent, productive Claude Code and Codex sessions.
 
 ---
 

@@ -2,16 +2,18 @@
 
 **Date:** 2026-09-08
 **Agent:** solo (Codex)
-**Commits:** implementation checkpoint on feat/codex-support; final review pending
+**Commits:** implementation and review fixes on feat/codex-support
 
-P107: implemented runtime-aware installation, native skills and reviewer
-configuration, shared hook policy and safe update paths. Installed the Codex
-integration locally and retained existing global reviewer customizations.
+P107: added native Codex skills, isolated reviewers and runtime-aware setup.
+Both public READMEs now describe the actual installation and daily workflows.
+Claude support, shared project data and customized user assets are preserved.
 
-Existing and new fixture suites pass; independent review findings were fixed.
-Start a fresh Codex session to reload the installed skills/hooks. Backlog remains IN PROGRESS while the configured reviewers check the implementation commit.
+Live feedback confirmed project-root hook payloads, exec_command translation to
+Bash/command, and production Stop continuation with the expected tracker notice.
+SessionStart, UserPromptSubmit and Stop delivery were also observed in a disposable
+runtime. The raw exec_command fixture did not demonstrate a translation bug.
 
-Live-hook feedback: project-root cwd and Bash/command translation were observed.
-SessionStart/UserPromptSubmit/Stop fired in a disposable runtime; the restored
-production Stop hook continued the real session with its tracker-drift notice.
-The prior raw exec_command fixture did not demonstrate a translation bug.
+Review fixes use trusted installed reviewer policy, check asset discovery failures,
+preserve shared uninstall data and harden priority refresh. Regression suites pass.
+Final configured review and branch publication are recorded in Backlog.md. The work
+remains IN PROGRESS pending merge; no release or merge is part of this session.

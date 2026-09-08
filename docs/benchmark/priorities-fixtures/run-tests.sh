@@ -141,6 +141,21 @@ check "generation-error" "failure returned" "$?" "1"
 if cmp -s AGENTS.md before; then r=same; else r=differs; fi
 check "generation-error-preserves-original" "instructions unchanged" "$r" "same"
 
+for markers in reversed repeated; do
+    d="$work/$markers"; mkdir -p "$d"; cd "$d" || exit 2
+    printf '### P1 — open\n`[OPEN] [Bug]`\n' > Backlog.md
+    if [ "$markers" = reversed ]; then
+        printf '<!-- priority-items:end -->\n<!-- priority-items:start -->\nSURVIVOR\n' > AGENTS.md
+    else
+        printf '<!-- priority-items:start -->\n<!-- priority-items:end -->\n<!-- priority-items:start -->\nSURVIVOR\n' > AGENTS.md
+    fi
+    cp AGENTS.md before
+    bash "$PRIORITIES" >/dev/null 2>&1
+    check "$markers-rejected" "failure returned" "$?" "1"
+    if cmp -s before AGENTS.md; then r=same; else r=differs; fi
+    check "$markers-preserved" "instructions unchanged" "$r" "same"
+done
+
 echo "Results: $pass passed, $fail failed"
 [ "$fail" -gt 0 ] && echo "Failed:$failed" && exit 1
 exit 0

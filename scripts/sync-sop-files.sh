@@ -116,10 +116,10 @@ if [ "$RUNTIME" = codex ]; then
     grep -E '^\| `[^`]+` \| `[^`]+` \| project \|' "$MANIFEST" > "$RUNTIME_MANIFEST" || { echo 'sync-sop-files: no project manifest rows' >&2; exit 1; }
     for f in "$UP"/scripts/hooks/*.sh; do
         path="${f#"$UP/"}"
-        printf '| `~/.codex/scripts/hooks/agent-sop/%s` | `%s` | user |\n' "$(basename "$f")" "$path" >> "$RUNTIME_MANIFEST"
+        printf '| `~/.codex/scripts/hooks/agent-sop/%s` | `%s` | user |\n' "$(basename "$f")" "$path" >> "$RUNTIME_MANIFEST" || { echo 'sync-sop-files: manifest write failed' >&2; exit 1; }
     done
     while IFS= read -r path; do
-        printf '| `~/%s` | `%s` | user |\n' "$path" "$path" >> "$RUNTIME_MANIFEST"
+        printf '| `~/%s` | `%s` | user |\n' "$path" "$path" >> "$RUNTIME_MANIFEST" || { echo 'sync-sop-files: manifest write failed' >&2; exit 1; }
     done < "$RUNTIME_MANIFEST.assets"
     MANIFEST="$RUNTIME_MANIFEST"
 fi

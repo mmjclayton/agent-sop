@@ -50,7 +50,10 @@ not as successful automatic enforcement.
 Claude's `isolation: "worktree"` is not a Codex tool argument. For Codex reviews,
 create an independent clone in `mktemp -d`, check out the exact review commit,
 and run a separate `codex exec --sandbox read-only` process there. Disable hooks
-for these reviewer processes to avoid recursive SOP sessions. Pass the range and
+for these reviewer processes to avoid recursive SOP sessions. The runner ignores
+user configuration and execution rules, and disables plugins, apps, delegation
+and computer/browser tools. Authentication is retained; the CLI default model
+is used. The temporary clone is untrusted, so its project config is not loaded. Pass the range and
 reviewer instructions on stdin, return findings inline, and have the parent write
 the report. The ship-sop `scripts/codex-review.sh` implements this boundary.
 A path mentioned in a subagent prompt does not isolate a process. Do not use
@@ -65,6 +68,7 @@ configured upstream checkout. It shares the existing classifier: pristine older
 files update, local edits remain for reconciliation. No blanket word replacement.
 Project-authored AGENTS.md, CLAUDE.md, Backlog and memory are never reset by setup.
 
-To remove the user integration run `bash scripts/install-codex.sh --uninstall`
+From your agent-sop source checkout (the configured `local_path`), remove the
+user integration with `bash scripts/install-codex.sh --uninstall`
 and `bash scripts/install-hooks.sh --runtime codex --uninstall`. Shared project
 documents, resume records and other runtime installations are preserved.

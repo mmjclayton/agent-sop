@@ -96,3 +96,8 @@ if bash "$WORK/broken/scripts/install-codex.sh" > "$WORK/broken.log" 2>&1; then
     echo 'FAIL: incomplete source accepted'; exit 1
 fi
 printf 'PASS: incomplete source installation fails\n'
+
+if (cd "$WORK/trackers" && bash "$SOURCE/scripts/detect-trackers.sh" missing.md) > "$WORK/missing-tracker" 2>&1; then
+    echo 'FAIL: unreadable tracker input accepted'; exit 1
+fi
+printf 'PASS: explicit missing tracker input fails\n'

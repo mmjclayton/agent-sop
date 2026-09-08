@@ -55,13 +55,13 @@ if ! grep -q "$SENTINEL_START" "$CLAUDE_MD"; then
     exit 0
 fi
 
-# The awk splice below drops every line between the start and end sentinels. If
-# the end sentinel is missing or mistyped, `skip` is never cleared and the splice
-# deletes the entire remainder of the file — silently, with exit 0 and a success
-# message. Verify both markers before touching the file.
-if ! grep -q "$SENTINEL_END" "$CLAUDE_MD"; then
-    echo "Error: $CLAUDE_MD has ${SENTINEL_START} but no matching ${SENTINEL_END}." >&2
-    echo "       Refusing to splice — that would delete everything after the start marker." >&2
+# Require exactly one ordered pair before any replacement can drop source lines.
+if ! awk '
+    /<!-- priority-items:start -->/ { starts++; if (state != 0) bad=1; state=1 }
+    /<!-- priority-items:end -->/ { ends++; if (state != 1) bad=1; state=2 }
+    END { exit (bad || starts != 1 || ends != 1 || state != 2) }
+' "$CLAUDE_MD"; then
+    echo "Error: $CLAUDE_MD needs exactly one ordered priority marker pair; refusing to splice." >&2
     exit 1
 fi
 
