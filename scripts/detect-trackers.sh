@@ -24,14 +24,15 @@
 
 set -euo pipefail
 
-CLAUDE_MD="${1:-CLAUDE.md}"
-
-# No CLAUDE.md is a legal state for a freshly scaffolded project.
-[ -f "$CLAUDE_MD" ] || exit 0
-
-# `|| true`: CLAUDE.md containing no backticked `.md` paths is legal, and a bare
-# grep exit 1 would propagate under `set -o pipefail` and kill the caller.
-{ grep -oE '`[^`]+\.md`' "$CLAUDE_MD" 2>/dev/null || true; } \
+INSTRUCTIONS=()
+if [ $# -gt 0 ]; then INSTRUCTIONS=("$1")
+else
+    for candidate in AGENTS.md CLAUDE.md; do
+        [ ! -f "$candidate" ] || INSTRUCTIONS+=("$candidate")
+    done
+fi
+[ "${#INSTRUCTIONS[@]}" -gt 0 ] || exit 0
+{ grep -hoE '`[^`]+\.md`' "${INSTRUCTIONS[@]}" 2>/dev/null || true; } \
   | tr -d '`' \
   | sort -u \
   | while read -r f; do

@@ -414,6 +414,12 @@ if [ "$RUNTIME" != claude ]; then
     CODEX_ARGS=(); [ "$FORCE" = false ] || CODEX_ARGS+=(--force)
     bash "$SCRIPT_DIR/scripts/install-codex.sh" ${CODEX_ARGS[@]+"${CODEX_ARGS[@]}"}
     if [ "$INSTALL_HOOKS" = true ]; then bash "$SCRIPT_DIR/scripts/install-hooks.sh" --runtime codex; fi
+    CODEX_CONFIG="${CODEX_HOME:-${AGENT_SOP_USER_HOME:-$HOME}/.codex}/agent-sop.config.json"
+    if [ "$(jq -r '.local_path' "$CODEX_CONFIG")" = "$SCRIPT_DIR" ]; then
+        bash "$SCRIPT_DIR/scripts/sync-sop-files.sh" --runtime codex --root "$TARGET" --config "$CODEX_CONFIG" --apply
+    else
+        echo "Codex baseline sync needs the configured source: $CODEX_CONFIG"
+    fi
     echo 'Codex: use $restart-sop, $update-sop and $update-agent-sop. Restart the session to reload skills/hooks.'
 fi
 

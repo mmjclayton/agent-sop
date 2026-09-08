@@ -9,6 +9,7 @@ unset CODEX_HOME
 mkdir -p "$WORK/project" "$WORK/dual" "$WORK/claude"
 bash "$SOURCE/setup.sh" "$WORK/project" --runtime codex --code > "$WORK/install.log"
 test -f "$WORK/project/AGENTS.md"
+jq -e '(.baseline_shas | length) > 0' "$AGENT_SOP_USER_HOME/.codex/agent-sop.config.json" >/dev/null
 test ! -e "$WORK/project/CLAUDE.md"
 test ! -e "$AGENT_SOP_USER_HOME/.claude"
 test -f "$AGENT_SOP_USER_HOME/.agents/skills/update-sop/SKILL.md"
@@ -77,3 +78,21 @@ bash "$SOURCE/scripts/install-hooks.sh" --runtime codex --uninstall > "$WORK/unh
 test -f "$AGENT_SOP_USER_HOME/.claude/settings.json"
 test -f "$WORK/project/AGENTS.md"
 printf 'PASS: removal preserves local edits, shared project data and Claude hooks\n'
+
+# Codex-only dispatch detects secondary trackers, without duplicate bridge paths.
+mkdir -p "$WORK/trackers/docs"
+printf '`docs/tasks.md`\n' > "$WORK/trackers/AGENTS.md"
+printf '### T1 [OPEN]\n' > "$WORK/trackers/docs/tasks.md"
+(cd "$WORK/trackers" && bash "$SOURCE/scripts/detect-trackers.sh") > "$WORK/detected"
+test "$(cat "$WORK/detected")" = docs/tasks.md
+cp "$WORK/trackers/AGENTS.md" "$WORK/trackers/CLAUDE.md"
+(cd "$WORK/trackers" && bash "$SOURCE/scripts/detect-trackers.sh") > "$WORK/detected"
+test "$(wc -l < "$WORK/detected" | tr -d ' ')" = 1
+printf 'PASS: native tracker dispatch and bridge deduplication\n'
+# Discovery errors cannot become successful partial installation.
+mkdir -p "$WORK/broken/scripts" "$WORK/broken/.agents/skills/restart-sop"
+cp "$SOURCE/scripts/install-codex.sh" "$WORK/broken/scripts/"
+if bash "$WORK/broken/scripts/install-codex.sh" > "$WORK/broken.log" 2>&1; then
+    echo 'FAIL: incomplete source accepted'; exit 1
+fi
+printf 'PASS: incomplete source installation fails\n'

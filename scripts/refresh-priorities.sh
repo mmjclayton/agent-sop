@@ -66,7 +66,8 @@ if ! grep -q "$SENTINEL_END" "$CLAUDE_MD"; then
 fi
 
 TMP=$(mktemp)
-trap 'rm -f "$TMP"' EXIT
+OUTPUT=$(mktemp "$(dirname "$CLAUDE_MD")/.sop-priorities.XXXXXX")
+trap 'rm -f "$TMP" "$OUTPUT"' EXIT
 
 # Emit one line per non-terminal item. A P-number heading is followed by its
 # status line in backticks, e.g. `[OPEN] [Bug] [has-open-questions]`.
@@ -155,6 +156,8 @@ trap 'rm -f "$TMP"' EXIT
     # not that the work is done — reporting the latter would be a false claim.
     if [ "$HEADINGS" = "0" ]; then
         echo "*Could not parse \`${BACKLOG}\` — no \`### P<n>\` headings found. Priority items not derived; check the Backlog format.*"
+    elif [ "$MALFORMED" -gt 0 ]; then
+        echo "*Could not parse ${MALFORMED} item(s) in \`$BACKLOG\`; check missing or malformed status tags. Listed priorities may be incomplete.*"
     elif [ "$FOUND" = "0" ]; then
         echo "*No open items. All ${HEADINGS} items in \`${BACKLOG}\` are shipped, deferred, or closed.*"
     fi
@@ -162,7 +165,7 @@ trap 'rm -f "$TMP"' EXIT
     echo "$SENTINEL_END"
 } > "$TMP"
 
-awk -v repl_file="$TMP" '
+if ! awk -v repl_file="$TMP" '
     /<!-- priority-items:start -->/ {
         while ((getline line < repl_file) > 0) print line
         close(repl_file)
@@ -174,6 +177,9 @@ awk -v repl_file="$TMP" '
         next
     }
     !skip { print }
-' "$CLAUDE_MD" > "${CLAUDE_MD}.tmp" && mv "${CLAUDE_MD}.tmp" "$CLAUDE_MD"
+' "$CLAUDE_MD" > "$OUTPUT"; then
+    echo 'Priority generation failed; instructions unchanged' >&2; exit 1
+fi
+mv "$OUTPUT" "$CLAUDE_MD" || { echo 'Priority replacement failed' >&2; exit 1; }
 
 echo "Priority items refreshed: $CLAUDE_MD"

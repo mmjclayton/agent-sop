@@ -106,20 +106,26 @@ TODAY=$(date +%Y-%m-%d)
 # same-device rename (atomic), and it is validated before it replaces anything.
 # Build an explicit runtime manifest. Shared project rows retain their real names.
 RUNTIME_MANIFEST=$(mktemp)
+trap 'rm -f "$RUNTIME_MANIFEST" "$RUNTIME_MANIFEST.assets"' EXIT
 if [ "$RUNTIME" = codex ]; then
-    grep -E '^\| `[^`]+` \| `[^`]+` \| project \|' "$MANIFEST" > "$RUNTIME_MANIFEST"
+    rows=$(grep -cE '^\| `[^`]+` \| `[^`]+` \|' "$MANIFEST")
+    valid=$(grep -cE '^\| `[^`]+` \| `[^`]+` \| (project|user) \|' "$MANIFEST")
+    [ "$rows" -gt 0 ] && [ "$rows" = "$valid" ] || { echo 'sync-sop-files: invalid original manifest' >&2; exit 1; }
+    [ -d "$UP/.agents/skills" ] && [ -d "$UP/.codex/agents" ] || { echo 'sync-sop-files: missing Codex asset directories' >&2; exit 1; }
+    (set -o pipefail; cd "$UP" && find .agents/skills .codex/agents -type f | LC_ALL=C sort) > "$RUNTIME_MANIFEST.assets" || { echo 'sync-sop-files: asset discovery failed' >&2; exit 1; }
+    grep -E '^\| `[^`]+` \| `[^`]+` \| project \|' "$MANIFEST" > "$RUNTIME_MANIFEST" || { echo 'sync-sop-files: no project manifest rows' >&2; exit 1; }
     for f in "$UP"/scripts/hooks/*.sh; do
         path="${f#"$UP/"}"
         printf '| `~/.codex/scripts/hooks/agent-sop/%s` | `%s` | user |\n' "$(basename "$f")" "$path" >> "$RUNTIME_MANIFEST"
     done
     while IFS= read -r path; do
         printf '| `~/%s` | `%s` | user |\n' "$path" "$path" >> "$RUNTIME_MANIFEST"
-    done < <(cd "$UP" && find .agents/skills .codex/agents -type f | LC_ALL=C sort)
+    done < "$RUNTIME_MANIFEST.assets"
     MANIFEST="$RUNTIME_MANIFEST"
 fi
 NEWCFG=$(mktemp "$(dirname "$CONFIG")/.agent-sop.config.XXXXXX") || { echo "sync-sop-files: cannot create a temp file beside $CONFIG" >&2; exit 1; }
 cp "$CONFIG" "$NEWCFG" || { rm -f "$NEWCFG"; echo "sync-sop-files: cannot read $CONFIG" >&2; exit 1; }
-trap 'rm -f "$NEWCFG" "$NEWCFG.tmp" "$RUNTIME_MANIFEST"' EXIT
+trap 'rm -f "$NEWCFG" "$NEWCFG.tmp" "$RUNTIME_MANIFEST" "$RUNTIME_MANIFEST.assets"' EXIT
 while IFS='|' read -r dest src scope; do
     dest=$(printf '%s' "$dest" | xargs); src=$(printf '%s' "$src" | xargs); scope=$(printf '%s' "$scope" | xargs)
     [ -n "$dest" ] && [ -n "$src" ] || continue

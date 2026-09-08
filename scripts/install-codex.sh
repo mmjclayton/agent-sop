@@ -29,6 +29,10 @@ asset_target() {
     esac
 }
 # Paths come only from repository files, never from an installed manifest.
+# Check discovery before the first asset mutation; process substitution loses failures.
+[ -d "$SOURCE/.agents/skills" ] && [ -d "$SOURCE/.codex/agents" ] || { echo 'Missing Codex asset directories' >&2; exit 1; }
+(cd "$SOURCE" && find .agents/skills .codex/agents -type f | LC_ALL=C sort) > "$WORK/assets" || { echo 'Codex asset discovery failed' >&2; exit 1; }
+[ -s "$WORK/assets" ] || { echo 'No Codex assets found' >&2; exit 1; }
 while IFS= read -r src; do
     case "$src" in *.md|*.toml|*.yaml|*.sh) ;; *) continue ;; esac
     dest=$(asset_target "$src")
@@ -62,7 +66,7 @@ while IFS= read -r src; do
         echo "install $dest"
     fi
     jq --arg p "$src" --arg sha "$wanted" '.[$p]=$sha' "$WORK/manifest" > "$WORK/next"; mv "$WORK/next" "$WORK/manifest"
-done < <(cd "$SOURCE" && find .agents/skills .codex/agents -type f | LC_ALL=C sort)
+done < "$WORK/assets"
 # Write through symlinks to preserve dotfiles-managed configuration.
 cat "$WORK/manifest" > "$MANIFEST"
 if [ "$REMOVE" = false ] && [ ! -f "$CONFIG" ]; then

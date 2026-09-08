@@ -124,6 +124,23 @@ bash "$PRIORITIES" >/dev/null 2>&1
 check "opt-in-skip" "exit 0 on absent sentinel" "$?" "0"
 
 echo ""
+d="$work/missing-status"; mkdir -p "$d"; cd "$d" || exit 2
+printf '### P1 — missing status\nbody\n' > Backlog.md
+printf '<!-- priority-items:start -->\nX\n<!-- priority-items:end -->\n' > AGENTS.md
+printf 'outside content\n' > outside
+ln -s "$d/outside" AGENTS.md.tmp
+bash "$PRIORITIES" >/dev/null 2>&1
+check "missing-status-warning" "incomplete parse visible" "$(grep -c 'Could not parse' AGENTS.md)" "1"
+check "temp-symlink-safe" "outside content preserved" "$(cat outside)" "outside content"
+cp AGENTS.md before
+mkdir bin
+printf '#!/bin/sh\nexit 1\n' > bin/awk
+chmod +x bin/awk
+PATH="$d/bin:$PATH" bash "$PRIORITIES" >/dev/null 2>&1
+check "generation-error" "failure returned" "$?" "1"
+if cmp -s AGENTS.md before; then r=same; else r=differs; fi
+check "generation-error-preserves-original" "instructions unchanged" "$r" "same"
+
 echo "Results: $pass passed, $fail failed"
 [ "$fail" -gt 0 ] && echo "Failed:$failed" && exit 1
 exit 0
