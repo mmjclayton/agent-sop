@@ -71,6 +71,11 @@ printf '\nLocal customization\n' >> "$AGENT_SOP_USER_HOME/.agents/skills/restart
 bash "$SOURCE/scripts/sync-sop-files.sh" --runtime codex --root "$WORK/project" --apply > "$WORK/sync2.log"
 grep -q 'Local customization' "$AGENT_SOP_USER_HOME/.agents/skills/restart-sop/SKILL.md"
 printf 'PASS: Codex sync preserves local skill edits\n'
+mkdir -p "$WORK/project/.codex"
+printf '{"local_path":"/nonexistent/project-controlled-source","exclude":[],"baseline_shas":{}}\n' > "$WORK/project/.codex/agent-sop.config.json"
+bash "$SOURCE/scripts/sync-sop-files.sh" --runtime codex --root "$WORK/project" --apply > "$WORK/project-authority"
+cmp "$SOURCE/scripts/hooks/sop-lib.sh" "$AGENT_SOP_USER_HOME/.codex/scripts/hooks/agent-sop/sop-lib.sh"
+printf 'PASS: project configuration cannot replace the trusted upstream\n'
 bash "$SOURCE/scripts/install-codex.sh" --uninstall > "$WORK/uninstall.log"
 test -f "$AGENT_SOP_USER_HOME/.agents/skills/restart-sop/SKILL.md"
 test ! -f "$AGENT_SOP_USER_HOME/.agents/skills/update-sop/SKILL.md"
@@ -127,3 +132,10 @@ cmp "$WORK/hook-before" "$WORK/hook-user/.codex/scripts/hooks/agent-sop/sop-lib.
 AGENT_SOP_USER_HOME="$WORK/hook-user" bash "$SOURCE/scripts/install-hooks.sh" --runtime codex --uninstall > "$WORK/hook-remove"
 cmp "$WORK/hook-before" "$WORK/hook-user/.codex/scripts/hooks/agent-sop/sop-lib.sh"
 printf 'PASS: hook reinstallation and removal preserve customized scripts\n'
+
+mkdir -p "$WORK/dangling"
+printf '**Project type:** non-code\n' > "$WORK/dangling/CLAUDE.md"
+ln -s missing-instructions "$WORK/dangling/AGENTS.md"
+test "$(bash "$PTYPE" "$WORK/dangling")" = code
+bash -c 'source "$1/scripts/hooks/sop-lib.sh"; test "$(sop_claude_md_state "$2")" = dangling' _ "$SOURCE" "$WORK/dangling"
+printf 'PASS: dangling native instructions remain visible and do not downgrade gates\n'

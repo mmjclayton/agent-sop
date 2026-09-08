@@ -112,6 +112,10 @@ sop_repo_key() {
 # AGENTS.md is canonical when present; existing Claude-only projects are unchanged.
 # A bridge AGENTS.md without a type declaration falls back to CLAUDE.md.
 sop_instruction_file() {
+    if { [ -L "$1/AGENTS.md" ] || [ -e "$1/AGENTS.md" ]; } &&
+       { [ ! -f "$1/AGENTS.md" ] || [ ! -r "$1/AGENTS.md" ]; }; then
+        printf '%s/AGENTS.md' "$1"; return
+    fi
     if { [ -f "$1/AGENTS.md" ] || [ -L "$1/AGENTS.md" ]; } &&
        { [ ! -f "$1/CLAUDE.md" ] || [ -n "$(sop_type_from_file "$1/AGENTS.md")" ]; }; then printf '%s/AGENTS.md' "$1"
     else printf '%s/CLAUDE.md' "$1"; fi
@@ -125,8 +129,9 @@ sop_claude_prose() { awk '/^[[:space:]]*```/{f=!f; next} !f' "$1" 2>/dev/null; }
 # fall-through to non-code would otherwise be silent — review finding).
 sop_claude_md_state() {
     local claude; claude=$(sop_instruction_file "$1")
-    if [ -f "$claude" ]; then printf 'ok'
-    elif [ -L "$claude" ]; then printf 'dangling'
+    if [ -f "$claude" ] && [ -r "$claude" ]; then printf 'ok'
+    elif [ -L "$claude" ] && [ ! -e "$claude" ]; then printf 'dangling'
+    elif [ -e "$claude" ]; then printf 'unreadable'
     else printf 'missing'; fi
 }
 
@@ -165,6 +170,9 @@ sop_code_signals() {
 sop_project_type() {
     local root="$1" declared
     [ -n "$root" ] && [ -d "$root" ] || { printf 'non-code'; return; }
+    # A failed native instruction source must not silently disable code gates.
+    if { [ -L "$root/AGENTS.md" ] || [ -e "$root/AGENTS.md" ]; } &&
+       { [ ! -f "$root/AGENTS.md" ] || [ ! -r "$root/AGENTS.md" ]; }; then printf 'code'; return; fi
     declared=$(sop_declared_project_type "$root")
     if [ -n "$declared" ]; then printf '%s' "$declared"; return; fi
     if [ -n "$(sop_code_signals "$root")" ]; then printf 'code'; else printf 'non-code'; fi

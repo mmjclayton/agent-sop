@@ -44,8 +44,15 @@ esac
 command -v jq >/dev/null 2>&1 || { echo "sync-sop-files: jq is required" >&2; exit 1; }
 [ -n "$ROOT" ] || ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || ROOT=$PWD
 if [ -z "$CONFIG" ]; then
-    if [ -f "$ROOT/.$RUNTIME/agent-sop.config.json" ]; then CONFIG="$ROOT/.$RUNTIME/agent-sop.config.json"
+    if [ "$RUNTIME" != codex ] && [ -f "$ROOT/.$RUNTIME/agent-sop.config.json" ]; then CONFIG="$ROOT/.$RUNTIME/agent-sop.config.json"
     else CONFIG="$CONFIG_HOME/agent-sop.config.json"; fi
+fi
+# Project exclusions are preferences; upstream authority and ownership hashes
+# for Codex come from the user config unless --config explicitly selects another.
+PROJECT_EXCLUSIONS=''
+if [ "$RUNTIME" = codex ] && [ -f "$ROOT/.codex/agent-sop.config.json" ]; then
+    PROJECT_EXCLUSIONS="$ROOT/.codex/agent-sop.config.json"
+    jq -e '(.exclude // []) | type == "array" and all(.[]; type == "string")' "$PROJECT_EXCLUSIONS" >/dev/null || { echo 'sync-sop-files: invalid project exclusions' >&2; exit 1; }
 fi
 [ -f "$CONFIG" ] || { echo "sync-sop-files: no config at $CONFIG" >&2; exit 1; }
 # The upstream location is a fact about the machine: a project-scope config
@@ -131,6 +138,9 @@ while IFS='|' read -r dest src scope; do
     [ -n "$dest" ] && [ -n "$src" ] || continue
     if jq -e --arg d "$dest" '(.exclude // []) | index($d) != null' "$CONFIG" >/dev/null; then
         echo "  excluded         $dest"; n_excluded=$((n_excluded+1)); continue
+    fi
+    if [ "$scope" = project ] && [ -n "$PROJECT_EXCLUSIONS" ] && jq -e --arg d "$dest" '(.exclude // []) | index($d) != null' "$PROJECT_EXCLUSIONS" >/dev/null; then
+        echo "  excluded         $dest (project preference)"; n_excluded=$((n_excluded+1)); continue
     fi
     if ! under "$UP/$src" "$UP"; then echo "  REFUSED          $dest (upstream path escapes the checkout: $src)"; n_refused=$((n_refused+1)); continue; fi
     [ -f "$UP/$src" ] || { echo "  absent-upstream  $dest (upstream has no $src)"; n_absent=$((n_absent+1)); continue; }
