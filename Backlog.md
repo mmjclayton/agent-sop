@@ -1194,3 +1194,49 @@ Closed more than 90 days ago; full entries in `docs/backlog-archive.md`, moved v
 - P58 — archived Karpathy before/after pattern (extend across SOP): see docs/backlog-archive.md
 - P59 — archived Step 1b reviewer-gate tightening + cross-layer rules guide: see docs/backlog-archive.md
 - P56 — archived Backend assumptions: gateway / non-Anthropic backend warning: see docs/backlog-archive.md
+
+### P107 — Native Codex support alongside Claude
+
+`[IN PROGRESS] [Feature]`
+
+Provide runtime-aware installation and updates, native Codex skills and reviewers,
+and one shared automatic review path. Preserve Claude support and project-owned files.
+
+Acceptance criteria:
+- `--runtime claude|codex|both` installs the selected integration without cross-runtime writes.
+- Codex hooks load context, continue on missing records and block uncovered pushes.
+- Native workflows have valid paths and enforce reviewer isolation.
+- Installation/update/uninstall fixtures and existing regression checks pass.
+
+Implementation complete locally (2026-09-08). Existing and new fixtures pass.
+review: docs/reviews/20260908-153509-ship-auto.md
+Implementation and configured review complete on `feat/codex-support`; prepared for branch publication and PR review. Keep IN PROGRESS until merged to main.
+
+### P108 — Codex compatibility follow-ups from native-runtime review
+
+`[OPEN] [Iteration]`
+
+Non-blocking review follow-ups to P107:
+- Reconcile `agent-sop.install.json` ownership hashes after `sync-sop-files.sh` updates, so later uninstall recognizes untouched synced assets.
+- Preserve an `AGENTS.md` symlink when refreshing priorities instead of replacing the link.
+- Support AGENTS-only projects in the legacy multi-agent migration script; the skill now names this limitation explicitly.
+- Replication empty-array parsing was escalated to HIGH and fixed under P109: structural JSON parsing now preserves an empty exclusion list, with a stale-mirror fixture.
+
+Source: configured Codex reviews and parent verification, 2026-09-08.
+
+### P109 — Port shared enforcement surfaces to Codex
+
+`[IN PROGRESS] [Refactor]`
+
+Declared enforcement scope accompanying the Codex runtime feature: runtime-aware
+validator configuration and replication paths, AGENTS/native-skill review triggers,
+and the hook adapters. In ship-sop, also replace the obsolete positive project-hook
+CI assertion with unified-hook installation fixtures. Policy thresholds remain unchanged.
+
+This is an explicit enforcement work item under security rule 11, separated from
+the feature declaration for auditability. Independent configured reviewers assess
+these changes; passing output from a changed validator is not the sole evidence.
+The pre-port validator is also run against the final Backlog transitions.
+
+review: docs/reviews/20260908-153509-ship-auto.md
+Configured review complete; remains IN PROGRESS until merge.

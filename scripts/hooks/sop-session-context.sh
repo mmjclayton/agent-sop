@@ -51,9 +51,11 @@ SIGNALS=$(sop_code_signals "$ROOT" | paste -sd, - | sed 's/,/, /g')
 # hide behind the gate line (review finding, HIGH).
 PTYPE_NOTE=""
 if [ "$DECLARED" = "non-code" ] && [ -n "$SIGNALS" ]; then
-    PTYPE_NOTE="CLAUDE.md declares non-code, but $SIGNALS say code; the declaration wins: the reviewer gate is off and the Stop hook enforces nothing here. Remove the line if that is not intended."
+    PTYPE_NOTE="$(basename "$(sop_instruction_file "$ROOT")") declares non-code, but $SIGNALS say code; the declaration wins: the reviewer gate is off and the Stop hook enforces nothing here. Remove the line if that is not intended."
 elif [ "$(sop_claude_md_state "$ROOT")" = "dangling" ]; then
-    PTYPE_NOTE="CLAUDE.md is a symlink whose target is missing; nothing could be read from it, so the type fell through to the manifest check. Fix the link if this is a code project."
+    PTYPE_NOTE="$(basename "$(sop_instruction_file "$ROOT")") is a symlink whose target is missing; nothing could be read from it, the detected project type is $PTYPE. Repair the instruction link."
+elif [ "$(sop_claude_md_state "$ROOT")" = "unreadable" ]; then
+    PTYPE_NOTE="$(basename "$(sop_instruction_file "$ROOT")") could not be read; the detected project type is $PTYPE. Repair the instruction file."
 fi
 
 # ── Resume snapshot ───────────────────────────────────────────────────────────
@@ -146,7 +148,7 @@ fi
 
 # ── Upstream SOP sync staleness ───────────────────────────────────────────────
 SYNC=""
-CFG="${HOME:-}/.claude/agent-sop.config.json"
+CFG="${AGENT_SOP_CONFIG_HOME:-${HOME:-}/.claude}/agent-sop.config.json"
 if [ -f "$CFG" ]; then
     last=$(jq -r '.last_update_check // empty' "$CFG" 2>/dev/null)
     cadence=$(jq -r '.update_reminder // "weekly"' "$CFG" 2>/dev/null)

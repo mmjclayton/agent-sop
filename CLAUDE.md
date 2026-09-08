@@ -1,6 +1,6 @@
-# Agent SOP — Standard Operating Procedure Library for Claude Code
+# Agent SOP — Standard Operating Procedure Library for Claude Code and Codex
 
-> The reference implementation for consistent, productive Claude Code agent sessions.
+> The reference implementation for consistent, productive Claude Code and Codex sessions.
 
 ---
 
@@ -33,7 +33,7 @@ Test: `bash docs/benchmark/hook-fixtures/run-tests.sh` (also `resume-path-fixtur
 <!-- Derived from Backlog.md by scripts/refresh-priorities.sh at every /update-sop. Do not edit by hand. -->
 
 <!-- priority-items:start -->
-*Derived from `Backlog.md` by `scripts/refresh-priorities.sh`. Do not edit by hand — the Backlog is the source of truth. Last refreshed: 2026-09-05.*
+*Derived from `Backlog.md` by `scripts/refresh-priorities.sh`. Do not edit by hand — the Backlog is the source of truth. Last refreshed: 2026-09-08.*
 
 - P8 — Web app domain variant — [OPEN] [Feature] [has-open-questions]
 - P9 — Marketing domain variant — [OPEN] [Feature] [has-open-questions]
@@ -42,6 +42,9 @@ Test: `bash docs/benchmark/hook-fixtures/run-tests.sh` (also `resume-path-fixtur
 - P79 — `sandboxing.md` treats the sandbox as protecting the host, never the reverse — [OPEN] [Iteration]
 - P80 — Benchmark rubric: pairwise scoring, and read judge reasoning not scores — [OPEN] [Iteration]
 - P81 — The MANDATORY lite benchmark rule fires on changes its instrument cannot measure — [OPEN] [Bug]
+- P107 — Native Codex support alongside Claude — [IN PROGRESS] [Feature]
+- P108 — Codex compatibility follow-ups from native-runtime review — [OPEN] [Iteration]
+- P109 — Port shared enforcement surfaces to Codex — [IN PROGRESS] [Refactor]
 <!-- priority-items:end -->
 
 ---

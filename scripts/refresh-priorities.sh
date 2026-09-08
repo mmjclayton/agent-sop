@@ -30,7 +30,11 @@ set -euo pipefail
 SENTINEL_START='<!-- priority-items:start -->'
 SENTINEL_END='<!-- priority-items:end -->'
 
-CLAUDE_MD="${1:-CLAUDE.md}"
+# In dual-runtime repos the shared priority block can remain in CLAUDE.md.
+DEFAULT_MD=CLAUDE.md
+if [ -f AGENTS.md ] && grep -q '<!-- priority-items:start -->' AGENTS.md; then DEFAULT_MD=AGENTS.md
+elif [ ! -f CLAUDE.md ] && [ -f AGENTS.md ]; then DEFAULT_MD=AGENTS.md; fi
+CLAUDE_MD="${1:-$DEFAULT_MD}"
 BACKLOG="${2:-Backlog.md}"
 
 if [ ! -f "$CLAUDE_MD" ]; then
@@ -46,23 +50,27 @@ fi
 # Opt-in, not a hard requirement. Pre-P92 projects keep their hand-written
 # section until they choose to migrate; failing here would break their
 # /update-sop run for a section they never opted into.
-if ! grep -q "$SENTINEL_START" "$CLAUDE_MD"; then
+marker_status=0
+grep -q "$SENTINEL_START" "$CLAUDE_MD" || marker_status=$?
+[ "$marker_status" -le 1 ] || { echo "Cannot read instructions: $CLAUDE_MD" >&2; exit "$marker_status"; }
+if [ "$marker_status" = 1 ]; then
     echo "refresh-priorities: no ${SENTINEL_START} block in $CLAUDE_MD — skipping (section is opt-in)"
     exit 0
 fi
 
-# The awk splice below drops every line between the start and end sentinels. If
-# the end sentinel is missing or mistyped, `skip` is never cleared and the splice
-# deletes the entire remainder of the file — silently, with exit 0 and a success
-# message. Verify both markers before touching the file.
-if ! grep -q "$SENTINEL_END" "$CLAUDE_MD"; then
-    echo "Error: $CLAUDE_MD has ${SENTINEL_START} but no matching ${SENTINEL_END}." >&2
-    echo "       Refusing to splice — that would delete everything after the start marker." >&2
+# Require exactly one ordered pair before any replacement can drop source lines.
+if ! awk '
+    /<!-- priority-items:start -->/ { starts++; if (state != 0) bad=1; state=1 }
+    /<!-- priority-items:end -->/ { ends++; if (state != 1) bad=1; state=2 }
+    END { exit (bad || starts != 1 || ends != 1 || state != 2) }
+' "$CLAUDE_MD"; then
+    echo "Error: $CLAUDE_MD needs exactly one ordered priority marker pair; refusing to splice." >&2
     exit 1
 fi
 
 TMP=$(mktemp)
-trap 'rm -f "$TMP"' EXIT
+OUTPUT=$(mktemp "$(dirname "$CLAUDE_MD")/.sop-priorities.XXXXXX")
+trap 'rm -f "$TMP" "$OUTPUT"' EXIT
 
 # Emit one line per non-terminal item. A P-number heading is followed by its
 # status line in backticks, e.g. `[OPEN] [Bug] [has-open-questions]`.
@@ -151,6 +159,8 @@ trap 'rm -f "$TMP"' EXIT
     # not that the work is done — reporting the latter would be a false claim.
     if [ "$HEADINGS" = "0" ]; then
         echo "*Could not parse \`${BACKLOG}\` — no \`### P<n>\` headings found. Priority items not derived; check the Backlog format.*"
+    elif [ "$MALFORMED" -gt 0 ]; then
+        echo "*Could not parse ${MALFORMED} item(s) in \`$BACKLOG\`; check missing or malformed status tags. Listed priorities may be incomplete.*"
     elif [ "$FOUND" = "0" ]; then
         echo "*No open items. All ${HEADINGS} items in \`${BACKLOG}\` are shipped, deferred, or closed.*"
     fi
@@ -158,7 +168,7 @@ trap 'rm -f "$TMP"' EXIT
     echo "$SENTINEL_END"
 } > "$TMP"
 
-awk -v repl_file="$TMP" '
+if ! awk -v repl_file="$TMP" '
     /<!-- priority-items:start -->/ {
         while ((getline line < repl_file) > 0) print line
         close(repl_file)
@@ -170,6 +180,9 @@ awk -v repl_file="$TMP" '
         next
     }
     !skip { print }
-' "$CLAUDE_MD" > "${CLAUDE_MD}.tmp" && mv "${CLAUDE_MD}.tmp" "$CLAUDE_MD"
+' "$CLAUDE_MD" > "$OUTPUT"; then
+    echo 'Priority generation failed; instructions unchanged' >&2; exit 1
+fi
+mv "$OUTPUT" "$CLAUDE_MD" || { echo 'Priority replacement failed' >&2; exit 1; }
 
 echo "Priority items refreshed: $CLAUDE_MD"

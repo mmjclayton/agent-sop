@@ -1,8 +1,8 @@
 # Claude Code Agent SOP
 
-SOP-Version: 2026-09-05
+SOP-Version: 2026-09-08
 
-The standard operating procedure for Claude Code sessions on a project. It supplies the context a session cannot derive and enforces the few standards a model does not keep by default. Everything else was cut on 2026-09-05 (P105) after a measured review: the hooks now do the mechanical half, and prose that duplicated them or was never read again is gone. Where a rule traces to a recorded incident, the P-number is given.
+The shared standard operating procedure for Claude Code and Codex sessions on a project. Codex runtime bindings (AGENTS.md, skills, hooks and reviewer isolation) are in `docs/sop/codex.md`; the historical filename remains stable. It supplies the context a session cannot derive and enforces the few standards a model does not keep by default. Everything else was cut on 2026-09-05 (P105) after a measured review: the hooks now do the mechanical half, and prose that duplicated them or was never read again is gone. Where a rule traces to a recorded incident, the P-number is given.
 
 ---
 

@@ -21,13 +21,15 @@ set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC="$SCRIPT_DIR/hooks"
-SETTINGS="${HOME}/.claude/settings.json"
-DEST="${HOME}/.claude/scripts/hooks/agent-sop"
+SETTINGS=""
+DEST=""
+RUNTIME=claude
 UNINSTALL=false
 DRY_RUN=false
 
 while [ $# -gt 0 ]; do
     case "$1" in
+        --runtime) RUNTIME="$2"; shift ;;
         --settings) SETTINGS="$2"; shift ;;
         --dest)     DEST="$2"; shift ;;
         --uninstall) UNINSTALL=true ;;
@@ -40,12 +42,19 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+case "$RUNTIME" in
+    claude) RUNTIME_HOME="${AGENT_SOP_USER_HOME:-$HOME}/.claude"; SETTINGS="${SETTINGS:-$RUNTIME_HOME/settings.json}" ;;
+    codex) RUNTIME_HOME="${CODEX_HOME:-${AGENT_SOP_USER_HOME:-$HOME}/.codex}"; SETTINGS="${SETTINGS:-$RUNTIME_HOME/hooks.json}" ;;
+    *) echo "install-hooks: runtime must be claude or codex" >&2; exit 1 ;;
+esac
+DEST="${DEST:-$RUNTIME_HOME/scripts/hooks/agent-sop}"
+
 if ! command -v jq >/dev/null 2>&1; then
     echo "install-hooks: jq is required (brew install jq)" >&2
     exit 1
 fi
 
-FILES="sop-lib.sh sop-session-context.sh sop-stop-drift.sh sop-push-gate.sh sop-project-type.sh"
+FILES="sop-lib.sh sop-session-context.sh sop-stop-drift.sh sop-push-gate.sh sop-project-type.sh sop-codex-hook.sh"
 for f in $FILES; do
     if [ ! -f "$SRC/$f" ]; then
         echo "install-hooks: missing $SRC/$f" >&2
@@ -56,6 +65,15 @@ done
 CTX_CMD="bash \"$DEST/sop-session-context.sh\""
 STOP_CMD="bash \"$DEST/sop-stop-drift.sh\""
 PUSH_CMD="bash \"$DEST/sop-push-gate.sh\""
+
+if [ "$RUNTIME" = codex ]; then
+    CTX_CMD="bash \"$DEST/sop-codex-hook.sh\" SessionStart"
+    PROMPT_CMD="bash \"$DEST/sop-codex-hook.sh\" UserPromptSubmit"
+    STOP_CMD="bash \"$DEST/sop-codex-hook.sh\" Stop"
+    PUSH_CMD="bash \"$DEST/sop-codex-hook.sh\" PreToolUse"
+else
+    PROMPT_CMD="$CTX_CMD"
+fi
 
 # A dotfiles-managed settings.json is often a symlink. `mv` over the link path
 # would replace the link with a plain file and leave the dotfiles source
@@ -111,7 +129,13 @@ if [ "$UNINSTALL" = true ]; then
         fi
     fi
     if [ "$DRY_RUN" = false ]; then
-        for f in $FILES; do rm -f "$DEST/$f"; done
+        for f in $FILES; do
+            if [ "$SRC/$f" -ef "$DEST/$f" ]; then continue; fi
+            if [ "$RUNTIME" = codex ] && [ -f "$DEST/$f" ] && ! cmp -s "$SRC/$f" "$DEST/$f"; then
+                echo "keep $DEST/$f (modified; reconcile manually)"; continue
+            fi
+            rm -f "$DEST/$f" || exit 1
+        done
         rmdir "$DEST" 2>/dev/null || true
     fi
     echo "install-hooks: agent-sop hooks removed from $SETTINGS and $DEST"
@@ -122,8 +146,12 @@ fi
 if [ "$DRY_RUN" = false ]; then
     mkdir -p "$DEST"
     for f in $FILES; do
-        cp "$SRC/$f" "$DEST/$f"
-        chmod +x "$DEST/$f"
+        # Existing Codex scripts update through sync-sop-files baseline checks.
+        if [ "$RUNTIME" = codex ] && [ -f "$DEST/$f" ]; then
+            echo "keep $DEST/$f (use Codex sync for safe updates)"; continue
+        fi
+        cp "$SRC/$f" "$DEST/$f" || exit 1
+        chmod +x "$DEST/$f" || exit 1
     done
 fi
 
@@ -131,16 +159,25 @@ fi
 [ -f "$SETTINGS" ] || { mkdir -p "$(dirname "$SETTINGS")"; echo '{}' > "$SETTINGS"; }
 
 NEW=$(jq \
-    --arg ctx "$CTX_CMD" --arg stop "$STOP_CMD" --arg push "$PUSH_CMD" '
+    --arg all "$([ "$RUNTIME" = codex ] && echo ".*" || echo "*")" \
+    --arg runtime "$RUNTIME" --arg legacy "bash \"${AGENT_SOP_USER_HOME:-$HOME}/.claude/scripts/hooks/agent-sop/" \
+    --arg ctx "$CTX_CMD" --arg prompt "$PROMPT_CMD" --arg stop "$STOP_CMD" --arg push "$PUSH_CMD" '
     def ensure(ev; m; cmd; t):
         .hooks[ev] = ((.hooks[ev] // []) |
             if any(.[]?.hooks[]?; (.command // "") == cmd) then .
             else . + [{ matcher: m, hooks: [{ type: "command", command: cmd, timeout: t }] }]
             end);
     .hooks = (.hooks // {})
-    | ensure("SessionStart"; "*"; $ctx; 15)
-    | ensure("UserPromptSubmit"; "*"; $ctx; 10)
-    | ensure("Stop"; "*"; $stop; 20)
+    | if $runtime == "codex" then
+        .hooks |= with_entries(.value |= map(
+          .hooks |= map(select(.command != ($legacy + "sop-session-context.sh\"") and
+                               .command != ($legacy + "sop-stop-drift.sh\"") and
+                               .command != ($legacy + "sop-push-gate.sh\"")))
+        ) | .value |= map(select((.hooks | length) > 0)))
+      else . end
+    | ensure("SessionStart"; $all; $ctx; 15)
+    | ensure("UserPromptSubmit"; $all; $prompt; 10)
+    | ensure("Stop"; $all; $stop; 20)
     | ensure("PreToolUse"; "Bash"; $push; 10)
 ' "$SETTINGS" 2>/dev/null) || { echo "install-hooks: could not parse $SETTINGS" >&2; exit 1; }
 

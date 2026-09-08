@@ -109,6 +109,18 @@ sop_repo_key() {
 # block says so (review finding: a `non-code` line on a repo that has since
 # grown a manifest is a silent switch-off of the gate otherwise).
 
+# AGENTS.md is canonical when present; existing Claude-only projects are unchanged.
+# A bridge AGENTS.md without a type declaration falls back to CLAUDE.md.
+sop_instruction_file() {
+    if { [ -L "$1/AGENTS.md" ] || [ -e "$1/AGENTS.md" ]; } &&
+       { [ ! -f "$1/AGENTS.md" ] || [ ! -r "$1/AGENTS.md" ]; }; then
+        printf '%s/AGENTS.md' "$1"; return
+    fi
+    if { [ -f "$1/AGENTS.md" ] || [ -L "$1/AGENTS.md" ]; } &&
+       { [ ! -f "$1/CLAUDE.md" ] || [ -n "$(sop_type_from_file "$1/AGENTS.md")" ]; }; then printf '%s/AGENTS.md' "$1"
+    else printf '%s/CLAUDE.md' "$1"; fi
+}
+
 # sop_claude_prose <file> — the file with fenced code blocks removed.
 sop_claude_prose() { awk '/^[[:space:]]*```/{f=!f; next} !f' "$1" 2>/dev/null; }
 
@@ -116,26 +128,31 @@ sop_claude_prose() { awk '/^[[:space:]]*```/{f=!f; next} !f' "$1" 2>/dev/null; }
 # target is gone: reads as missing, and the context block says so, since the
 # fall-through to non-code would otherwise be silent — review finding).
 sop_claude_md_state() {
-    local claude="$1/CLAUDE.md"
-    if [ -f "$claude" ]; then printf 'ok'
-    elif [ -L "$claude" ]; then printf 'dangling'
+    local claude; claude=$(sop_instruction_file "$1")
+    if [ -f "$claude" ] && [ -r "$claude" ]; then printf 'ok'
+    elif [ -L "$claude" ] && [ ! -e "$claude" ]; then printf 'dangling'
+    elif [ -e "$claude" ]; then printf 'unreadable'
     else printf 'missing'; fi
 }
 
 # sop_declared_project_type <root> — "code", "non-code", or empty.
-sop_declared_project_type() {
-    local claude="$1/CLAUDE.md"
-    [ -f "$claude" ] || { printf ''; return; }
-    sop_claude_prose "$claude" \
+sop_type_from_file() {
+    [ -f "$1" ] || return 0
+    sop_claude_prose "$1" \
         | sed -E 's/^[[:space:]]*[-+*][[:space:]]+//' \
         | grep -Ei '^[*_]*project type' | head -1 | tr 'A-Z' 'a-z' \
         | sed -nE 's/^[*_]*project type[*_]*:?[*_]*[[:space:]]*(non-code|code)([^a-z].*)?$/\1/p'
 }
 
+sop_declared_project_type() {
+    sop_type_from_file "$(sop_instruction_file "$1")"
+}
+
 # sop_code_signals <root> — one line per heuristic that says "code", in the
 # documented order; empty when none does.
 sop_code_signals() {
-    local root="$1" claude="$1/CLAUDE.md" m
+    local root="$1" claude m
+    claude=$(sop_instruction_file "$root")
     if [ -f "$claude" ]; then
         sop_claude_prose "$claude" | grep -Ei '^## (Auth|Database|Design System)([^A-Za-z]|$)' | head -1 \
             | sed -E 's/^## ([A-Za-z]+( [A-Za-z]+)?).*/\1 heading/'
@@ -153,6 +170,9 @@ sop_code_signals() {
 sop_project_type() {
     local root="$1" declared
     [ -n "$root" ] && [ -d "$root" ] || { printf 'non-code'; return; }
+    # A failed native instruction source must not silently disable code gates.
+    if { [ -L "$root/AGENTS.md" ] || [ -e "$root/AGENTS.md" ]; } &&
+       { [ ! -f "$root/AGENTS.md" ] || [ ! -r "$root/AGENTS.md" ]; }; then printf 'code'; return; fi
     declared=$(sop_declared_project_type "$root")
     if [ -n "$declared" ]; then printf '%s' "$declared"; return; fi
     if [ -n "$(sop_code_signals "$root")" ]; then printf 'code'; else printf 'non-code'; fi
@@ -229,7 +249,7 @@ sop_drift_commits() {
 # path after the status columns so names with spaces survive intact.
 sop_tracker_dirty() {
     git -C "$1" status --porcelain --untracked-files=all -- \
-        Backlog.md CLAUDE.md docs/RECENT-WORK.md docs/feature-map.md docs/agent-memory.md \
+        Backlog.md CLAUDE.md AGENTS.md docs/RECENT-WORK.md docs/feature-map.md docs/agent-memory.md \
         docs/recent-work docs/agent-memory docs/build-plans docs/reviews 2>/dev/null \
         | sed -E 's/^.{3}//; s/^.* -> //; s/^"(.*)"$/\1/'
 }
@@ -377,5 +397,9 @@ sop_shipsop_gate() {
         "$lines" "${branch:-HEAD}" "$(sop_default_branch "$root")" "$(printf '%s' "$base" | cut -c1-7)" "$(printf '%s' "$head" | cut -c1-7)"
     printf '  Run these agents against that range, collect every result (they run in the background), then write %s containing the line `Covers: %s`:\n' "$report" "$head"
     printf '%s\n' "$agents"
+    if [ "${AGENT_SOP_RUNTIME:-claude}" = codex ]; then
+        printf '  Use the ship skill: run reviewers in separate checkouts with a read-only sandbox; collect every result, then write the report in the parent. Never substitute a worktree path in a prompt for enforced isolation.\n'
+        return
+    fi
     printf '  Rules: launch each agent with isolation: "worktree", read-only; wait for every result; write the report after any fix commit so it covers HEAD; CRITICAL/HIGH at the top of your next reply with file:line, MEDIUM/LOW stay in the report; file nothing to Backlog.md.\n'
 }

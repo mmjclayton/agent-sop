@@ -34,6 +34,9 @@ These are the files this command keeps in sync. Everything else (CLAUDE.md, Back
 
 | Destination in consumer project | Upstream path | Scope |
 |---------------------------------|---------------|-------|
+| `docs/sop/codex.md` | `docs/sop/codex.md` | project |
+| `scripts/refresh-priorities.sh` | `scripts/refresh-priorities.sh` | project |
+| `scripts/detect-trackers.sh` | `scripts/detect-trackers.sh` | project |
 | `docs/sop/claude-agent-sop.md` | `docs/sop/claude-agent-sop.md` | project |
 | `docs/sop/security.md` | `docs/sop/security.md` | project |
 | `docs/sop/sandboxing.md` | `docs/sop/sandboxing.md` | project |
@@ -65,6 +68,7 @@ These are the files this command keeps in sync. Everything else (CLAUDE.md, Back
 | `~/.claude/agents/security-reviewer.md` | `.claude/agents/security-reviewer.md` | user |
 | `~/.claude/agents/planner.md` | `.claude/agents/planner.md` | user |
 | `~/.claude/agents/e2e-runner.md` | `.claude/agents/e2e-runner.md` | user |
+| `~/.claude/scripts/hooks/agent-sop/sop-codex-hook.sh` | `scripts/hooks/sop-codex-hook.sh` | user |
 | `~/.claude/scripts/hooks/agent-sop/sop-lib.sh` | `scripts/hooks/sop-lib.sh` | user |
 | `~/.claude/scripts/hooks/agent-sop/sop-session-context.sh` | `scripts/hooks/sop-session-context.sh` | user |
 | `~/.claude/scripts/hooks/agent-sop/sop-stop-drift.sh` | `scripts/hooks/sop-stop-drift.sh` | user |

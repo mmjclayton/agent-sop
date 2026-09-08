@@ -31,9 +31,13 @@
 #     copy that actually executes. Upstream only, also reports stale baseline
 #     SHAs. Silent no-op when the session touched no manifest file.
 #
-# Zero-dependency bash 3.2 (macOS default). No associative arrays.
+# Bash 3.2 (macOS default). Replication checks require jq; no associative arrays.
 
 set -euo pipefail
+SOP_RUNTIME="${AGENT_SOP_RUNTIME:-claude}"
+SOP_CONFIG_HOME="${AGENT_SOP_USER_HOME:-$HOME}/.claude"
+if [ "$SOP_RUNTIME" = codex ]; then SOP_CONFIG_HOME="${CODEX_HOME:-${AGENT_SOP_USER_HOME:-$HOME}/.codex}"; fi
+
 
 MODE="validate"
 BEFORE_REF=""
@@ -281,10 +285,10 @@ if [ "$MODE" = "check-drift" ]; then
   threshold_files="${DRIFT_THRESHOLD_FILES:-}"
   if [ -z "$threshold_loc" ] || [ -z "$threshold_files" ]; then
     config_file=""
-    if [ -f ".claude/agent-sop.config.json" ]; then
-      config_file=".claude/agent-sop.config.json"
-    elif [ -f "$HOME/.claude/agent-sop.config.json" ]; then
-      config_file="$HOME/.claude/agent-sop.config.json"
+    if [ -f ".$SOP_RUNTIME/agent-sop.config.json" ]; then
+      config_file=".$SOP_RUNTIME/agent-sop.config.json"
+    elif [ -f "$SOP_CONFIG_HOME/agent-sop.config.json" ]; then
+      config_file="$SOP_CONFIG_HOME/agent-sop.config.json"
     fi
     if [ -n "$config_file" ]; then
       # `|| true` keeps pipefail + errexit from killing us when a field is
@@ -371,11 +375,17 @@ if [ "$MODE" = "check-replication" ]; then
   # Resolve config: project scope wins over user scope, matching /update-agent-sop.
   config="$REPL_CONFIG_FILE"
   if [ -z "$config" ]; then
-    for candidate in ".claude/agent-sop.config.json" "$HOME/.claude/agent-sop.config.json"; do
+    if [ "$SOP_RUNTIME" = codex ]; then config="$SOP_CONFIG_HOME/agent-sop.config.json"; fi
+    for candidate in ".$SOP_RUNTIME/agent-sop.config.json" "$SOP_CONFIG_HOME/agent-sop.config.json"; do
+      [ -z "$config" ] || break
       if [ -f "$candidate" ]; then config="$candidate"; break; fi
     done
   fi
   if [ -z "$config" ] || [ ! -f "$config" ]; then
+    if [ "$SOP_RUNTIME" = codex ] && [ -f .codex/agent-sop.config.json ]; then
+      echo "BLOCK: project Codex replication configuration exists, but user configuration is missing: $config" >&2
+      exit 1
+    fi
     echo "check-replication: no agent-sop.config.json found — skipping (project does not track pristine replicas)"
     exit 0
   fi
@@ -390,12 +400,17 @@ if [ "$MODE" = "check-replication" ]; then
     fi
   }
 
-  # Manifest = keys of baseline_shas. Zero-dep extraction: isolate the block,
-  # then pull "path": "sha" pairs. Restricted to the tracked extensions so a
-  # nested object cannot inject a false key.
-  manifest=$(sed -n '/"baseline_shas"[[:space:]]*:[[:space:]]*{/,/^[[:space:]]*}/p' "$config" \
-    | grep -oE '"[^"]+\.(md|sh|py)"[[:space:]]*:[[:space:]]*"[a-f0-9]{64}"' \
-    | sed 's/"[[:space:]]*:[[:space:]]*"/|/; s/^"//; s/"$//' || true)
+  # Parse JSON structurally: an inline empty exclude array must not consume
+  # subsequent baseline keys. Invalid or unavailable configuration fails closed.
+  command -v jq >/dev/null || { echo 'BLOCK: replication checks require jq' >&2; exit 1; }
+  jq -e 'type == "object" and ((.baseline_shas // {}) | type == "object") and
+    ((.exclude // []) | type == "array" and all(.[]; type == "string"))' "$config" >/dev/null || {
+    echo "BLOCK: invalid replication configuration: $config" >&2; exit 1;
+  }
+  manifest=$(jq -r '(.baseline_shas // {}) | to_entries[] |
+    select(.key | test("\\.(md|sh|py|toml|yaml)$")) |
+    select(.value | type == "string") | select(.value | test("^[a-f0-9]{64}$")) |
+    "\(.key)|\(.value)"' "$config") || { echo 'BLOCK: cannot parse replication baselines' >&2; exit 1; }
 
   if [ -z "$manifest" ]; then
     echo "check-replication: baseline_shas is empty — skipping (nothing tracked yet)"
@@ -403,8 +418,15 @@ if [ "$MODE" = "check-replication" ]; then
   fi
 
   # Excluded files are never synced, so they can never be out of sync.
-  excluded=$(sed -n '/"exclude"[[:space:]]*:[[:space:]]*\[/,/\]/p' "$config" \
-    | grep -oE '"[^"]+\.(md|sh|py)"' | tr -d '"' || true)
+  excluded=$(jq -r '(.exclude // [])[]' "$config") || {
+    echo 'BLOCK: cannot parse replication exclusions' >&2; exit 1;
+  }
+
+  project_excluded=""
+  if [ "$SOP_RUNTIME" = codex ] && [ -f .codex/agent-sop.config.json ]; then
+    jq -e '(.exclude // []) | type == "array" and all(.[]; type == "string")' .codex/agent-sop.config.json >/dev/null || { echo 'BLOCK: invalid project exclusions' >&2; exit 1; }
+    project_excluded=$(jq -r '(.exclude // [])[]' .codex/agent-sop.config.json) || exit 1
+  fi
 
   # Session-changed files: committed in range plus working tree. Fixture mode
   # supplies the list directly so the check is testable without a repo.
@@ -457,15 +479,22 @@ if [ "$MODE" = "check-replication" ]; then
     printf '%s\n' "$changed" | grep -qxF "$path" || continue
     # Excluded files are out of scope by declaration.
     if [ -n "$excluded" ] && printf '%s\n' "$excluded" | grep -qxF "$path"; then continue; fi
+    case "$path" in
+      .claude/*|.codex/*|.agents/skills/*) ;;
+      *) if [ -n "$project_excluded" ] && printf '%s\n' "$project_excluded" | grep -qxF "$path"; then continue; fi ;;
+    esac
     [ -f "$path" ] || continue
 
     checked=$((checked + 1))
     current=$(sha_of "$path")
 
     case "$path" in
-      .claude/*)
+      .claude/*|.codex/*|.agents/skills/*)
         # User-scope mirror: the copy that actually executes in every session.
         mirror="$home_root/$path"
+        if [ "$SOP_RUNTIME" = codex ]; then
+          case "$path" in .codex/*) mirror="${CODEX_HOME:-$home_root/.codex}/${path#.codex/}" ;; esac
+        fi
         if [ ! -f "$mirror" ]; then
           stale_mirror="$stale_mirror
   $path -> $mirror (mirror missing)"
@@ -605,7 +634,7 @@ legal_paths_from() {
 # P84/P92 work) were tagged [Bug]/[Refactor] and exempt, and the reviews that
 # did run found a HIGH and two CRITICALs. Tag is a poor proxy for risk here.
 sop_self_mod_paths() {
-  printf '%s\n' "$1" | grep -E '^(docs/sop/|docs/guides/sop-|\.claude/agents/|\.claude/commands/|scripts/validate-)' || true
+  printf '%s\n' "$1" | grep -E '^(docs/sop/|docs/guides/sop-|\.claude/agents/|\.claude/commands/|\.agents/skills/|\.codex/agents/|scripts/validate-)' || true
 }
 
 session_changed_files() {
@@ -688,7 +717,7 @@ while IFS=$'\t' read -r p after_status; do
           # only check when we have a real git range (not fixture mode)
           range_ref="${BEFORE_REF:-}"
           if [ -z "$range_ref" ]; then
-            range_ref=$(git merge-base HEAD @{upstream} 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || echo "")
+            range_ref=$(git merge-base HEAD '@{upstream}' 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || echo "")
           fi
           if [ -n "$range_ref" ]; then
             if ! git log "${range_ref}..HEAD" --name-only --format= 2>/dev/null | grep -qE "docs/agent-memory/decisions/.*${p}[^0-9]"; then

@@ -37,7 +37,7 @@ resolve_rollup_file() {
         printf '%s' "$1"
         return 0
     fi
-    for candidate in docs/RECENT-WORK.md CLAUDE.md; do
+    for candidate in docs/RECENT-WORK.md AGENTS.md CLAUDE.md; do
         if [ -f "$candidate" ] && grep -q "$SENTINEL_START" "$candidate"; then
             printf '%s' "$candidate"
             return 0
@@ -69,7 +69,7 @@ fi
 # stale, and compliance checks C13/M5 accept either location, so nothing else
 # flags it. Warn rather than block: refreshing the resolved target is still the
 # correct action.
-for other in docs/RECENT-WORK.md CLAUDE.md; do
+for other in docs/RECENT-WORK.md AGENTS.md CLAUDE.md; do
     if [ "$other" != "$ROLLUP_FILE" ] && [ -f "$other" ] && grep -q "$SENTINEL_START" "$other"; then
         echo "Warning: $other also carries the rollup sentinel but was not refreshed." >&2
         echo "         Delete its sentinel block, or pass it explicitly as the first argument." >&2
