@@ -137,6 +137,29 @@ if bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WO
 fi
 test "$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/hash-user" --read)" = "$hash_write"
 echo 'PASS: hash migration normalises active identity and survives later closure and failed retry'
+git init -q -b main --separate-git-dir "$WORK/external-git" "$WORK/external-main"
+test "$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/external-main" --agent-id)" = solo
+external_legacy=$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/external-main" --home "$WORK/external-user" --legacy-dir)
+mkdir -p "$external_legacy"
+printf '# Separate Git directory resume\n' > "$external_legacy/project_resume_solo.md"
+bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/external-main" --home "$WORK/external-user" --migrate-legacy >/dev/null
+test -f "$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/external-main" --home "$WORK/external-user" --read)"
+if (cd "$WORK/repo" && AGENT_SOP_AGENT_ID=bad/id bash "$SOURCE/scripts/validate-state-transitions.sh" --check-drift) > "$WORK/drift-error" 2>&1; then
+    echo 'FAIL: drift validation skipped a failed resolver'; exit 1
+fi
+grep -q 'resume resolution failed' "$WORK/drift-error"
+echo 'PASS: external Git directories retain solo and drift checks propagate resolver failures'
+failed_legacy=$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/failed-user" --legacy-dir)
+failed_memory=$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/failed-user" --dir)
+mkdir -p "$failed_legacy" "$WORK/failing-copy-bin"
+printf '# Complete snapshot\n' > "$failed_legacy/project_resume_solo.md"
+printf '#!/bin/sh\nprintf partial > "$2"\nexit 1\n' > "$WORK/failing-copy-bin/cp"
+chmod +x "$WORK/failing-copy-bin/cp"
+if PATH="$WORK/failing-copy-bin:$PATH" bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/failed-user" --migrate-legacy >/dev/null 2>&1; then
+    echo 'FAIL: partial copy was accepted'; exit 1
+fi
+test -z "$(find "$failed_memory" -type f)"
+echo 'PASS: failed migration copy leaves no active or temporary partial snapshot'
 
 # Real linked worktrees share ownership, but permit disjoint tasks and paths.
 git -C "$WORK/repo" worktree add -qb other "$WORK/other"

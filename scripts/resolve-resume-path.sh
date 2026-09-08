@@ -98,6 +98,15 @@ if [ "$ROOT" = "$HOME_DIR" ]; then
     exit 2
 fi
 
+IS_MAIN=false
+GIT_DIR=$(git -C "$ROOT" rev-parse --absolute-git-dir 2>/dev/null) || GIT_DIR=''
+COMMON_DIR=$(git -C "$ROOT" rev-parse --git-common-dir 2>/dev/null) || COMMON_DIR=''
+if [ -n "$GIT_DIR" ] && [ -n "$COMMON_DIR" ]; then
+    COMMON_DIR=$(cd "$ROOT" && cd "$COMMON_DIR" && pwd -P) || COMMON_DIR=''
+    GIT_DIR=$(cd "$GIT_DIR" && pwd -P) || GIT_DIR=''
+    [ -z "$GIT_DIR" ] || [ "$GIT_DIR" != "$COMMON_DIR" ] || IS_MAIN=true
+fi
+
 resolve_agent_id() {
     if [ -n "${AGENT_SOP_AGENT_ID:-}" ]; then
         printf '%s' "$AGENT_SOP_AGENT_ID"
@@ -113,9 +122,9 @@ resolve_agent_id() {
         return 0
     fi
 
-    # Main worktrees keep solo regardless of the number of linked worktrees.
-    # Linked worktrees have a .git file and keep their path identity after siblings leave.
-    if [ -d "$ROOT/.git" ]; then
+    # Main worktrees, including submodules and separate Git directories, keep solo.
+    # Only linked worktrees have distinct private and common Git directories.
+    if [ "$IS_MAIN" = true ]; then
         printf 'solo'
         return 0
     fi
@@ -147,7 +156,7 @@ MEMORY_DIR="$HOME_DIR/.claude/agent-sop/projects/$ROOT_DIGEST/memory"
 OLD_HASH=$(printf '%s' "$ROOT_DIGEST" | cut -c1-6)
 check_main_conflict() {
     local dir="$1"
-    if [ "$AGENT_ID" = solo ] && [ -d "$ROOT/.git" ] &&
+    if [ "$AGENT_ID" = solo ] && [ "$IS_MAIN" = true ] &&
        [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ] &&
        [ -f "$dir/project_resume_solo.md" ] && [ -f "$dir/project_resume_$OLD_HASH.md" ] &&
        ! cmp -s "$dir/project_resume_solo.md" "$dir/project_resume_$OLD_HASH.md"; then
@@ -157,6 +166,21 @@ check_main_conflict() {
 }
 if [ "$MODE" = legacy-dir ]; then printf '%s\n' "$LEGACY_DIR"; exit 0; fi
 if [ "$MODE" = migrate ]; then
+    MIGRATION_TEMP=''
+    trap '[ -z "$MIGRATION_TEMP" ] || rm -f "$MIGRATION_TEMP"' EXIT
+    copy_new_snapshot() {
+        local source="$1" destination="$2"
+        MIGRATION_TEMP=$(mktemp "${destination}.migrate.XXXXXX") || return 1
+        if ! cp "$source" "$MIGRATION_TEMP" || ! cmp -s "$source" "$MIGRATION_TEMP"; then
+            echo "Migration copy failed: $source" >&2
+            rm -f "$MIGRATION_TEMP"; MIGRATION_TEMP=''; return 1
+        fi
+        if ! ln "$MIGRATION_TEMP" "$destination"; then
+            echo "Migration publish failed: $destination" >&2
+            rm -f "$MIGRATION_TEMP"; MIGRATION_TEMP=''; return 1
+        fi
+        rm -f "$MIGRATION_TEMP"; MIGRATION_TEMP=''
+    }
     # Explicit operator action: legacy slugs can collide, so never auto-claim them.
     [ -d "$LEGACY_DIR" ] || { echo 'No legacy directory to migrate.' >&2; exit 1; }
     check_main_conflict "$LEGACY_DIR" || exit 2
@@ -168,7 +192,7 @@ if [ "$MODE" = migrate ]; then
     [ ! -f "$MEMORY_DIR/project_resume_solo.md" ] || incoming_solo="$MEMORY_DIR/project_resume_solo.md"
     incoming_hash="$LEGACY_DIR/project_resume_$OLD_HASH.md"
     [ ! -f "$MEMORY_DIR/project_resume_$OLD_HASH.md" ] || incoming_hash="$MEMORY_DIR/project_resume_$OLD_HASH.md"
-    if [ "$AGENT_ID" = solo ] && [ -d "$ROOT/.git" ] &&
+    if [ "$AGENT_ID" = solo ] && [ "$IS_MAIN" = true ] &&
        [ -f "$incoming_solo" ] && [ -f "$incoming_hash" ] && ! cmp -s "$incoming_solo" "$incoming_hash"; then
         echo 'Migration conflict: differing main snapshot generations require reconciliation before copying.' >&2
         exit 2
@@ -183,10 +207,10 @@ if [ "$MODE" = migrate ]; then
         target="$MEMORY_DIR/$(basename "$source")"
         if [ -e "$target" ]; then
             cmp -s "$source" "$target" || { echo "Migration conflict: $target" >&2; exit 2; }
-        else cp "$source" "$target" || exit 1; fi
+        else copy_new_snapshot "$source" "$target" || exit 2; fi
     done
     check_main_conflict "$MEMORY_DIR" || exit 2
-    if [ "$AGENT_ID" = solo ] && [ -d "$ROOT/.git" ] &&
+    if [ "$AGENT_ID" = solo ] && [ "$IS_MAIN" = true ] &&
        [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ] &&
        [ -f "$MEMORY_DIR/project_resume_$OLD_HASH.md" ]; then
         # Establish one active main snapshot; a later normal close must not conflict
@@ -196,8 +220,8 @@ if [ "$MODE" = migrate ]; then
         mkdir -p "$MEMORY_DIR/archive" || exit 1
         if [ -e "$archive_snapshot" ]; then
             cmp -s "$hash_snapshot" "$archive_snapshot" || { echo "Migration conflict: $archive_snapshot" >&2; exit 2; }
-        else cp "$hash_snapshot" "$archive_snapshot" || exit 1; fi
-        [ -f "$MEMORY_DIR/project_resume_solo.md" ] || cp "$hash_snapshot" "$MEMORY_DIR/project_resume_solo.md" || exit 1
+        else copy_new_snapshot "$hash_snapshot" "$archive_snapshot" || exit 2; fi
+        [ -f "$MEMORY_DIR/project_resume_solo.md" ] || copy_new_snapshot "$hash_snapshot" "$MEMORY_DIR/project_resume_solo.md" || exit 2
         rm "$hash_snapshot" || exit 1
     fi
     printf '%s\n' "$MEMORY_DIR"
