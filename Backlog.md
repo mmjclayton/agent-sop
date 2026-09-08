@@ -1209,8 +1209,8 @@ Acceptance criteria:
 - Installation/update/uninstall fixtures and existing regression checks pass.
 
 Implementation complete locally (2026-09-08). Existing and new fixtures pass.
-review: docs/reviews/2026-09-08_codex-port.md
-Implementation committed on `feat/codex-support`; final review and branch publication in progress. Keep IN PROGRESS until merged to main.
+review: docs/reviews/20260908-153509-ship-auto.md
+Implementation and configured review complete on `feat/codex-support`; prepared for branch publication and PR review. Keep IN PROGRESS until merged to main.
 
 ### P108 — Codex compatibility follow-ups from native-runtime review
 
@@ -1238,5 +1238,5 @@ the feature declaration for auditability. Independent configured reviewers asses
 these changes; passing output from a changed validator is not the sole evidence.
 The pre-port validator is also run against the final Backlog transitions.
 
-review: docs/reviews/2026-09-08_codex-port.md
-Ready for final review; remains IN PROGRESS until merge.
+review: docs/reviews/20260908-153509-ship-auto.md
+Configured review complete; remains IN PROGRESS until merge.
