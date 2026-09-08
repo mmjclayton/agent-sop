@@ -69,6 +69,8 @@ These are the files this command keeps in sync. Everything else (CLAUDE.md, Back
 | `~/.claude/agents/planner.md` | `.claude/agents/planner.md` | user |
 | `~/.claude/agents/e2e-runner.md` | `.claude/agents/e2e-runner.md` | user |
 | `~/.claude/scripts/hooks/agent-sop/sop-codex-hook.sh` | `scripts/hooks/sop-codex-hook.sh` | user |
+| `~/.claude/scripts/hooks/agent-sop/sop-worktree-claim.sh` | `scripts/hooks/sop-worktree-claim.sh` | user |
+| `~/.claude/scripts/hooks/agent-sop/sop-doctor.sh` | `scripts/hooks/sop-doctor.sh` | user |
 | `~/.claude/scripts/hooks/agent-sop/sop-lib.sh` | `scripts/hooks/sop-lib.sh` | user |
 | `~/.claude/scripts/hooks/agent-sop/sop-session-context.sh` | `scripts/hooks/sop-session-context.sh` | user |
 | `~/.claude/scripts/hooks/agent-sop/sop-stop-drift.sh` | `scripts/hooks/sop-stop-drift.sh` | user |

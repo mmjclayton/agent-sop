@@ -108,3 +108,7 @@ git add Backlog.md docs/ && git commit -m "docs: session end housekeeping — <w
 ```
 
 Name the files; never `git add -A` after a review. Report in one paragraph: what shipped, which validators ran, what remains.
+
+If this session holds a worktree writer claim, release it with the installed
+`sop-worktree-claim.sh release <session-id>` after recording the handoff. Only the
+coordinating session writes shared close-out records.

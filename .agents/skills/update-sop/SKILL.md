@@ -31,3 +31,7 @@ session-end section and docs/sop/codex.md. Preserve the user's task scope.
    respect an explicit request to leave changes uncommitted. Summarize changes,
    test/review results and any remaining work. Publication requires its own
    user authorization; closing the session does not imply sending messages.
+
+If this session holds a worktree writer claim, release it with the installed
+`sop-worktree-claim.sh release <session-id>` after recording the handoff. Only the
+coordinating session writes shared close-out records.

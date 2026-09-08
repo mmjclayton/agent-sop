@@ -31,13 +31,47 @@ SESSION=$(sop_field '.session_id')
 [ -n "$SESSION" ] || SESSION="nosession"
 SOURCE=$(sop_field '.source')
 
+# Live presence is local to this Git repository, shared across linked worktrees.
+# It is advisory, not a write lock; one active writer per worktree remains required.
+COMMON=$(git -C "$ROOT" rev-parse --git-common-dir 2>/dev/null)
+case "$COMMON" in /*) ;; *) COMMON="$ROOT/$COMMON" ;; esac
+PRESENCE="$COMMON/agent-sop/sessions"
+SESSION_KEY=$(printf '%s' "$SESSION" | sop_sha256)
+NOW=$(date +%s)
+OTHER='[]'
+if mkdir -p "$PRESENCE" 2>/dev/null; then
+    TEMP=$(mktemp "$PRESENCE/.presence.XXXXXX")
+    jq -n --arg root "$ROOT" --arg session "$SESSION_KEY" --argjson updated "$NOW" \
+      '{root:$root,session:$session,updated:$updated}' > "$TEMP" && mv "$TEMP" "$PRESENCE/$SESSION_KEY.json"
+    rm -f "$TEMP"
+    OTHER=$(jq -s --arg session "$SESSION_KEY" --argjson cutoff "$((NOW - 1800))" \
+      '[.[] | select(.session != $session and .updated > $cutoff) | {root,session}] | sort_by(.root,.session)' \
+      "$PRESENCE"/*.json 2>/dev/null) || OTHER='[]'
+fi
+CLAIMS='[]'
+if [ -d "$COMMON/agent-sop/claims" ]; then
+    CLAIMS=$(find "$COMMON/agent-sop/claims" -maxdepth 1 -name '*.json' -type f -exec cat {} \; | jq -sc . 2>/dev/null) || CLAIMS='[]'
+fi
+CURRENT_HEAD=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)
+CONTEXT_KEY=$(printf '%s|%s|%s' "$CURRENT_HEAD" "$OTHER" "$CLAIMS" | sop_sha256)
 MARKER_DIR="$(sop_state_dir)/sessions/$SESSION"
 MARKER="$MARKER_DIR/$(sop_repo_key "$ROOT").ctx"
 case "$SOURCE" in
     compact|clear) ;;
-    *) [ -f "$MARKER" ] && exit 0 ;;
+    *)
+        if [ -f "$MARKER" ]; then
+            if [ "$(cat "$MARKER")" != "$CONTEXT_KEY" ]; then
+                printf '[agent-sop] Context changed: HEAD %s. Refresh affected task context before editing. Other active sessions: %s; writer claims: %s\n' "$CURRENT_HEAD" "$(printf '%s' "$OTHER" | jq -c .)" "$CLAIMS"
+                printf '%s' "$CONTEXT_KEY" > "$MARKER"
+            fi
+            exit 0
+        fi ;;
 esac
-mkdir -p "$MARKER_DIR" 2>/dev/null && : > "$MARKER" 2>/dev/null
+mkdir -p "$MARKER_DIR" 2>/dev/null && printf '%s' "$CONTEXT_KEY" > "$MARKER" 2>/dev/null
+if [ "$CLAIMS" != '[]' ]; then printf '[agent-sop] Writer/task claims: %s\n' "$CLAIMS"; fi
+if [ "$OTHER" != '[]' ]; then
+    printf '[agent-sop] Other active sessions (30-minute presence lease): %s. Use one writer per worktree; coordinate task and path ownership.\n' "$(printf '%s' "$OTHER" | jq -c .)"
+fi
 
 NAME=$(basename "$ROOT")
 BRANCH=$(git -C "$ROOT" branch --show-current 2>/dev/null)
@@ -68,11 +102,22 @@ $(head -80 "$RESUME_PATH")"
     fi
 fi
 
-# ── In-flight lines for this agent ────────────────────────────────────────────
-INFLIGHT="(none)"
-if [ -s "$ROOT/docs/agent-memory/in-flight/$AGENT.md" ]; then
-    INFLIGHT=$(head -10 "$ROOT/docs/agent-memory/in-flight/$AGENT.md")
-fi
+# Read all local worktree handoffs, bounded to keep coordination context small.
+INFLIGHT=""
+while IFS= read -r wt; do
+    [ -n "$wt" ] || continue
+    for file in "$wt"/docs/agent-memory/in-flight/*.md; do
+        [ -s "$file" ] || continue
+        [ "$(basename "$file")" != README.md ] || continue
+        INFLIGHT="$INFLIGHT
+$wt / $(basename "$file"):
+$(head -5 "$file")"
+    done
+done <<EOF
+$(git -C "$ROOT" worktree list --porcelain | sed -n 's/^worktree //p')
+EOF
+INFLIGHT=$(printf '%s\n' "$INFLIGHT" | head -30)
+[ -n "$INFLIGHT" ] || INFLIGHT="(none)"
 
 # ── Recent sessions (rollup between sentinels, else directory listing) ────────
 RECENT=""
@@ -140,7 +185,7 @@ if [ "${WT_COUNT:-1}" -gt 1 ] 2>/dev/null; then
 $(git -C "$ROOT" worktree list --porcelain 2>/dev/null | awk '/^worktree /{sub(/^worktree /, ""); print}')
 EOF
     if [ -n "$DIRTY_SIBS" ]; then
-        SIBLINGS="$WT_COUNT worktrees; sibling worktree(s) with uncommitted edits:$DIRTY_SIBS — branch-mutating git ops here can wipe them"
+        SIBLINGS="$WT_COUNT worktrees; sibling worktree(s) with uncommitted edits:$DIRTY_SIBS — coordinate ownership before operations targeting those worktrees or shared refs"
     else
         SIBLINGS="$WT_COUNT worktrees, all siblings clean"
     fi

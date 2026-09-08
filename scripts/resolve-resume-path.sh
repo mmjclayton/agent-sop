@@ -56,6 +56,8 @@ HOME_OVERRIDE=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
+        --migrate-legacy) MODE="migrate" ;;
+        --legacy-dir) MODE="legacy-dir" ;;
         --read)     MODE="read" ;;
         --dir)      MODE="dir" ;;
         --agent-id) MODE="agent-id" ;;
@@ -111,16 +113,9 @@ resolve_agent_id() {
         return 0
     fi
 
-    # Only an exact count of 1 means solo. An empty or 0 count means the
-    # worktree count could not be determined, and falling through to the path
-    # hash is the conservative answer: a hash is unique per worktree, whereas
-    # guessing `solo` would collide with every sibling. Kept byte-identical to
-    # the copies this replaced (restart-sop.md:64, update-sop.md:37) — a
-    # divergence here would silently rename every affected project's resume
-    # file and strand the old one.
-    local count
-    count=$(git -C "$ROOT" worktree list 2>/dev/null | wc -l | tr -d '[:space:]')
-    if [ "$count" = "1" ]; then
+    # Main worktrees keep solo regardless of the number of linked worktrees.
+    # Linked worktrees have a .git file and keep their path identity after siblings leave.
+    if [ -d "$ROOT/.git" ]; then
         printf 'solo'
         return 0
     fi
@@ -134,6 +129,7 @@ resolve_agent_id() {
 
 AGENT_ID=$(resolve_agent_id)
 [ -z "$AGENT_ID" ] && AGENT_ID="solo"
+case "$AGENT_ID" in *[!a-zA-Z0-9_-]*|.|..) echo 'resolve-resume-path: invalid agent identity' >&2; exit 2 ;; esac
 
 if [ "$MODE" = "agent-id" ]; then
     printf '%s\n' "$AGENT_ID"
@@ -145,7 +141,24 @@ fi
 # the observed single-hyphen convention. Kept byte-identical to the derivation
 # previously inlined in restart-sop.md and validate-state-transitions.sh.
 PROJECT_HASH=$(printf '%s' "$ROOT" | sed 's|[^a-zA-Z0-9-]|-|g' | sed 's|--*|-|g' | sed 's|^-||')
-MEMORY_DIR="$HOME_DIR/.claude/projects/-$PROJECT_HASH/memory"
+LEGACY_DIR="$HOME_DIR/.claude/projects/-$PROJECT_HASH/memory"
+ROOT_DIGEST=$(printf '%s' "$ROOT" | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)
+MEMORY_DIR="$HOME_DIR/.claude/agent-sop/projects/$ROOT_DIGEST/memory"
+if [ "$MODE" = legacy-dir ]; then printf '%s\n' "$LEGACY_DIR"; exit 0; fi
+if [ "$MODE" = migrate ]; then
+    # Explicit operator action: legacy slugs can collide, so never auto-claim them.
+    [ -d "$LEGACY_DIR" ] || { echo 'No legacy directory to migrate.' >&2; exit 1; }
+    mkdir -p "$MEMORY_DIR"
+    for source in "$LEGACY_DIR"/project_resume*.md; do
+        [ -f "$source" ] || continue
+        target="$MEMORY_DIR/$(basename "$source")"
+        if [ -e "$target" ]; then
+            cmp -s "$source" "$target" || { echo "Migration conflict: $target" >&2; exit 2; }
+        else cp "$source" "$target" || exit 1; fi
+    done
+    printf '%s\n' "$MEMORY_DIR"
+    exit 0
+fi
 
 if [ "$MODE" = "dir" ]; then
     printf '%s\n' "$MEMORY_DIR"
@@ -154,6 +167,12 @@ fi
 
 PER_AGENT="$MEMORY_DIR/project_resume_${AGENT_ID}.md"
 LEGACY="$MEMORY_DIR/project_resume.md"
+# Pre-hardening main worktrees could switch from solo to their path hash.
+if [ "$MODE" = read ] && [ "$AGENT_ID" = solo ] && [ ! -f "$PER_AGENT" ] &&
+   [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ]; then
+    OLD_HASH=$(printf '%s' "$ROOT_DIGEST" | cut -c1-6)
+    [ ! -f "$MEMORY_DIR/project_resume_$OLD_HASH.md" ] || PER_AGENT="$MEMORY_DIR/project_resume_$OLD_HASH.md"
+fi
 
 # Write target is always the per-agent filename in the project-scoped directory.
 # Deterministic by construction: never depends on where the session was launched
@@ -193,4 +212,5 @@ if [ -f "$LEGACY" ]; then
     exit 0
 fi
 
+[ ! -d "$LEGACY_DIR" ] || echo "Legacy snapshots require explicit ownership confirmation: inspect $LEGACY_DIR then run --migrate-legacy for this root." >&2
 exit 1

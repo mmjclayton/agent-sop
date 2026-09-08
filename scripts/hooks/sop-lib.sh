@@ -314,7 +314,12 @@ sop_strip_heredocs() {
 # (review finding, CRITICAL: whitespace splitting read the old name).
 sop_code_lines() {
     git -C "$1" diff --numstat "$2..$3" 2>/dev/null | awk -F'\t' -v skip="$4" '
-        function isdoc(p) { return p ~ /\.(md|markdown|txt|rst)$/ }
+        function isdoc(p) {
+            if (p ~ /^docs\/reviews\/.*-ship-auto\.json$/) return 1
+            if (p ~ /^(\.agents\/|\.claude\/|\.codex\/|docs\/sop\/|docs\/guides\/sop-)/) return 0
+            if (p ~ /(^|\/)(AGENTS|CLAUDE|SKILL)\.md$/) return 0
+            return p ~ /\.(md|markdown|txt|rst)$/
+        }
         {
             path = $3; old = path; new = path
             if (path ~ / => /) {
@@ -329,12 +334,74 @@ sop_code_lines() {
         END { print t + 0 }'
 }
 
-# sop_shipsop_covered <root> <head> — true when some docs/reviews/*-ship-auto.md
-# carries `Covers: <sha>` for an ancestor of HEAD with zero code lines between
-# it and HEAD. Code lines exclude documentation, same as the trigger.
+# Shared receipt contract. Markdown is a view, never evidence consumed by a gate.
+sop_policy_valid() {
+    jq -e '
+      def prop($key; $default): if has($key) then .[$key] else $default end;
+      type == "object" and (.trigger | type == "object") and
+      (.trigger.mode | IN("auto", "manual", "off")) and
+      ((.trigger | prop("throttle"; {})) | type == "object") and
+      ((.trigger | prop("throttle"; {}) | prop("min_diff_lines"; 10)) | type == "number" and . >= 0 and floor == .) and
+      ((.trigger | prop("throttle"; {}) | prop("skip_branch_patterns"; [])) | type == "array" and all(.[]; type == "string" and (test("[\\r\\n]") | not))) and
+      (.agents | type == "object" and all(to_entries[];
+        (.key | test("^[a-z0-9][a-z0-9-]*$")) and
+        (.value.enabled | type == "boolean") and
+        (.value | prop("block_on"; "CRITICAL") | IN("CRITICAL", "HIGH", "MEDIUM", "never"))))
+    ' "$1" >/dev/null 2>&1 || return 1
+    local pat result
+    while IFS= read -r pat; do
+        printf '' | grep -E -- "$pat" >/dev/null 2>&1; result=$?
+        [ "$result" -le 1 ] || return 1
+    done < <(jq -r '.trigger.throttle.skip_branch_patterns[]?' "$1")
+    return 0
+}
+
+sop_policy_digest() {
+    { printf 'ship-receipt-v1\n'; jq -Sc . "$1"; } | sop_sha256
+}
+
+# Validate completion and derive threshold decisions, independently of prose verdicts.
+sop_receipt_valid() {
+    local root="$1" receipt="$2" cfg="$1/ship-sop.config.json" sha base required tree
+    sop_policy_valid "$cfg" || return 1
+    jq -e --slurpfile cfg "$cfg" --arg policy "$(sop_policy_digest "$cfg")" '
+      def rank: {CRITICAL:4,HIGH:3,MEDIUM:2,LOW:1,INFO:0,never:99}[.];
+      def text: type == "string" and length > 0;
+      . as $r |
+      .schema_version == 1 and .policy_sha256 == $policy and
+      (.head | test("^[0-9a-f]{40}$")) and (.base | test("^[0-9a-f]{40}$")) and
+      (.tree | test("^[0-9a-f]{40}$")) and
+      (.tests.status | IN("PASS", "NOT_AVAILABLE")) and (.tests.evidence | text) and
+      (.reviewers | type == "array" and length > 0) and
+      ([.reviewers[].name] | length == (unique | length)) and
+      all(.reviewers[]; (.name | text) and .verdict == "PASS" and
+        (.version | text) and (.model | text) and
+        (.findings | type == "array" and all(.[];
+          (.severity | IN("CRITICAL","HIGH","MEDIUM","LOW","INFO")) and
+          (.file | text) and (.line | type == "number" and . > 0 and floor == .) and (.message | text)))) and
+      all($cfg[0].agents | to_entries[] | select(.value.enabled); . as $a |
+        ([$r.reviewers[] | select(.name == $a.key)] | length == 1) and
+        all($r.reviewers[] | select(.name == $a.key) | .findings[];
+          (.severity | rank) < ($a.value.block_on // "CRITICAL" | rank))) and
+      all(.reviewers[]; . as $review |
+        ($cfg[0].agents[$review.name].block_on // "CRITICAL") as $threshold |
+        all(.findings[]; (.severity | rank) < ($threshold | rank)))
+    ' "$receipt" >/dev/null 2>&1 || return 1
+    sha=$(jq -r .head "$receipt"); base=$(jq -r .base "$receipt")
+    tree=$(git -C "$root" rev-parse "$sha^{tree}" 2>/dev/null) || return 1
+    [ "$tree" = "$(jq -r .tree "$receipt")" ] || return 1
+    git -C "$root" merge-base --is-ancestor "$base" "$sha" 2>/dev/null || return 1
+    required=$(sop_range_base "$root")
+    [ -n "$required" ] || required=$(git -C "$root" rev-parse HEAD)
+    git -C "$root" merge-base --is-ancestor "$base" "$required" 2>/dev/null
+}
+
 sop_shipsop_covered() {
-    local root="$1" head="$2" sha
-    for sha in $(cat "$root"/docs/reviews/*-ship-auto.md 2>/dev/null | grep -oE 'Covers: [0-9a-f]{7,40}' | awk '{print $2}' | sort -u); do
+    local root="$1" head="$2" receipt sha
+    for receipt in "$root"/docs/reviews/*-ship-auto.json; do
+        [ -f "$receipt" ] || continue
+        sop_receipt_valid "$root" "$receipt" || continue
+        sha=$(jq -r .head "$receipt")
         git -C "$root" merge-base --is-ancestor "$sha" "$head" 2>/dev/null || continue
         [ "$(sop_code_lines "$root" "$sha" "$head" true)" = "0" ] && return 0
     done
@@ -361,14 +428,19 @@ sop_shipsop_gate() {
     [ -f "$cfg" ] || { printf ''; return; }
     sop_have_jq || { printf ''; return; }
 
+    sop_is_code_repo "$root" || { printf ''; return; }
+    if ! sop_policy_valid "$cfg"; then
+        printf 'ship-sop configuration invalid: repair ship-sop.config.json before publication.\n'
+        return
+    fi
     mode=$(jq -r '.trigger.mode // "manual"' "$cfg" 2>/dev/null)
     [ "$mode" = "auto" ] || { printf ''; return; }
     sop_is_code_repo "$root" || { printf ''; return; }
 
     branch=$(git -C "$root" branch --show-current 2>/dev/null)
-    for pat in $(jq -r '.trigger.throttle.skip_branch_patterns[]? // empty' "$cfg" 2>/dev/null); do
+    while IFS= read -r pat; do
         if printf '%s' "$branch" | grep -Eq -- "$pat"; then printf ''; return; fi
-    done
+    done < <(jq -r '.trigger.throttle.skip_branch_patterns[]? // empty' "$cfg")
 
     base=$(sop_range_base "$root")
     [ -n "$base" ] || { printf ''; return; }
@@ -379,7 +451,9 @@ sop_shipsop_gate() {
     # Documentation extensions are excluded from the count, always, so a
     # docs-heavy branch never summons reviewers for prose.
     lines=$(sop_code_lines "$root" "$base" "$head" true)
-    [ "${lines:-0}" -ge "${min:-10}" ] 2>/dev/null || { printf ''; return; }
+    if ! git -C "$root" diff --name-only "$base..$head" | grep -Eq '^(\.agents/|\.claude/|\.codex/|docs/sop/|docs/guides/sop-|AGENTS\.md$|CLAUDE\.md$)'; then
+        [ "${lines:-0}" -ge "${min:-10}" ] 2>/dev/null || { printf ''; return; }
+    fi
 
     # Coverage is a fact, not a stamp: a report names a commit that is an
     # ancestor of HEAD with no code change since. "No code change" uses the
@@ -395,7 +469,7 @@ sop_shipsop_gate() {
 
     printf 'ship-sop gate (auto-mode per ship-sop.config.json): %s code lines on %s vs %s (%s..%s) have no gate report.\n' \
         "$lines" "${branch:-HEAD}" "$(sop_default_branch "$root")" "$(printf '%s' "$base" | cut -c1-7)" "$(printf '%s' "$head" | cut -c1-7)"
-    printf '  Run these agents against that range, collect every result (they run in the background), then write %s containing the line `Covers: %s`:\n' "$report" "$head"
+    printf '  Run these agents against that range, collect every result (they run in the background), then write %s and a validated companion JSON receipt for %s (a Covers: line alone is not coverage):\n' "$report" "$head"
     printf '%s\n' "$agents"
     if [ "${AGENT_SOP_RUNTIME:-claude}" = codex ]; then
         printf '  Use the ship skill: run reviewers in separate checkouts with a read-only sandbox; collect every result, then write the report in the parent. Never substitute a worktree path in a prompt for enforced isolation.\n'

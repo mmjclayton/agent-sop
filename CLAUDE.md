@@ -17,7 +17,7 @@ This project IS the SOP library and follows `docs/sop/claude-agent-sop.md` itsel
 | When you need to... | Start at | Notes |
 |---------------------|----------|-------|
 | Check or update work items | `Backlog.md` | Grep `^### P<n>`, read only that range; closed items older than 90 days live in `docs/backlog-archive.md` |
-| Read why something was decided, or what bites | `docs/agent-memory/decisions/`, `docs/agent-memory/gotchas/` | Newest first; the two reviewer-overwrite gotchas before launching any Bash-armed subagent |
+| Read why something was decided, or what bites | `docs/agent-memory/decisions/`, `docs/agent-memory/gotchas/` | Search by task/path first; the two reviewer-overwrite gotchas before launching any Bash-armed subagent |
 | Change process rules | `docs/sop/claude-agent-sop.md` | Section numbers are stable; the compliance checklist greps them |
 | Change what a hook does | `scripts/hooks/sop-lib.sh` (shared rules), then the hook script | Every rule the Stop hook, push gate and context block share lives in the lib; fixtures in `docs/benchmark/hook-fixtures/run-tests.sh` |
 | Change the validator | `scripts/validate-state-transitions.sh`, the `[SHIPPED]` block | Fixtures in `docs/benchmark/state-transition-fixtures/`; expect-stdout files pin messages |
@@ -41,8 +41,8 @@ Test: `bash docs/benchmark/hook-fixtures/run-tests.sh` (also `resume-path-fixtur
 - P78 — Automate `cross-layer-rules.md` Tier 0 across instruction files — [OPEN] [Feature]
 - P79 — `sandboxing.md` treats the sandbox as protecting the host, never the reverse — [OPEN] [Iteration]
 - P80 — Benchmark rubric: pairwise scoring, and read judge reasoning not scores — [OPEN] [Iteration]
-- P81 — The MANDATORY lite benchmark rule fires on changes its instrument cannot measure — [OPEN] [Bug]
 - P108 — Codex compatibility follow-ups from native-runtime review — [OPEN] [Iteration]
+- P110 - Review evidence, continuity and operating-cost hardening — [IN PROGRESS] [Refactor]
 <!-- priority-items:end -->
 
 ---
@@ -56,7 +56,7 @@ Test: `bash docs/benchmark/hook-fixtures/run-tests.sh` (also `resume-path-fixtur
 ## Stack
 
 - Markdown, plus bash and Python tooling in `scripts/` (`setup.sh`, `install-hooks.sh`, the hooks under `scripts/hooks/`, `validate-state-transitions.sh`, `resolve-resume-path.sh`, `archive-backlog.sh`, `migrate-to-multi-agent.py`)
-- Hosting: GitHub, `mmjclayton/agent-sop`, public; no CI, merge on a green fixture run
+- Hosting: GitHub, `mmjclayton/agent-sop`, public; CI runs fixture suites on pull requests
 - Tests: the fixture suites under `docs/benchmark/*-fixtures/run-tests.sh`
 
 ---

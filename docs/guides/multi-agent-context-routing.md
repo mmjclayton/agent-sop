@@ -1,7 +1,7 @@
 <!-- SOP-Version: 2026-04-19 -->
 # Multi-Agent Context Routing
 
-Applies when multiple agents work in parallel on the same project. Routing the right context to each agent based on task type saves 15-25% of token spend while maintaining quality on the tasks that matter.
+Applies when multiple agents work in parallel on the same project. Route task-relevant context progressively. Cost savings must be measured against equal task acceptance; no general percentage saving is established.
 
 Extracted from SOP Section 16 on 2026-04-17 as part of the P32 trim. For single-agent work, this guide is not needed — the core SOP covers it.
 
@@ -21,10 +21,10 @@ Extracted from SOP Section 16 on 2026-04-17 as part of the P32 trim. For single-
 
 ## Routing rules
 
-1. **Default to full context.** When in doubt, load everything. The cost of unnecessary context (~5K tokens) is lower than the cost of a wrong turn (rework, production bugs).
+1. **Start with task-relevant context.** Include acceptance criteria, affected paths and critical invariants, then retrieve more when uncertainty demands it.
 2. **Use minimal context only when the task is tagged `[ok-for-automation]`** or is explicitly a single-file, self-contained change.
-3. **Test-writing agents should NOT read CLAUDE.md.** Benchmark data shows SOP context adds no quality to test writing and may introduce caution that weakens assertions.
-4. **Every agent, regardless of tier, must follow the session end checklist** if it modifies committed files.
+3. **Test writers need the relevant testing conventions and invariants.** Avoid unrelated project history; never suppress instructions the runtime requires.
+4. **The coordinating session owns shared session closure.** Specialists return changes, test results and non-obvious discoveries; they do not duplicate Backlog, rollup or resume writes.
 5. **Progressive retrieval for large corpuses.** When an agent faces a large body of prior context (decision log, observation store, big memory file), retrieve identifiers or a compact index first, narrow the candidates by timeline or topic, and only then fetch full content for the few items that matter. Don't load the full corpus upfront. Pattern: index → narrow → fetch.
 
 ## Conflict avoidance

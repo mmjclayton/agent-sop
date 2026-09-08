@@ -117,3 +117,18 @@ done
 
 Historical experiments are in [docs/benchmark](docs/benchmark/). Propose changes
 through a pull request.
+
+## Upgrade and diagnostics
+
+Review coverage now requires a validated JSON receipt; Markdown-only reports are
+history. Upgrade Agent SOP and ship-sop together. Executable instruction files
+count as code for review invalidation, and invalid configured policy blocks
+supported publication operations.
+
+Resume storage uses a full root digest to avoid path-slug collisions. Inspect
+`bash scripts/resolve-resume-path.sh --legacy-dir`, confirm the snapshots belong
+to this repository, then run `--migrate-legacy`. Existing files are preserved.
+
+Run `bash scripts/hooks/sop-doctor.sh --runtime codex --root /path/to/project`
+from this checkout for configuration, installed-policy and reviewer diagnostics.
+A local marker or registered hook is not proof of live runtime enforcement.

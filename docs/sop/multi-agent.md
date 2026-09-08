@@ -51,7 +51,7 @@ For coordinator+specialist within one session, the decision is simpler: use it w
 Phase 1 (P43) shipped four structural choices that prevent tracking-file conflicts in parallel mode without any human-in-the-loop coordination protocol. They are summarised here so this document is self-contained for orientation; full mechanics live in `multi-agent-parallel-sessions.md`.
 
 - **Per-entry directories.** Recent Work, Decisions, Gotchas, and In-Flight all live as one file per entry with agent-id in the filename. Two agents writing on the same date produce distinct filenames. The `## Recent Work (rollup)` section in CLAUDE.md is regenerated from `docs/recent-work/` by `/update-sop` Step 8b — idempotent so merges converge.
-- **Per-agent resume snapshots.** `project_resume_<agent-id>.md` keyed by agent-id (resolution: `CLAUDE_AGENT_ID` env > `.sop-agent-id` file > `solo` default > 6-char path hash). No cross-agent clobber. Agent-id separates agents *within* a project; the repo-root-derived directory from `scripts/resolve-resume-path.sh` separates projects. Both are needed — every single-worktree project resolves to the same `solo` id, so the directory is the only thing keeping two projects' snapshots apart.
+- **Per-agent resume snapshots.** `project_resume_<agent-id>.md` keyed by agent-id (resolution: `AGENT_SOP_AGENT_ID` env > `CLAUDE_AGENT_ID` > `.sop-agent-id` file > main-worktree `solo` > linked-worktree path hash). No cross-agent clobber. Agent-id separates agents *within* a project; the repo-root-derived directory from `scripts/resolve-resume-path.sh` separates projects. Both are needed — every single-worktree project resolves to the same `solo` id, so the directory is the only thing keeping two projects' snapshots apart.
 - **Commit-range partitioning.** Secondary-tracker reconciliation, drift guard, and hard-block checks use `git merge-base <default> HEAD..HEAD` so sibling agents' finding IDs never contaminate this agent's scope.
 - **P-number collisions.** Two agents can pick the same next P-number on sibling branches. The merge shows it as a conflict in `Backlog.md`; renumber the later item per `docs/guides/multi-agent-parallel-sessions.md` Section 6. (The `/update-sop` pre-check that fetched the default branch every session was removed on 2026-09-05: no collision was ever recorded.)
 
@@ -93,7 +93,7 @@ These are heuristics derived from the P54 hardening dogfood (sibling-worktree wi
 
 Multi-agent introduces failure modes that don't exist in solo work. Each entry below has a confirmed source incident.
 
-**Sibling worktree wipe.** Branch-mutating git operations (`checkout`, `reset --hard`, `rebase`, ref-touching deletes) in any worktree can discard uncommitted edits in a *sibling* worktree because the `.git` directory is shared. `/restart-sop` Step 0a prints a soft advisory; `/update-sop` enforces the same gate harder. Recovery via `git fsck --lost-found` is possible but slow and lossy. **Always commit or stash in every worktree before any branch-mutating operation in any worktree.** Source: `docs/agent-memory/gotchas/2026-05-02_solo_worktree-uncommitted-wipe.md`.
+**Worktree boundaries.** Linked worktrees have separate indexes and HEADs but share refs. Ordinary reset/checkout in one worktree does not normally erase another worktree's uncommitted edits. Confirm the target directory before destructive operations and coordinate shared-ref changes. Do not infer recoverability of unstaged edits from Git's object store. The historical wipe incident did not establish a general cross-worktree reset mechanism.
 
 **P-number collision masquerading as a no-op.** When two agents pick the same next P-number for *similar-sounding* items (e.g. both file "fix tonnage rounding"), the the merge-conflict rule above check matches titles loosely and may treat the collision as a no-op rather than blocking. **Always re-read the colliding entry's body before merging.** If the items are genuinely different, run `renumber_p` on the second one regardless of what the merge-conflict rule above reports. Source: parallel-sessions guide §6.
 
@@ -135,3 +135,37 @@ Run via the `sop-checker` agent against any project — see `.claude/agents/sop-
 | Backend-substituted (gateway) sessions | `docs/sop/claude-agent-sop.md` §15.5 |
 | Compliance enforcement | `docs/sop/compliance-checklist.md` Section 11 |
 | Sibling-worktree wipe gotcha | `docs/agent-memory/gotchas/2026-05-02_solo_worktree-uncommitted-wipe.md` |
+
+## Current continuity contract (2026-09-08)
+
+Main-worktree identity stays `solo` as worktrees are added or removed; linked
+worktrees retain a path-derived identity. Explicit overrides must be safe filename
+identifiers. Resume writes use `.claude/agent-sop/projects/<full-root-digest>/memory`.
+Run the resolver with `--legacy-dir` to inspect older slug-based storage. After
+confirming it belongs to this repository, `--migrate-legacy` copies snapshots
+without replacing conflicting destinations. Migration is explicit because old
+path slugs can collide. The reader also recognises an older main-worktree hash
+snapshot in the migrated directory. Repository moves still need explicit migration.
+
+The context hook shows bounded handoffs from all local worktrees and recently
+observed sessions through a 30-minute presence lease in the Git common directory.
+This is advisory discovery, not a task lock or cross-machine synchronisation.
+One writer per worktree remains the supported arrangement. Agree task/path ownership
+before parallel changes. Relevant HEAD/presence changes produce a small delta notice
+instead of replaying the full snapshot. The coordinating session owns shared closure.
+
+### Explicit writer/task claims
+
+Before editing in a parallel session, run the installed
+`sop-worktree-claim.sh claim <session-id> <task-id> <owned-path>...` from your
+worktree. Omitted paths mean the whole repository. The registry in the Git common
+directory serialises claim mutations and rejects a second writer in the same
+worktree, duplicate tasks, or overlapping path prefixes across worktrees. Inspect
+with `status`; finish with `release <session-id>`. Only the recorded session owner
+can release a claim. Claims do not expire automatically: after an interrupted
+session, inspect its work and explicitly release using the recorded owner before
+reassigning. A leftover `.lock` requires inspection before removal.
+
+This is cooperative local ownership, not a sandbox against arbitrary writes.
+Separate clones/machines need an agreed external task owner. Claim source paths;
+the coordinator integrates shared Backlog and rollup changes after results return.

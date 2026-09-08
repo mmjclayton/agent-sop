@@ -1,3 +1,8 @@
+> Historical experiment archive. As of 2026-09-08, the mandatory rerun rules
+> below are retired (P81/P110). They do not apply to current changes. Current
+> evaluation requirements are in `evaluation-protocol.md`; fixture suites remain
+> mandatory for script changes. Historical percentages are not current claims.
+
 # Agent SOP Benchmark Framework
 
 Measures whether the Agent SOP improves Claude Code agent output quality, consistency, and efficiency compared to a baseline agent with no SOP context.

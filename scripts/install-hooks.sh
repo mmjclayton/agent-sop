@@ -54,7 +54,7 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
-FILES="sop-lib.sh sop-session-context.sh sop-stop-drift.sh sop-push-gate.sh sop-project-type.sh sop-codex-hook.sh"
+FILES="sop-worktree-claim.sh sop-doctor.sh sop-lib.sh sop-session-context.sh sop-stop-drift.sh sop-push-gate.sh sop-project-type.sh sop-codex-hook.sh"
 for f in $FILES; do
     if [ ! -f "$SRC/$f" ]; then
         echo "install-hooks: missing $SRC/$f" >&2
