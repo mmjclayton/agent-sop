@@ -38,7 +38,8 @@ output does not make concurrent writes to a shared document safe.
 Always use the resolver for read and write targets. Storage uses a full root digest.
 Inspect `--legacy-dir` and confirm ownership before `--migrate-legacy`; old path
 slugs can collide. Migration copies snapshots and rejects conflicting destinations.
-The reader can recover a migrated older main-worktree hash snapshot. A repository
+Migration normalises an unambiguous old main-worktree hash snapshot into solo and
+preserves the hash copy under memory/archive, outside active snapshot lookup. A repository
 move still requires explicit migration. Do not guess machine-local memory paths.
 If solo and the old main-path hash contain different snapshots, migration and read
 stop for reconciliation. Merge the relevant content into solo, preserve both

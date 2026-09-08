@@ -26,6 +26,7 @@ CWD=$(sop_field '.cwd')
 [ -n "$CWD" ] || CWD="$PWD"
 ROOT=$(sop_repo_root "$CWD")
 sop_is_sop_repo "$ROOT" || exit 0
+AGENT=$(sop_agent_id "$ROOT" 2>&1) || { printf '[agent-sop] Identity unavailable: %s\n' "$AGENT"; exit 0; }
 
 SESSION=$(sop_field '.session_id')
 [ -n "$SESSION" ] || SESSION="nosession"
@@ -53,6 +54,11 @@ if mkdir -p "$PRESENCE" 2>/dev/null && mkdir "$PRESENCE/.lock" 2>/dev/null; then
     trap - EXIT
 else PRESENCE_WARNING='unavailable: presence directory is not writable or busy'; fi
 OTHER=$(sop_registry_read "$PRESENCE" 2>/dev/null) || OTHER='[{"status":"unavailable: invalid or unreadable session registry"}]'
+if ! printf '%s' "$OTHER" | jq -e 'all(.[]; .status != null or
+  ((.root | type == "string" and length > 0) and (.session | type == "string" and length > 0) and
+   (.updated | type == "number" and . >= 0)))' >/dev/null; then
+    OTHER='[{"status":"unavailable: invalid session presence fields"}]'
+fi
 OTHER=$(printf '%s' "$OTHER" | jq -c --arg session "$SESSION_KEY" --argjson cutoff "$((NOW - 1800))" \
   '[.[] | select(.status != null or (.session != $session and .updated > $cutoff)) | del(.updated)] | sort_by(.root,.session)')
 if [ -n "$PRESENCE_WARNING" ]; then OTHER=$(printf '%s' "$OTHER" | jq -c --arg warning "$PRESENCE_WARNING" '. + [{status:$warning}]'); fi
@@ -80,7 +86,6 @@ fi
 
 NAME=$(basename "$ROOT")
 BRANCH=$(git -C "$ROOT" branch --show-current 2>/dev/null)
-AGENT=$(sop_agent_id "$ROOT")
 PTYPE=$(sop_project_type "$ROOT")
 DECLARED=$(sop_declared_project_type "$ROOT")
 SIGNALS=$(sop_code_signals "$ROOT" | paste -sd, - | sed 's/,/, /g')
@@ -115,7 +120,13 @@ fi
 INFLIGHT=""
 while IFS= read -r wt; do
     [ -n "$wt" ] || continue
+    if [ -L "$wt/docs" ] || [ -L "$wt/docs/agent-memory" ] || [ -L "$wt/docs/agent-memory/in-flight" ]; then
+        INFLIGHT="$INFLIGHT
+$wt: skipped symlinked handoff directory"
+        continue
+    fi
     for file in "$wt"/docs/agent-memory/in-flight/*.md; do
+        [ ! -L "$file" ] && [ -f "$file" ] || continue
         [ -s "$file" ] || continue
         [ "$(basename "$file")" != README.md ] || continue
         INFLIGHT="$INFLIGHT

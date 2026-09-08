@@ -162,6 +162,22 @@ if [ "$MODE" = migrate ]; then
     check_main_conflict "$LEGACY_DIR" || exit 2
     check_main_conflict "$MEMORY_DIR" || exit 2
     mkdir -p "$MEMORY_DIR"
+    # Preflight all destinations before copying, so a failed repeat migration
+    # cannot reintroduce a stale hash snapshot beside an updated canonical file.
+    incoming_solo="$LEGACY_DIR/project_resume_solo.md"
+    [ ! -f "$MEMORY_DIR/project_resume_solo.md" ] || incoming_solo="$MEMORY_DIR/project_resume_solo.md"
+    incoming_hash="$LEGACY_DIR/project_resume_$OLD_HASH.md"
+    [ ! -f "$MEMORY_DIR/project_resume_$OLD_HASH.md" ] || incoming_hash="$MEMORY_DIR/project_resume_$OLD_HASH.md"
+    if [ "$AGENT_ID" = solo ] && [ -d "$ROOT/.git" ] &&
+       [ -f "$incoming_solo" ] && [ -f "$incoming_hash" ] && ! cmp -s "$incoming_solo" "$incoming_hash"; then
+        echo 'Migration conflict: differing main snapshot generations require reconciliation before copying.' >&2
+        exit 2
+    fi
+    for source in "$LEGACY_DIR"/project_resume*.md; do
+        [ -f "$source" ] || continue
+        target="$MEMORY_DIR/$(basename "$source")"
+        [ ! -e "$target" ] || cmp -s "$source" "$target" || { echo "Migration conflict: $target" >&2; exit 2; }
+    done
     for source in "$LEGACY_DIR"/project_resume*.md; do
         [ -f "$source" ] || continue
         target="$MEMORY_DIR/$(basename "$source")"
@@ -170,6 +186,20 @@ if [ "$MODE" = migrate ]; then
         else cp "$source" "$target" || exit 1; fi
     done
     check_main_conflict "$MEMORY_DIR" || exit 2
+    if [ "$AGENT_ID" = solo ] && [ -d "$ROOT/.git" ] &&
+       [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ] &&
+       [ -f "$MEMORY_DIR/project_resume_$OLD_HASH.md" ]; then
+        # Establish one active main snapshot; a later normal close must not conflict
+        # with the historical hash generation retained by this explicit migration.
+        hash_snapshot="$MEMORY_DIR/project_resume_$OLD_HASH.md"
+        archive_snapshot="$MEMORY_DIR/archive/project_resume_$OLD_HASH.md"
+        mkdir -p "$MEMORY_DIR/archive" || exit 1
+        if [ -e "$archive_snapshot" ]; then
+            cmp -s "$hash_snapshot" "$archive_snapshot" || { echo "Migration conflict: $archive_snapshot" >&2; exit 2; }
+        else cp "$hash_snapshot" "$archive_snapshot" || exit 1; fi
+        [ -f "$MEMORY_DIR/project_resume_solo.md" ] || cp "$hash_snapshot" "$MEMORY_DIR/project_resume_solo.md" || exit 1
+        rm "$hash_snapshot" || exit 1
+    fi
     printf '%s\n' "$MEMORY_DIR"
     exit 0
 fi

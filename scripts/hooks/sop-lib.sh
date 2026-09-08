@@ -240,13 +240,9 @@ sop_resolver() {
 }
 
 sop_agent_id() {
-    local root="$1" id="" resolver
-    resolver=$(sop_resolver) || resolver=''
-    if [ -n "$resolver" ]; then
-        id=$(bash "$resolver" --agent-id --root "$root" --home "${HOME:-}" 2>/dev/null)
-    fi
-    [ -n "$id" ] || id="${AGENT_SOP_AGENT_ID:-${CLAUDE_AGENT_ID:-solo}}"
-    printf '%s' "$id"
+    local root="$1" resolver
+    resolver=$(sop_resolver) || { echo 'Trusted identity resolver unavailable; update Agent SOP' >&2; return 1; }
+    bash "$resolver" --agent-id --root "$root" --home "${HOME:-}"
 }
 
 # sop_last_record_commit <root> — newest commit touching a session record.

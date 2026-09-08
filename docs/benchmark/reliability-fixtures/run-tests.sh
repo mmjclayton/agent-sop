@@ -123,6 +123,20 @@ if bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WO
 fi
 rm "$(dirname "$before")/project_resume_$old_hash.md"
 echo 'PASS: conflicting main snapshot generations require explicit reconciliation'
+hash_legacy=$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/hash-user" --legacy-dir)
+mkdir -p "$hash_legacy"
+printf '# Main hash snapshot\n' > "$hash_legacy/project_resume_$old_hash.md"
+bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/hash-user" --migrate-legacy >/dev/null
+hash_write=$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/hash-user" --write)
+test -f "$hash_write"
+test -f "$(dirname "$hash_write")/archive/project_resume_$old_hash.md"
+printf '# Updated after normal close\n' > "$hash_write"
+test "$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/hash-user" --read)" = "$hash_write"
+if bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/hash-user" --migrate-legacy >/dev/null 2>&1; then
+    echo 'FAIL: repeated migration ignored newer canonical content'; exit 1
+fi
+test "$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/hash-user" --read)" = "$hash_write"
+echo 'PASS: hash migration normalises active identity and survives later closure and failed retry'
 
 # Real linked worktrees share ownership, but permit disjoint tasks and paths.
 git -C "$WORK/repo" worktree add -qb other "$WORK/other"
@@ -170,6 +184,28 @@ context "$WORK/repo" session-a >/dev/null
 test ! -e "$presence/expired.json"
 test "$(find "$presence" -name '*.json' | wc -l | tr -d ' ')" = 2
 echo 'PASS: presence pruning removes expired records and preserves active peers'
+printf 'DUMMY-EXTERNAL-SECRET\n' > "$WORK/dummy-secret"
+ln -s "$WORK/dummy-secret" "$WORK/other/docs/agent-memory/in-flight/000-secret.md"
+context "$WORK/repo" symlink-file-test > "$WORK/symlink-output"
+if grep -q DUMMY-EXTERNAL-SECRET "$WORK/symlink-output"; then echo 'FAIL: handoff symlink disclosed external content'; exit 1; fi
+mkdir -p "$WORK/external-handoffs"
+cp "$WORK/dummy-secret" "$WORK/external-handoffs/secret.md"
+mv "$WORK/other/docs/agent-memory/in-flight" "$WORK/other-handoffs"
+ln -s "$WORK/external-handoffs" "$WORK/other/docs/agent-memory/in-flight"
+context "$WORK/repo" symlink-directory-test > "$WORK/symlink-output"
+if grep -q DUMMY-EXTERNAL-SECRET "$WORK/symlink-output"; then echo 'FAIL: handoff directory symlink disclosed external content'; exit 1; fi
+rm "$WORK/other/docs/agent-memory/in-flight"
+mv "$WORK/other-handoffs" "$WORK/other/docs/agent-memory/in-flight"
+echo 'PASS: file and directory handoff symlinks cannot inject external content'
+printf '{"root":"peer","session":"corrupt"}\n' > "$presence/corrupt.json"
+context "$WORK/repo" invalid-presence-test > "$WORK/invalid-presence-output"
+grep -q 'invalid session presence fields' "$WORK/invalid-presence-output"
+rm "$presence/corrupt.json"
+if AGENT_SOP_AGENT_ID=bad/id sop_agent_id "$WORK/repo" > "$WORK/invalid-identity" 2>/dev/null; then
+    echo 'FAIL: shared helper accepted rejected identity'; exit 1
+fi
+test ! -s "$WORK/invalid-identity"
+echo 'PASS: invalid identity and presence schema cannot become successful fallback state'
 
 mkdir -p "$WORK/repo/nested" "$WORK/other/nested"
 (cd "$WORK/repo/nested" && bash "$CLAIM" claim owner task src) >/dev/null
