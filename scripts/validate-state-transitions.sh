@@ -375,7 +375,9 @@ if [ "$MODE" = "check-replication" ]; then
   # Resolve config: project scope wins over user scope, matching /update-agent-sop.
   config="$REPL_CONFIG_FILE"
   if [ -z "$config" ]; then
+    if [ "$SOP_RUNTIME" = codex ]; then config="$SOP_CONFIG_HOME/agent-sop.config.json"; fi
     for candidate in ".$SOP_RUNTIME/agent-sop.config.json" "$SOP_CONFIG_HOME/agent-sop.config.json"; do
+      [ -z "$config" ] || break
       if [ -f "$candidate" ]; then config="$candidate"; break; fi
     done
   fi
@@ -415,6 +417,12 @@ if [ "$MODE" = "check-replication" ]; then
   excluded=$(jq -r '(.exclude // [])[]' "$config") || {
     echo 'BLOCK: cannot parse replication exclusions' >&2; exit 1;
   }
+
+  project_excluded=""
+  if [ "$SOP_RUNTIME" = codex ] && [ -f .codex/agent-sop.config.json ]; then
+    jq -e '(.exclude // []) | type == "array" and all(.[]; type == "string")' .codex/agent-sop.config.json >/dev/null || { echo 'BLOCK: invalid project exclusions' >&2; exit 1; }
+    project_excluded=$(jq -r '(.exclude // [])[]' .codex/agent-sop.config.json) || exit 1
+  fi
 
   # Session-changed files: committed in range plus working tree. Fixture mode
   # supplies the list directly so the check is testable without a repo.
@@ -467,6 +475,10 @@ if [ "$MODE" = "check-replication" ]; then
     printf '%s\n' "$changed" | grep -qxF "$path" || continue
     # Excluded files are out of scope by declaration.
     if [ -n "$excluded" ] && printf '%s\n' "$excluded" | grep -qxF "$path"; then continue; fi
+    case "$path" in
+      .claude/*|.codex/*|.agents/skills/*) ;;
+      *) if [ -n "$project_excluded" ] && printf '%s\n' "$project_excluded" | grep -qxF "$path"; then continue; fi ;;
+    esac
     [ -f "$path" ] || continue
 
     checked=$((checked + 1))

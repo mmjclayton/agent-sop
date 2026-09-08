@@ -139,3 +139,17 @@ ln -s missing-instructions "$WORK/dangling/AGENTS.md"
 test "$(bash "$PTYPE" "$WORK/dangling")" = code
 bash -c 'source "$1/scripts/hooks/sop-lib.sh"; test "$(sop_claude_md_state "$2")" = dangling' _ "$SOURCE" "$WORK/dangling"
 printf 'PASS: dangling native instructions remain visible and do not downgrade gates\n'
+
+# Project exclusions must not shadow user-owned replication baselines.
+mkdir -p "$WORK/repl-project/.codex/agents" "$WORK/repl-user/.codex/agents"
+printf 'new reviewer\n' > "$WORK/repl-project/.codex/agents/test.toml"
+printf 'old reviewer\n' > "$WORK/repl-user/.codex/agents/test.toml"
+printf '{"exclude":[]}\n' > "$WORK/repl-project/.codex/agent-sop.config.json"
+REPL_SHA=$(shasum -a 256 "$WORK/repl-project/.codex/agents/test.toml" | cut -d' ' -f1)
+jq -n --arg sha "$REPL_SHA" '{exclude:[],baseline_shas:{".codex/agents/test.toml":$sha}}' > "$WORK/repl-user/.codex/agent-sop.config.json"
+printf '.codex/agents/test.toml\n' > "$WORK/repl-changed"
+if (cd "$WORK/repl-project" && AGENT_SOP_RUNTIME=codex AGENT_SOP_USER_HOME="$WORK/repl-user" bash "$SOURCE/scripts/validate-state-transitions.sh" --check-replication --repl-changed-file "$WORK/repl-changed" --repl-home "$WORK/repl-user") > "$WORK/repl-result" 2>&1; then
+    echo 'FAIL: project config shadowed user replica baseline'; exit 1
+fi
+grep -q 'content differs' "$WORK/repl-result"
+printf 'PASS: project exclusions cannot disable native replication checks\n'
