@@ -187,7 +187,7 @@ if [ "$MODE" = migrate ]; then
     [ -d "$LEGACY_DIR" ] || { echo 'No legacy directory to migrate.' >&2; exit 1; }
     [ -r "$LEGACY_DIR" ] && [ -x "$LEGACY_DIR" ] || { echo "Legacy storage unreadable: $LEGACY_DIR" >&2; exit 2; }
     MIGRATION_LIST=$(mktemp) || { echo 'Migration enumeration storage unavailable' >&2; exit 2; }
-    find "$LEGACY_DIR" -maxdepth 1 -name 'project_resume*.md' -print0 > "$MIGRATION_LIST" || {
+    find -H "$LEGACY_DIR" -maxdepth 1 -name 'project_resume*.md' -print0 > "$MIGRATION_LIST" || {
         echo "Legacy snapshot enumeration failed: $LEGACY_DIR" >&2; exit 2;
     }
     check_main_conflict "$LEGACY_DIR" || exit 2
@@ -205,12 +205,12 @@ if [ "$MODE" = migrate ]; then
         exit 2
     fi
     while IFS= read -r -d '' source; do
-        [ -f "$source" ] || continue
+        [ -f "$source" ] && [ -r "$source" ] || { echo "Invalid or unreadable legacy snapshot: $source" >&2; exit 2; }
         target="$MEMORY_DIR/$(basename "$source")"
         [ ! -e "$target" ] || cmp -s "$source" "$target" || { echo "Migration conflict: $target" >&2; exit 2; }
     done < "$MIGRATION_LIST"
     while IFS= read -r -d '' source; do
-        [ -f "$source" ] || continue
+        [ -f "$source" ] && [ -r "$source" ] || { echo "Invalid or unreadable legacy snapshot: $source" >&2; exit 2; }
         target="$MEMORY_DIR/$(basename "$source")"
         if [ -e "$target" ]; then
             cmp -s "$source" "$target" || { echo "Migration conflict: $target" >&2; exit 2; }

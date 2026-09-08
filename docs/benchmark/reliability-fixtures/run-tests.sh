@@ -193,6 +193,20 @@ if bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WO
 fi
 grep -q 'Resume storage unavailable' "$WORK/broken-memory-result"
 echo 'PASS: unavailable current storage is distinguished from absent snapshots'
+symlink_legacy=$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/symlink-user" --legacy-dir)
+mkdir -p "$(dirname "$symlink_legacy")" "$WORK/symlink-memory-target"
+printf '# Symlinked legacy storage\n' > "$WORK/symlink-memory-target/project_resume_solo.md"
+ln -s "$WORK/symlink-memory-target" "$symlink_legacy"
+bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/symlink-user" --migrate-legacy >/dev/null
+symlink_resume=$(bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/symlink-user" --read)
+cmp "$symlink_resume" "$WORK/symlink-memory-target/project_resume_solo.md"
+echo 'PASS: explicit migration follows a symlinked legacy storage directory'
+ln -s "$WORK/missing-snapshot" "$symlink_legacy/project_resume_broken.md"
+if bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --home "$WORK/symlink-user" --migrate-legacy > "$WORK/broken-snapshot-result" 2>&1; then
+    echo 'FAIL: migration silently skipped an enumerated broken snapshot'; exit 1
+fi
+grep -q 'Invalid or unreadable legacy snapshot' "$WORK/broken-snapshot-result"
+echo 'PASS: every enumerated legacy snapshot must be readable and valid'
 
 # Real linked worktrees share ownership, but permit disjoint tasks and paths.
 git -C "$WORK/repo" worktree add -qb other "$WORK/other"
@@ -276,9 +290,14 @@ done
 (cd "$WORK/repo/nested" && bash "$CLAIM" release owner) >/dev/null
 mkdir -p "$WORK/repo/scripts"
 printf '#!/bin/sh\ntouch "%s"\n' "$WORK/unsafe-resolver-ran" > "$WORK/repo/scripts/resolve-resume-path.sh"
+mkdir -p "$WORK/doctor-codex/scripts/hooks/agent-sop"
+for dependency in sop-lib.sh sop-stop-drift.sh sop-push-gate.sh; do
+    cp "$SOURCE/scripts/hooks/$dependency" "$WORK/doctor-codex/scripts/hooks/agent-sop/$dependency"
+done
 CODEX_HOME="$WORK/doctor-codex" bash "$SOURCE/scripts/hooks/sop-doctor.sh" --runtime codex --root "$WORK/repo" > "$WORK/doctor.json" || true
 test ! -f "$WORK/unsafe-resolver-ran"
 jq -e 'has("resume_diagnostic")' "$WORK/doctor.json" >/dev/null
+jq -e '.hooks_installed == false and (.missing_hook_files | index("resolve-resume-path.sh") != null and index("sop-session-context.sh") != null and index("sop-codex-hook.sh") != null) and (.resume_diagnostic | contains("Installed trusted resolver unavailable"))' "$WORK/doctor.json" >/dev/null
 echo 'PASS: subdirectory ownership, dot-path rejection and trusted diagnostic resolver'
 mkdir -p "$WORK/broken-hash-bin"
 for name in shasum sha256sum; do
