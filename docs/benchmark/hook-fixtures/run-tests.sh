@@ -309,7 +309,7 @@ SUPER="$TMP/super"; make_repo "$SUPER" with-code
 SUPER_DIR=$(dirname "$(bash "$SUPER/scripts/resolve-resume-path.sh" --root "$(git -C "$SUPER" rev-parse --show-toplevel)" --home "$HOME")")
 mkdir -p "$SUPER_DIR" && printf '**SUPERSEDED - 2026-08-07.** Use the per-agent file.\n\n## What is next\n- stale\n' > "$SUPER_DIR/project_resume.md"
 SESSION_ID=ctx-super run_hook "$CTX" "$SUPER" ''
-if grep -q "^Resume snapshot: (none found" "$HOOK_OUT" && ! grep -q "SUPERSEDED" "$HOOK_OUT"; then ok "ctx-superseded-legacy-resume-not-served"; else bad "ctx-superseded-legacy-resume-not-served" "out='$(grep -A1 'Resume snapshot' "$HOOK_OUT" | head -2)'"; fi
+if grep -q "^Resume snapshot: .*marked superseded" "$HOOK_OUT" && ! grep -q "^- stale$" "$HOOK_OUT"; then ok "ctx-superseded-legacy-resume-not-served"; else bad "ctx-superseded-legacy-resume-not-served" "out='$(grep -A1 'Resume snapshot' "$HOOK_OUT" | head -2)'"; fi
 
 # The notice's own "carry on" instruction — add a line to the in-flight file —
 # must not re-fire it (seen live on the first P103 run); any other tracker

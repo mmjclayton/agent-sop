@@ -211,6 +211,22 @@ sop_range_base() {
     fi
 }
 
+# Read each registry record explicitly; unreadable/malformed state is not empty.
+sop_registry_read() {
+    local dir="$1" file item contents=''
+    if [ ! -e "$dir" ]; then printf '[]'; return 0; fi
+    [ -d "$dir" ] && [ -r "$dir" ] && [ -x "$dir" ] || { echo "Registry unavailable: $dir" >&2; return 1; }
+    for file in "$dir"/*.json; do
+        [ -e "$file" ] || [ -L "$file" ] || continue
+        item=$(jq -cse 'if length == 1 and (.[0] | type == "object") then .[0] else error("one record required") end' "$file" 2>/dev/null) || {
+            echo "Registry record unreadable or invalid: $file" >&2; return 1;
+        }
+        contents="$contents
+$item"
+    done
+    printf '%s\n' "$contents" | jq -sc .
+}
+
 # Resolve only a trusted package asset, never an executable in a target repository.
 sop_resolver() {
     local here
@@ -320,12 +336,15 @@ sop_strip_heredocs() {
 # `dir/{old => new}/rest`. A rename is excluded only when both names are
 # documentation — a doc renamed into a code file with logic added is code
 # (review finding, CRITICAL: whitespace splitting read the old name).
+sop_instruction_pattern() {
+    printf '%s' '^([.]agents/|[.]claude/|[.]codex/|docs/sop/|docs/guides/sop-)|(^|/)(AGENTS|CLAUDE|SKILL)[.]md$'
+}
+
 sop_code_lines() {
-    git -C "$1" diff --numstat "$2..$3" 2>/dev/null | awk -F'\t' -v skip="$4" '
+    git -C "$1" diff --numstat "$2..$3" 2>/dev/null | awk -F'\t' -v skip="$4" -v instructions="$(sop_instruction_pattern)" '
         function isdoc(p) {
             if (p ~ /^docs\/reviews\/.*-ship-auto\.json$/) return 1
-            if (p ~ /^(\.agents\/|\.claude\/|\.codex\/|docs\/sop\/|docs\/guides\/sop-)/) return 0
-            if (p ~ /(^|\/)(AGENTS|CLAUDE|SKILL)\.md$/) return 0
+            if (p ~ instructions) return 0
             return p ~ /\.(md|markdown|txt|rst)$/
         }
         {
@@ -471,7 +490,7 @@ sop_shipsop_gate() {
     # Documentation extensions are excluded from the count, always, so a
     # docs-heavy branch never summons reviewers for prose.
     lines=$(sop_code_lines "$root" "$base" "$head" true)
-    if ! git -C "$root" diff --name-only "$base..$head" | grep -Eq '^(\.agents/|\.claude/|\.codex/|docs/sop/|docs/guides/sop-|AGENTS\.md$|CLAUDE\.md$)'; then
+    if ! git -C "$root" diff --name-only "$base..$head" | grep -Eq "$(sop_instruction_pattern)"; then
         [ "${lines:-0}" -ge "${min:-10}" ] 2>/dev/null || { printf ''; return; }
     fi
 

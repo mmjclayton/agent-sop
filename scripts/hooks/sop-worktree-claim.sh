@@ -9,7 +9,7 @@ case "$COMMON" in /*) ;; *) COMMON="$ROOT/$COMMON" ;; esac
 REGISTRY="$COMMON/agent-sop/claims"
 mkdir -p "$REGISTRY"
 if [ "$ACTION" = status ]; then
-    find "$REGISTRY" -maxdepth 1 -name '*.json' -type f -exec cat {} \; | jq -s .
+    sop_registry_read "$REGISTRY"
     exit 0
 fi
 SESSION=${1:-}; shift || true
@@ -39,7 +39,8 @@ for path in "$@"; do
     PATHS=$(jq --arg path "$path" '. + [$path]' <<< "$PATHS")
 done
 for other in "$REGISTRY"/*.json; do
-    [ -f "$other" ] || continue
+    [ -e "$other" ] || [ -L "$other" ] || continue
+    [ -f "$other" ] && [ -r "$other" ] || { echo "BLOCK: unreadable claim $other" >&2; exit 1; }
     jq -se 'length == 1' "$other" >/dev/null || { echo "BLOCK: malformed claim $other" >&2; exit 1; }
     jq -e '(.root | type == "string") and (.session | type == "string") and
       (.task | type == "string") and (.paths | type == "array" and length > 0 and all(.[]; type == "string"))' "$other" >/dev/null || {

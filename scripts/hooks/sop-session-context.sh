@@ -38,20 +38,19 @@ case "$COMMON" in /*) ;; *) COMMON="$ROOT/$COMMON" ;; esac
 PRESENCE="$COMMON/agent-sop/sessions"
 SESSION_KEY=$(printf '%s' "$SESSION" | sop_sha256)
 NOW=$(date +%s)
-OTHER='[]'
+PRESENCE_WARNING=''
 if mkdir -p "$PRESENCE" 2>/dev/null; then
-    TEMP=$(mktemp "$PRESENCE/.presence.XXXXXX")
-    jq -n --arg root "$ROOT" --arg session "$SESSION_KEY" --argjson updated "$NOW" \
-      '{root:$root,session:$session,updated:$updated}' > "$TEMP" && mv "$TEMP" "$PRESENCE/$SESSION_KEY.json"
-    rm -f "$TEMP"
-    OTHER=$(jq -s --arg session "$SESSION_KEY" --argjson cutoff "$((NOW - 1800))" \
-      '[.[] | select(.session != $session and .updated > $cutoff) | {root,session}] | sort_by(.root,.session)' \
-      "$PRESENCE"/*.json 2>/dev/null) || OTHER='[{"status":"unavailable: invalid session presence; inspect Git common directory"}]' 
-fi
-CLAIMS='[]'
-if [ -d "$COMMON/agent-sop/claims" ]; then
-    CLAIMS=$(find "$COMMON/agent-sop/claims" -maxdepth 1 -name '*.json' -type f -exec cat {} \; | jq -sc . 2>/dev/null) || CLAIMS='[{"status":"unavailable: invalid claim record; inspect Git common directory"}]' 
-fi
+    TEMP=$(mktemp "$PRESENCE/.presence.XXXXXX") || TEMP=''
+    if [ -n "$TEMP" ] && jq -n --arg root "$ROOT" --arg session "$SESSION_KEY" --argjson updated "$NOW" \
+      '{root:$root,session:$session,updated:$updated}' > "$TEMP" && mv "$TEMP" "$PRESENCE/$SESSION_KEY.json"; then :
+    else PRESENCE_WARNING='unavailable: could not publish this session presence'; fi
+    [ -z "$TEMP" ] || rm -f "$TEMP"
+else PRESENCE_WARNING='unavailable: presence directory is not writable'; fi
+OTHER=$(sop_registry_read "$PRESENCE" 2>/dev/null) || OTHER='[{"status":"unavailable: invalid or unreadable session registry"}]'
+OTHER=$(printf '%s' "$OTHER" | jq -c --arg session "$SESSION_KEY" --argjson cutoff "$((NOW - 1800))" \
+  '[.[] | select(.status != null or (.session != $session and .updated > $cutoff)) | del(.updated)] | sort_by(.root,.session)')
+if [ -n "$PRESENCE_WARNING" ]; then OTHER=$(printf '%s' "$OTHER" | jq -c --arg warning "$PRESENCE_WARNING" '. + [{status:$warning}]'); fi
+CLAIMS=$(sop_registry_read "$COMMON/agent-sop/claims" 2>/dev/null) || CLAIMS='[{"status":"unavailable: invalid or unreadable claim registry"}]'
 CURRENT_HEAD=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)
 CONTEXT_KEY=$(printf '%s|%s|%s' "$CURRENT_HEAD" "$OTHER" "$CLAIMS" | sop_sha256)
 MARKER_DIR="$(sop_state_dir)/sessions/$SESSION"
@@ -94,7 +93,7 @@ fi
 
 # ── Resume snapshot ───────────────────────────────────────────────────────────
 RESUME_TEXT="(none found — first session on this project for agent-id $AGENT, or no resolver in scripts/)"
-RESOLVER=$(sop_resolver) || RESOLVER=''
+RESOLVER=$(sop_resolver) || { RESOLVER=''; RESUME_TEXT="Trusted resolver unavailable: update Agent SOP installation"; }
 if [ -n "$RESOLVER" ]; then
     RESUME_ERROR=$(mktemp)
     RESUME_PATH=$(bash "$RESOLVER" --read --root "$ROOT" --home "${HOME:-}" 2> "$RESUME_ERROR")

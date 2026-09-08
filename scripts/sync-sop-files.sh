@@ -121,7 +121,7 @@ if [ "$RUNTIME" = codex ]; then
     [ -d "$UP/.agents/skills" ] && [ -d "$UP/.codex/agents" ] || { echo 'sync-sop-files: missing Codex asset directories' >&2; exit 1; }
     (set -o pipefail; cd "$UP" && find .agents/skills .codex/agents -type f | LC_ALL=C sort) > "$RUNTIME_MANIFEST.assets" || { echo 'sync-sop-files: asset discovery failed' >&2; exit 1; }
     grep -E '^\| `[^`]+` \| `[^`]+` \| project \|' "$MANIFEST" > "$RUNTIME_MANIFEST" || { echo 'sync-sop-files: no project manifest rows' >&2; exit 1; }
-    for f in "$UP"/scripts/hooks/*.sh; do
+    for f in "$UP"/scripts/hooks/*.sh "$UP/scripts/resolve-resume-path.sh"; do
         path="${f#"$UP/"}"
         printf '| `~/.codex/scripts/hooks/agent-sop/%s` | `%s` | user |\n' "$(basename "$f")" "$path" >> "$RUNTIME_MANIFEST" || { echo 'sync-sop-files: manifest write failed' >&2; exit 1; }
     done

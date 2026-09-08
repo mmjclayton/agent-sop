@@ -120,14 +120,13 @@ resolve_agent_id() {
         return 0
     fi
 
-    if command -v shasum >/dev/null 2>&1; then
-        printf '%s' "$ROOT" | shasum -a 256 | cut -c1-6
-    else
-        printf '%s' "$ROOT" | sha256sum | cut -c1-6
-    fi
+    local hash
+    hash=$(printf '%s' "$ROOT" | { shasum -a 256 2>/dev/null || sha256sum; } | cut -c1-6)
+    [[ "$hash" =~ ^[0-9a-f]{6}$ ]] || { echo 'resolve-resume-path: identity hashing failed' >&2; return 1; }
+    printf '%s' "$hash"
 }
 
-AGENT_ID=$(resolve_agent_id)
+AGENT_ID=$(resolve_agent_id) || exit 2
 [ -z "$AGENT_ID" ] && AGENT_ID="solo"
 case "$AGENT_ID" in *[!a-zA-Z0-9_-]*|.|..) echo 'resolve-resume-path: invalid agent identity' >&2; exit 2 ;; esac
 
@@ -143,6 +142,7 @@ fi
 PROJECT_HASH=$(printf '%s' "$ROOT" | sed 's|[^a-zA-Z0-9-]|-|g' | sed 's|--*|-|g' | sed 's|^-||')
 LEGACY_DIR="$HOME_DIR/.claude/projects/-$PROJECT_HASH/memory"
 ROOT_DIGEST=$(printf '%s' "$ROOT" | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)
+[[ "$ROOT_DIGEST" =~ ^[0-9a-f]{64}$ ]] || { echo 'resolve-resume-path: root hashing failed; no safe storage path' >&2; exit 2; }
 MEMORY_DIR="$HOME_DIR/.claude/agent-sop/projects/$ROOT_DIGEST/memory"
 if [ "$MODE" = legacy-dir ]; then printf '%s\n' "$LEGACY_DIR"; exit 0; fi
 if [ "$MODE" = migrate ]; then

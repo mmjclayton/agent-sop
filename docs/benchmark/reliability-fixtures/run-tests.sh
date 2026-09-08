@@ -155,3 +155,30 @@ CODEX_HOME="$WORK/doctor-codex" bash "$SOURCE/scripts/hooks/sop-doctor.sh" --run
 test ! -f "$WORK/unsafe-resolver-ran"
 jq -e 'has("resume_diagnostic")' "$WORK/doctor.json" >/dev/null
 echo 'PASS: subdirectory ownership, dot-path rejection and trusted diagnostic resolver'
+mkdir -p "$WORK/broken-hash-bin"
+for name in shasum sha256sum; do
+    printf '#!/bin/sh\nexit 127\n' > "$WORK/broken-hash-bin/$name"
+    chmod +x "$WORK/broken-hash-bin/$name"
+done
+if PATH="$WORK/broken-hash-bin:$PATH" bash "$SOURCE/scripts/resolve-resume-path.sh" --root "$WORK/repo" --dir > "$WORK/bad-path" 2>/dev/null; then
+    echo 'FAIL: hashing failure returned a storage path'; exit 1
+fi
+test ! -s "$WORK/bad-path"
+mkdir -p "$WORK/registry"
+printf '{invalid\n' > "$WORK/registry/bad.json"
+if sop_registry_read "$WORK/registry" >/dev/null 2>&1; then echo 'FAIL: malformed registry appeared empty'; exit 1; fi
+rm "$WORK/registry/bad.json"
+ln -s "$WORK/absent" "$WORK/registry/unreadable.json"
+if sop_registry_read "$WORK/registry" >/dev/null 2>&1; then echo 'FAIL: unreadable record appeared empty'; exit 1; fi
+ln -s "$WORK/absent" "$WORK/repo/.git/agent-sop/claims/unreadable.json"
+if (cd "$WORK/repo" && bash "$CLAIM" claim owner task src) >/dev/null 2>&1; then
+    echo 'FAIL: claiming ignored an unreadable peer claim'; exit 1
+fi
+rm "$WORK/repo/.git/agent-sop/claims/unreadable.json"
+git -C "$WORK/repo" update-ref refs/remotes/origin/main HEAD
+mkdir -p "$WORK/repo/src"
+printf 'One instruction\n' > "$WORK/repo/src/AGENTS.md"
+git -C "$WORK/repo" add src/AGENTS.md
+git -C "$WORK/repo" commit -qm nested-instruction
+test -n "$(sop_shipsop_gate "$WORK/repo")"
+echo 'PASS: hash failures stop resolution, registry errors surface, nested instructions demand review'
