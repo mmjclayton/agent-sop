@@ -54,9 +54,10 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
-FILES="sop-worktree-claim.sh sop-doctor.sh sop-lib.sh sop-session-context.sh sop-stop-drift.sh sop-push-gate.sh sop-project-type.sh sop-codex-hook.sh"
+source_file() { if [ "$1" = resolve-resume-path.sh ]; then printf '%s/../%s' "$SRC" "$1"; else printf '%s/%s' "$SRC" "$1"; fi; }
+FILES="resolve-resume-path.sh sop-worktree-claim.sh sop-doctor.sh sop-lib.sh sop-session-context.sh sop-stop-drift.sh sop-push-gate.sh sop-project-type.sh sop-codex-hook.sh"
 for f in $FILES; do
-    if [ ! -f "$SRC/$f" ]; then
+    if [ ! -f "$(source_file "$f")" ]; then
         echo "install-hooks: missing $SRC/$f" >&2
         exit 1
     fi
@@ -130,8 +131,8 @@ if [ "$UNINSTALL" = true ]; then
     fi
     if [ "$DRY_RUN" = false ]; then
         for f in $FILES; do
-            if [ "$SRC/$f" -ef "$DEST/$f" ]; then continue; fi
-            if [ "$RUNTIME" = codex ] && [ -f "$DEST/$f" ] && ! cmp -s "$SRC/$f" "$DEST/$f"; then
+            if [ "$(source_file "$f")" -ef "$DEST/$f" ]; then continue; fi
+            if [ "$RUNTIME" = codex ] && [ -f "$DEST/$f" ] && ! cmp -s "$(source_file "$f")" "$DEST/$f"; then
                 echo "keep $DEST/$f (modified; reconcile manually)"; continue
             fi
             rm -f "$DEST/$f" || exit 1
@@ -150,7 +151,7 @@ if [ "$DRY_RUN" = false ]; then
         if [ "$RUNTIME" = codex ] && [ -f "$DEST/$f" ]; then
             echo "keep $DEST/$f (use Codex sync for safe updates)"; continue
         fi
-        cp "$SRC/$f" "$DEST/$f" || exit 1
+        cp "$(source_file "$f")" "$DEST/$f" || exit 1
         chmod +x "$DEST/$f" || exit 1
     done
 fi

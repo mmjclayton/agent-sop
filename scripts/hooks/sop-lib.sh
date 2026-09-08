@@ -211,14 +211,22 @@ sop_range_base() {
     fi
 }
 
-# sop_agent_id <root> — via the project's resolver when present (one rule,
-# P96), else the solo default. No fourth inline copy of the precedence.
+# Resolve only a trusted package asset, never an executable in a target repository.
+sop_resolver() {
+    local here
+    here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    if [ -f "$here/resolve-resume-path.sh" ]; then printf '%s/resolve-resume-path.sh' "$here"
+    elif [ -f "$here/../resolve-resume-path.sh" ]; then printf '%s/../resolve-resume-path.sh' "$here"
+    else return 1; fi
+}
+
 sop_agent_id() {
-    local root="$1" id=""
-    if [ -f "$root/scripts/resolve-resume-path.sh" ]; then
-        id=$(bash "$root/scripts/resolve-resume-path.sh" --agent-id --root "$root" --home "${HOME:-}" 2>/dev/null)
+    local root="$1" id="" resolver
+    resolver=$(sop_resolver) || resolver=''
+    if [ -n "$resolver" ]; then
+        id=$(bash "$resolver" --agent-id --root "$root" --home "${HOME:-}" 2>/dev/null)
     fi
-    [ -n "$id" ] || id="${CLAUDE_AGENT_ID:-solo}"
+    [ -n "$id" ] || id="${AGENT_SOP_AGENT_ID:-${CLAUDE_AGENT_ID:-solo}}"
     printf '%s' "$id"
 }
 
@@ -335,7 +343,17 @@ sop_code_lines() {
 }
 
 # Shared receipt contract. Markdown is a view, never evidence consumed by a gate.
+sop_effective_config() {
+    if [ -f "$1/ship-sop.config.json" ]; then printf '%s/ship-sop.config.json' "$1"; return; fi
+    local config_home
+    if [ "${AGENT_SOP_RUNTIME:-claude}" = codex ]; then
+        config_home=${AGENT_SOP_CONFIG_HOME:-${CODEX_HOME:-${AGENT_SOP_USER_HOME:-$HOME}/.codex}}
+    else config_home=${AGENT_SOP_CONFIG_HOME:-${AGENT_SOP_USER_HOME:-$HOME}/.claude}; fi
+    printf '%s/ship-sop.config.json' "$config_home"
+}
+
 sop_policy_valid() {
+    jq -se 'length == 1' "$1" >/dev/null 2>&1 || return 1
     jq -e '
       def prop($key; $default): if has($key) then .[$key] else $default end;
       type == "object" and (.trigger | type == "object") and
@@ -362,7 +380,9 @@ sop_policy_digest() {
 
 # Validate completion and derive threshold decisions, independently of prose verdicts.
 sop_receipt_valid() {
-    local root="$1" receipt="$2" cfg="$1/ship-sop.config.json" sha base required tree
+    local root="$1" receipt="$2" cfg sha base required tree
+    cfg=$(sop_effective_config "$root")
+    jq -se 'length == 1' "$receipt" >/dev/null 2>&1 || return 1
     sop_policy_valid "$cfg" || return 1
     jq -e --slurpfile cfg "$cfg" --arg policy "$(sop_policy_digest "$cfg")" '
       def rank: {CRITICAL:4,HIGH:3,MEDIUM:2,LOW:1,INFO:0,never:99}[.];

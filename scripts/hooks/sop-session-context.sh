@@ -46,11 +46,11 @@ if mkdir -p "$PRESENCE" 2>/dev/null; then
     rm -f "$TEMP"
     OTHER=$(jq -s --arg session "$SESSION_KEY" --argjson cutoff "$((NOW - 1800))" \
       '[.[] | select(.session != $session and .updated > $cutoff) | {root,session}] | sort_by(.root,.session)' \
-      "$PRESENCE"/*.json 2>/dev/null) || OTHER='[]'
+      "$PRESENCE"/*.json 2>/dev/null) || OTHER='[{"status":"unavailable: invalid session presence; inspect Git common directory"}]' 
 fi
 CLAIMS='[]'
 if [ -d "$COMMON/agent-sop/claims" ]; then
-    CLAIMS=$(find "$COMMON/agent-sop/claims" -maxdepth 1 -name '*.json' -type f -exec cat {} \; | jq -sc . 2>/dev/null) || CLAIMS='[]'
+    CLAIMS=$(find "$COMMON/agent-sop/claims" -maxdepth 1 -name '*.json' -type f -exec cat {} \; | jq -sc . 2>/dev/null) || CLAIMS='[{"status":"unavailable: invalid claim record; inspect Git common directory"}]' 
 fi
 CURRENT_HEAD=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)
 CONTEXT_KEY=$(printf '%s|%s|%s' "$CURRENT_HEAD" "$OTHER" "$CLAIMS" | sop_sha256)
@@ -94,8 +94,12 @@ fi
 
 # ── Resume snapshot ───────────────────────────────────────────────────────────
 RESUME_TEXT="(none found — first session on this project for agent-id $AGENT, or no resolver in scripts/)"
-if [ -f "$ROOT/scripts/resolve-resume-path.sh" ]; then
-    RESUME_PATH=$(bash "$ROOT/scripts/resolve-resume-path.sh" --read --root "$ROOT" --home "${HOME:-}" 2>/dev/null)
+RESOLVER=$(sop_resolver) || RESOLVER=''
+if [ -n "$RESOLVER" ]; then
+    RESUME_ERROR=$(mktemp)
+    RESUME_PATH=$(bash "$RESOLVER" --read --root "$ROOT" --home "${HOME:-}" 2> "$RESUME_ERROR")
+    [ ! -s "$RESUME_ERROR" ] || RESUME_TEXT="$(cat "$RESUME_ERROR")"
+    rm -f "$RESUME_ERROR"
     if [ -n "$RESUME_PATH" ] && [ -f "$RESUME_PATH" ]; then
         RESUME_TEXT="$RESUME_PATH
 $(head -80 "$RESUME_PATH")"

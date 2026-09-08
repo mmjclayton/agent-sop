@@ -4,7 +4,7 @@ set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/sop-lib.sh"
 ACTION=${1:-status}; shift || true
 ROOT=$(git rev-parse --show-toplevel)
-COMMON=$(git rev-parse --git-common-dir)
+COMMON=$(git -C "$ROOT" rev-parse --git-common-dir)
 case "$COMMON" in /*) ;; *) COMMON="$ROOT/$COMMON" ;; esac
 REGISTRY="$COMMON/agent-sop/claims"
 mkdir -p "$REGISTRY"
@@ -34,12 +34,13 @@ TASK=${1:-}; shift || true
 PATHS='[]'
 [ $# -gt 0 ] || set -- '*'
 for path in "$@"; do
-    case "$path" in ''|/*|..|../*|*/../*|*/..|./*|*//*|*\\*) echo "Invalid repository-relative path: $path" >&2; exit 2 ;; esac
+    case "$path" in ''|.|/*|..|../*|*/../*|*/..|./*|*/./*|*/.|*//*|*\\*) echo "Invalid repository-relative path: $path" >&2; exit 2 ;; esac
     path=${path%/}
     PATHS=$(jq --arg path "$path" '. + [$path]' <<< "$PATHS")
 done
 for other in "$REGISTRY"/*.json; do
     [ -f "$other" ] || continue
+    jq -se 'length == 1' "$other" >/dev/null || { echo "BLOCK: malformed claim $other" >&2; exit 1; }
     jq -e '(.root | type == "string") and (.session | type == "string") and
       (.task | type == "string") and (.paths | type == "array" and length > 0 and all(.[]; type == "string"))' "$other" >/dev/null || {
         echo "BLOCK: invalid claim record $other; inspect and repair" >&2; exit 1;

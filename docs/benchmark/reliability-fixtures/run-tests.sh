@@ -29,6 +29,13 @@ printf '{invalid\n' > "$WORK/repo/ship-sop.config.json"
 test -n "$(sop_shipsop_gate "$WORK/repo")"
 echo 'PASS: invalid configured policy demands repair'
 cp "$WORK/config" "$WORK/repo/ship-sop.config.json"
+for mutation in '.trigger.throttle=false' '.trigger.throttle.min_diff_lines=null' '.agents["code-reviewer"].block_on=false'; do
+    jq "$mutation" "$WORK/config" > "$WORK/invalid-policy.json"
+    if sop_policy_valid "$WORK/invalid-policy.json"; then echo "FAIL: accepted $mutation"; exit 1; fi
+done
+cat "$WORK/config" "$WORK/config" > "$WORK/invalid-policy.json"
+if sop_policy_valid "$WORK/invalid-policy.json"; then echo 'FAIL: accepted multiple config documents'; exit 1; fi
+echo 'PASS: policy validation rejects false/null defaults and multiple documents'
 printf '# executable instructions\n' > "$WORK/repo/.agents/skills/example/SKILL.md"
 git -C "$WORK/repo" add .agents
 git -C "$WORK/repo" commit -qm instructions
@@ -130,3 +137,21 @@ context "$WORK/repo" session-a > "$WORK/context-delta"
 grep -q 'Context changed' "$WORK/context-delta"
 grep -q 'Other active sessions' "$WORK/context-delta"
 echo 'PASS: sibling handoffs load and presence changes produce a compact delta'
+
+mkdir -p "$WORK/repo/nested" "$WORK/other/nested"
+(cd "$WORK/repo/nested" && bash "$CLAIM" claim owner task src) >/dev/null
+if (cd "$WORK/repo" && bash "$CLAIM" claim foreign other docs) 2>/dev/null; then
+    echo 'FAIL: subdirectory used a different registry'; exit 1
+fi
+for path in . src/./file src/.; do
+    if (cd "$WORK/other/nested" && bash "$CLAIM" claim other-owner other-task "$path") 2>/dev/null; then
+        echo 'FAIL: accepted ambiguous dot path'; exit 1
+    fi
+done
+(cd "$WORK/repo/nested" && bash "$CLAIM" release owner) >/dev/null
+mkdir -p "$WORK/repo/scripts"
+printf '#!/bin/sh\ntouch "%s"\n' "$WORK/unsafe-resolver-ran" > "$WORK/repo/scripts/resolve-resume-path.sh"
+CODEX_HOME="$WORK/doctor-codex" bash "$SOURCE/scripts/hooks/sop-doctor.sh" --runtime codex --root "$WORK/repo" > "$WORK/doctor.json" || true
+test ! -f "$WORK/unsafe-resolver-ran"
+jq -e 'has("resume_diagnostic")' "$WORK/doctor.json" >/dev/null
+echo 'PASS: subdirectory ownership, dot-path rejection and trusted diagnostic resolver'
