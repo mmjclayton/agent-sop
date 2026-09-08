@@ -95,12 +95,10 @@ When loaded and trusted by the runtime, the hooks:
 Non-code projects use the manual session-close workflow. These are agent hooks,
 not repository permissions: they do not govern pushes made in another terminal.
 
-**Codex verification:** live testing confirmed lifecycle event delivery,
-translation of shell calls to the hook's `Bash` format, and continuation from the
-production Stop hook's drift notice. Fixture tests cover the policy checks;
-a live smoke test covers the isolated reviewer runner. A full automatic review
-and push-gate cycle has not yet been verified end to end. Start in the project
-root and check actual hook execution when diagnosing your installation.
+**Codex verification:** a fresh-session test completed the full automatic cycle:
+production Stop continuation, all configured reviewers, a covering report and a
+successful push to a local Git remote. See the [runtime test record](docs/reviews/2026-09-08_codex-auto-runtime.md).
+Start Codex in the project root; other installations still need working, trusted hooks.
 
 See [Codex setup and runtime details](docs/sop/codex.md) for hook installation,
 updates and removal. SOP updates preserve local edits and report conflicts for
