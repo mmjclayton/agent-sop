@@ -45,6 +45,9 @@ while IFS= read -r src; do
     current=''; [ ! -f "$dest" ] || current=$(sha "$dest")
     wanted=$(sha "$SOURCE/$src")
     if [ "$REMOVE" = true ]; then
+        if [ "$SOURCE/$src" -ef "$dest" ]; then
+            echo "keep $dest (links to source)"; continue
+        fi
         if [ -f "$dest" ] && { [ "$FORCE" = true ] || [ "$current" = "$old" ] || [ "$current" = "$wanted" ]; }; then
             rm "$dest"
             jq --arg p "$src" 'del(.[$p])' "$WORK/manifest" > "$WORK/next"; mv "$WORK/next" "$WORK/manifest"
@@ -52,14 +55,6 @@ while IFS= read -r src; do
         elif [ -f "$dest" ]; then echo "keep $dest (locally modified)"; fi
         continue
     fi
-    # One-time migration of known mechanically converted command wrappers.
-    # Back up the old instruction body; customized canonical skills stay protected.
-    case "$src" in
-        .agents/skills/source-command-*/SKILL.md)
-            if [ -f "$dest" ] && grep -q 'Use this skill when the user asks to run the migrated source command' "$dest" && grep -q '^# source-command-' "$dest"; then
-                cp "$dest" "$dest.bak"; old="$current"
-            fi ;;
-    esac
     if [ -f "$dest" ] && [ "$current" != "$wanted" ] && [ "$current" != "$old" ] && [ "$FORCE" = false ]; then
         echo "RECONCILE $dest (locally modified; kept)"
         continue

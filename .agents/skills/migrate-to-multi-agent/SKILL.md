@@ -11,3 +11,7 @@ SOP storage. Create distinct checkouts for concurrent writers; a working-directo
 instruction alone does not isolate tool access. Migrate records without deleting
 history, run the state and drift validators, and report the new per-agent paths.
 Do not launch concurrent work unless it is part of the user's requested task.
+
+Current limitation: the legacy migration script requires CLAUDE.md. On an
+AGENTS.md-only project, report that limitation before invoking it; do not claim
+a completed migration. Codex-only migration support remains follow-up work.

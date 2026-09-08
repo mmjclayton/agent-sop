@@ -105,7 +105,7 @@ TODAY=$(date +%Y-%m-%d)
 # The working copy lives beside the config so the final replace is a
 # same-device rename (atomic), and it is validated before it replaces anything.
 # Build an explicit runtime manifest. Shared project rows retain their real names.
-RUNTIME_MANIFEST=$(mktemp)
+RUNTIME_MANIFEST=$(mktemp) || { echo 'sync-sop-files: cannot create runtime manifest' >&2; exit 1; }
 trap 'rm -f "$RUNTIME_MANIFEST" "$RUNTIME_MANIFEST.assets"' EXIT
 if [ "$RUNTIME" = codex ]; then
     rows=$(grep -cE '^\| `[^`]+` \| `[^`]+` \|' "$MANIFEST")

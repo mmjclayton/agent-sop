@@ -101,3 +101,19 @@ if (cd "$WORK/trackers" && bash "$SOURCE/scripts/detect-trackers.sh" missing.md)
     echo 'FAIL: unreadable tracker input accepted'; exit 1
 fi
 printf 'PASS: explicit missing tracker input fails\n'
+
+# Directory symlinks must never make uninstall remove the source checkout.
+mkdir -p "$WORK/broken/.codex/agents" "$WORK/linked-user/.agents/skills"
+printf 'source skill\n' > "$WORK/broken/.agents/skills/restart-sop/SKILL.md"
+ln -s "$WORK/broken/.agents/skills/restart-sop" "$WORK/linked-user/.agents/skills/restart-sop"
+AGENT_SOP_USER_HOME="$WORK/linked-user" bash "$WORK/broken/scripts/install-codex.sh" --uninstall --force > "$WORK/link-uninstall"
+test -f "$WORK/broken/.agents/skills/restart-sop/SKILL.md"
+printf 'PASS: uninstall preserves assets linked to the source checkout\n'
+
+# Marker text is not proof that a legacy wrapper is unmodified.
+mkdir -p "$WORK/custom-user/.agents/skills/source-command-restart-sop"
+printf '# source-command-restart-sop\nUse this skill when the user asks to run the migrated source command\nMy custom workflow\n' > "$WORK/custom-user/.agents/skills/source-command-restart-sop/SKILL.md"
+cp "$WORK/custom-user/.agents/skills/source-command-restart-sop/SKILL.md" "$WORK/custom-before"
+AGENT_SOP_USER_HOME="$WORK/custom-user" bash "$SOURCE/scripts/install-codex.sh" > "$WORK/custom-install"
+cmp "$WORK/custom-before" "$WORK/custom-user/.agents/skills/source-command-restart-sop/SKILL.md"
+printf 'PASS: customized legacy aliases survive installation\n'

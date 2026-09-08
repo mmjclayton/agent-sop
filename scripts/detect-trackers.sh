@@ -47,7 +47,8 @@ cat "$PATHS" \
         # Backlog.md is Step 3; its archive is the same entries moved verbatim (P105).
         case "$f" in Backlog.md|docs/backlog-archive.md) continue ;; esac
         if [ ! -f "$f" ]; then continue; fi
-        if grep -qE '^##+ .*\[(OPEN|IN PROGRESS|BLOCKED|DEFERRED|SHIPPED|VERIFIED|WON.T)' "$f"; then
-            printf '%s\n' "$f"
-        fi
+        status=0
+        grep -qE '^##+ .*\[(OPEN|IN PROGRESS|BLOCKED|DEFERRED|SHIPPED|VERIFIED|WON.T)' "$f" || status=$?
+        if [ "$status" = 0 ]; then printf '%s\n' "$f"
+        elif [ "$status" -gt 1 ]; then echo "Cannot read tracker: $f" >&2; exit "$status"; fi
     done

@@ -50,7 +50,10 @@ fi
 # Opt-in, not a hard requirement. Pre-P92 projects keep their hand-written
 # section until they choose to migrate; failing here would break their
 # /update-sop run for a section they never opted into.
-if ! grep -q "$SENTINEL_START" "$CLAUDE_MD"; then
+marker_status=0
+grep -q "$SENTINEL_START" "$CLAUDE_MD" || marker_status=$?
+[ "$marker_status" -le 1 ] || { echo "Cannot read instructions: $CLAUDE_MD" >&2; exit "$marker_status"; }
+if [ "$marker_status" = 1 ]; then
     echo "refresh-priorities: no ${SENTINEL_START} block in $CLAUDE_MD — skipping (section is opt-in)"
     exit 0
 fi
