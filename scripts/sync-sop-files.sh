@@ -24,9 +24,10 @@
 # any version upstream has ever shipped was never edited locally.
 
 set -u
-ROOT=""; CONFIG=""; APPLY=0
+ROOT=""; CONFIG=""; APPLY=0; RUNTIME="${AGENT_SOP_RUNTIME:-claude}"
 while [ $# -gt 0 ]; do
     case "$1" in
+        --runtime) RUNTIME="$2"; shift ;;
         --root) ROOT="$2"; shift ;;
         --config) CONFIG="$2"; shift ;;
         --apply) APPLY=1 ;;
@@ -35,18 +36,23 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+case "$RUNTIME" in
+    claude) CONFIG_HOME="${AGENT_SOP_USER_HOME:-$HOME}/.claude" ;;
+    codex) CONFIG_HOME="${CODEX_HOME:-${AGENT_SOP_USER_HOME:-$HOME}/.codex}" ;;
+    *) echo 'sync-sop-files: runtime must be claude or codex' >&2; exit 2 ;;
+esac
 command -v jq >/dev/null 2>&1 || { echo "sync-sop-files: jq is required" >&2; exit 1; }
 [ -n "$ROOT" ] || ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || ROOT=$PWD
 if [ -z "$CONFIG" ]; then
-    if [ -f "$ROOT/.claude/agent-sop.config.json" ]; then CONFIG="$ROOT/.claude/agent-sop.config.json"
-    else CONFIG="$HOME/.claude/agent-sop.config.json"; fi
+    if [ -f "$ROOT/.$RUNTIME/agent-sop.config.json" ]; then CONFIG="$ROOT/.$RUNTIME/agent-sop.config.json"
+    else CONFIG="$CONFIG_HOME/agent-sop.config.json"; fi
 fi
 [ -f "$CONFIG" ] || { echo "sync-sop-files: no config at $CONFIG" >&2; exit 1; }
 # The upstream location is a fact about the machine: a project-scope config
 # (exclusions, notes, its own baselines) may omit local_path, in which case
 # the user-global config supplies it.
 UP=$(jq -r '.local_path // empty' "$CONFIG")
-[ -n "$UP" ] || UP=$(jq -r '.local_path // empty' "$HOME/.claude/agent-sop.config.json" 2>/dev/null)
+[ -n "$UP" ] || UP=$(jq -r '.local_path // empty' "$CONFIG_HOME/agent-sop.config.json" 2>/dev/null)
 UP="${UP/#\~/$HOME}"
 [ -f "$UP/docs/sop/claude-agent-sop.md" ] || { echo "sync-sop-files: upstream checkout not found at '$UP' (config local_path); the GitHub-raw fallback is the command's prose path" >&2; exit 1; }
 MANIFEST="$UP/.claude/commands/update-agent-sop.md"
@@ -73,7 +79,7 @@ under() {
     p="$anc${tail:+/$tail}"
     case "$p" in "$b"/*) return 0 ;; *) return 1 ;; esac
 }
-ROOT_R=$(cd "$ROOT" && pwd -P); CLAUDE_R="$HOME/.claude"; mkdir -p "$CLAUDE_R"; CLAUDE_R=$(cd "$CLAUDE_R" && pwd -P)
+ROOT_R=$(cd "$ROOT" && pwd -P); CLAUDE_R="$CONFIG_HOME"; mkdir -p "$CLAUDE_R"; CLAUDE_R=$(cd "$CLAUDE_R" && pwd -P)
 # in_history <upstream-path> <sha> — true when some past upstream version of
 # the file hashes to <sha>. Bounded to the file's own log; stops at first hit.
 in_history() {
@@ -98,9 +104,22 @@ n_sync=0; n_missing=0; n_older=0; n_modified=0; n_reconcile=0; n_excluded=0; n_a
 TODAY=$(date +%Y-%m-%d)
 # The working copy lives beside the config so the final replace is a
 # same-device rename (atomic), and it is validated before it replaces anything.
+# Build an explicit runtime manifest. Shared project rows retain their real names.
+RUNTIME_MANIFEST=$(mktemp)
+if [ "$RUNTIME" = codex ]; then
+    grep -E '^\| `[^`]+` \| `[^`]+` \| project \|' "$MANIFEST" > "$RUNTIME_MANIFEST"
+    for f in "$UP"/scripts/hooks/*.sh; do
+        path="${f#"$UP/"}"
+        printf '| `~/.codex/scripts/hooks/agent-sop/%s` | `%s` | user |\n' "$(basename "$f")" "$path" >> "$RUNTIME_MANIFEST"
+    done
+    while IFS= read -r path; do
+        printf '| `~/%s` | `%s` | user |\n' "$path" "$path" >> "$RUNTIME_MANIFEST"
+    done < <(cd "$UP" && find .agents/skills .codex/agents -type f | LC_ALL=C sort)
+    MANIFEST="$RUNTIME_MANIFEST"
+fi
 NEWCFG=$(mktemp "$(dirname "$CONFIG")/.agent-sop.config.XXXXXX") || { echo "sync-sop-files: cannot create a temp file beside $CONFIG" >&2; exit 1; }
 cp "$CONFIG" "$NEWCFG" || { rm -f "$NEWCFG"; echo "sync-sop-files: cannot read $CONFIG" >&2; exit 1; }
-trap 'rm -f "$NEWCFG" "$NEWCFG.tmp"' EXIT
+trap 'rm -f "$NEWCFG" "$NEWCFG.tmp" "$RUNTIME_MANIFEST"' EXIT
 while IFS='|' read -r dest src scope; do
     dest=$(printf '%s' "$dest" | xargs); src=$(printf '%s' "$src" | xargs); scope=$(printf '%s' "$scope" | xargs)
     [ -n "$dest" ] && [ -n "$src" ] || continue
@@ -110,7 +129,16 @@ while IFS='|' read -r dest src scope; do
     if ! under "$UP/$src" "$UP"; then echo "  REFUSED          $dest (upstream path escapes the checkout: $src)"; n_refused=$((n_refused+1)); continue; fi
     [ -f "$UP/$src" ] || { echo "  absent-upstream  $dest (upstream has no $src)"; n_absent=$((n_absent+1)); continue; }
     case "$scope" in
-        user) target="${dest/#\~/$HOME}"; base_dir="$CLAUDE_R" ;;
+        user)
+            target="${dest/#\~/${AGENT_SOP_USER_HOME:-$HOME}}"; base_dir="$CLAUDE_R"
+            if [ "$RUNTIME" = codex ]; then
+                # Literal tilde prefixes are manifest syntax, not shell paths.
+                # shellcheck disable=SC2088
+                case "$dest" in
+                    '~/.codex/'*) target="$CONFIG_HOME/${dest#\~/.codex/}" ;;
+                    '~/.agents/skills/'*) base_dir="${AGENT_SOP_USER_HOME:-$HOME}/.agents/skills"; mkdir -p "$base_dir" ;;
+                esac
+            fi ;;
         *)    target="$ROOT/$dest"; base_dir="$ROOT_R" ;;
     esac
     if ! under "$target" "$base_dir"; then echo "  REFUSED          $dest (destination leaves $([ "$scope" = user ] && echo "$HOME/.claude" || echo 'the consumer root'))"; n_refused=$((n_refused+1)); continue; fi

@@ -1194,3 +1194,20 @@ Closed more than 90 days ago; full entries in `docs/backlog-archive.md`, moved v
 - P58 — archived Karpathy before/after pattern (extend across SOP): see docs/backlog-archive.md
 - P59 — archived Step 1b reviewer-gate tightening + cross-layer rules guide: see docs/backlog-archive.md
 - P56 — archived Backend assumptions: gateway / non-Anthropic backend warning: see docs/backlog-archive.md
+
+### P107 — Native Codex support alongside Claude
+
+`[IN PROGRESS] [Feature]`
+
+Provide runtime-aware installation and updates, native Codex skills and reviewers,
+and one shared automatic review path. Preserve Claude support and project-owned files.
+
+Acceptance criteria:
+- `--runtime claude|codex|both` installs the selected integration without cross-runtime writes.
+- Codex hooks load context, continue on missing records and block uncovered pushes.
+- Native workflows have valid paths and enforce reviewer isolation.
+- Installation/update/uninstall fixtures and existing regression checks pass.
+
+Implementation complete locally (2026-09-08). Existing and new fixtures pass.
+review: docs/reviews/2026-09-08_codex-port.md
+Awaiting commit and final configured ship gate; no publication performed.

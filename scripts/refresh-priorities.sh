@@ -30,7 +30,11 @@ set -euo pipefail
 SENTINEL_START='<!-- priority-items:start -->'
 SENTINEL_END='<!-- priority-items:end -->'
 
-CLAUDE_MD="${1:-CLAUDE.md}"
+# In dual-runtime repos the shared priority block can remain in CLAUDE.md.
+DEFAULT_MD=CLAUDE.md
+if [ -f AGENTS.md ] && grep -q '<!-- priority-items:start -->' AGENTS.md; then DEFAULT_MD=AGENTS.md
+elif [ ! -f CLAUDE.md ] && [ -f AGENTS.md ]; then DEFAULT_MD=AGENTS.md; fi
+CLAUDE_MD="${1:-$DEFAULT_MD}"
 BACKLOG="${2:-Backlog.md}"
 
 if [ ! -f "$CLAUDE_MD" ]; then

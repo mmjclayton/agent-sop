@@ -39,6 +39,21 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Runtime selection is stripped before the legacy option parser.
+RUNTIME=claude
+RUNTIME_ARGS=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --runtime) [ $# -ge 2 ] || { echo '--runtime needs a value' >&2; exit 2; }; RUNTIME="$2"; shift ;;
+        --runtime=*) RUNTIME="${1#*=}" ;;
+        *) RUNTIME_ARGS+=("$1") ;;
+    esac
+    shift
+done
+case "$RUNTIME" in claude|codex|both) ;; *) echo 'runtime must be claude, codex or both' >&2; exit 2 ;; esac
+set -- ${RUNTIME_ARGS[@]+"${RUNTIME_ARGS[@]}"}
+
 TEMPLATE_DIR="$SCRIPT_DIR/docs/templates"
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
@@ -54,6 +69,7 @@ usage() {
     echo "Usage: $(basename "$0") /path/to/project [--code] [--force]"
     echo ""
     echo "Options:"
+    echo "  --runtime claude|codex|both  (default: claude)"
     echo "  --code       Use the code project template (Auth, DB, Design System)"
     echo "  --force      Overwrite existing files"
     echo "  --no-hooks   Do not register the user-scope hooks in ~/.claude/settings.json"
@@ -138,6 +154,7 @@ done
 copy_if_missing() {
     local src="$1"
     local dest="$2"
+    [ ! "$src" -ef "$dest" ] || return 0
 
     if [ -f "$dest" ] && [ "$FORCE" = false ]; then
         echo "  skip  $(basename "$dest") (already exists, use --force to overwrite)"
@@ -154,6 +171,7 @@ copy_if_missing() {
 copy_project_file() {
     local src="$1"
     local dest="$2"
+    [ ! "$src" -ef "$dest" ] || return 0
 
     if [ -f "$dest" ]; then
         if [ "$FORCE" = true ]; then
@@ -204,7 +222,7 @@ echo ""
 # rule bypass through symlinked paths. Both are containment fixes the parallel
 # worktree workflow depends on. Warn, do not block.
 
-if command -v claude >/dev/null 2>&1; then
+if [ "$RUNTIME" != codex ] && command -v claude >/dev/null 2>&1; then
     CLAUDE_VERSION="$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || true)"
     if [ -n "$CLAUDE_VERSION" ]; then
         REQUIRED="2.1.251"
@@ -225,7 +243,18 @@ else
 fi
 echo ""
 
-copy_project_file "$CLAUDE_TEMPLATE" "$TARGET/CLAUDE.md"
+if [ "$RUNTIME" != codex ]; then copy_project_file "$CLAUDE_TEMPLATE" "$TARGET/CLAUDE.md"; fi
+if [ "$RUNTIME" != claude ]; then
+    if [ -f "$TARGET/CLAUDE.md" ]; then
+        copy_project_file "$TEMPLATE_DIR/agents-md-bridge.md" "$TARGET/AGENTS.md"
+    else
+        if [ ! -f "$TARGET/AGENTS.md" ] && [ "$USE_CODE_TEMPLATE" = true ]; then
+            sed 's/\*\*Project type:\*\* non-code/**Project type:** code/' "$TEMPLATE_DIR/agents-md-template.md" > "$TARGET/AGENTS.md"
+        else
+            copy_project_file "$TEMPLATE_DIR/agents-md-template.md" "$TARGET/AGENTS.md"
+        fi
+    fi
+fi
 copy_project_file "$TEMPLATE_DIR/backlog-template.md" "$TARGET/Backlog.md"
 copy_project_file "$TEMPLATE_DIR/agent-memory-template.md" "$TARGET/docs/agent-memory.md"
 copy_project_file "$TEMPLATE_DIR/build-plan-template.md" "$TARGET/docs/build-plans/phase-0-foundation.md"
@@ -287,7 +316,8 @@ fi
 
 # ── Install slash commands and reference agents (user-scope) ──────────────────
 
-USER_CLAUDE_DIR="${HOME}/.claude"
+if [ "$RUNTIME" != codex ]; then
+USER_CLAUDE_DIR="${AGENT_SOP_USER_HOME:-$HOME}/.claude"
 mkdir -p "$USER_CLAUDE_DIR/commands" "$USER_CLAUDE_DIR/agents"
 
 for src in "$SCRIPT_DIR"/.claude/commands/*.md; do
@@ -366,6 +396,8 @@ else
     echo "  skip  ~/.claude/agent-sop.config.json (already exists, use --force)"
 fi
 
+fi # Claude commands, agents and baseline config
+
 # ── Install user-scope hooks (P97) ────────────────────────────────────────────
 #
 # User-scope, not project-scope: a project's .claude/settings.json is only
@@ -373,9 +405,16 @@ fi
 # session launched elsewhere. install-hooks.sh is idempotent and backs up
 # settings.json before writing. Non-fatal: a missing jq prints a message.
 
-if [ "$INSTALL_HOOKS" = true ]; then
+if [ "$INSTALL_HOOKS" = true ] && [ "$RUNTIME" != codex ]; then
     echo ""
     bash "$SCRIPT_DIR/scripts/install-hooks.sh" || echo "  (hooks not installed — see message above; re-run: bash $SCRIPT_DIR/scripts/install-hooks.sh)"
+fi
+
+if [ "$RUNTIME" != claude ]; then
+    CODEX_ARGS=(); [ "$FORCE" = false ] || CODEX_ARGS+=(--force)
+    bash "$SCRIPT_DIR/scripts/install-codex.sh" ${CODEX_ARGS[@]+"${CODEX_ARGS[@]}"}
+    if [ "$INSTALL_HOOKS" = true ]; then bash "$SCRIPT_DIR/scripts/install-hooks.sh" --runtime codex; fi
+    echo 'Codex: use $restart-sop, $update-sop and $update-agent-sop. Restart the session to reload skills/hooks.'
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────
@@ -386,8 +425,8 @@ echo ""
 echo "  1. Open each file in $TARGET and replace [bracket placeholders]"
 echo "     with real project-specific content."
 echo ""
-echo "  2. Start a Claude Code session on your project. Use /restart-sop"
-echo "     to run the session start checklist. Use /update-sop at the end."
+echo "  2. Start a $RUNTIME session on your project. Use restart-sop"
+echo "     to run the session start checklist. Use update-sop at the end."
 echo ""
 echo "  3. Validate your setup with the compliance checker:"
 echo "     @sop-checker check SOP compliance for $TARGET"

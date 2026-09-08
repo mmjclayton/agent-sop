@@ -97,6 +97,10 @@ if [ "$ROOT" = "$HOME_DIR" ]; then
 fi
 
 resolve_agent_id() {
+    if [ -n "${AGENT_SOP_AGENT_ID:-}" ]; then
+        printf '%s' "$AGENT_SOP_AGENT_ID"
+        return 0
+    fi
     if [ -n "${CLAUDE_AGENT_ID:-}" ]; then
         printf '%s' "$CLAUDE_AGENT_ID"
         return 0

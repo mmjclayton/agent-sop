@@ -34,6 +34,10 @@
 # Zero-dependency bash 3.2 (macOS default). No associative arrays.
 
 set -euo pipefail
+SOP_RUNTIME="${AGENT_SOP_RUNTIME:-claude}"
+SOP_CONFIG_HOME="${AGENT_SOP_USER_HOME:-$HOME}/.claude"
+if [ "$SOP_RUNTIME" = codex ]; then SOP_CONFIG_HOME="${CODEX_HOME:-${AGENT_SOP_USER_HOME:-$HOME}/.codex}"; fi
+
 
 MODE="validate"
 BEFORE_REF=""
@@ -281,10 +285,10 @@ if [ "$MODE" = "check-drift" ]; then
   threshold_files="${DRIFT_THRESHOLD_FILES:-}"
   if [ -z "$threshold_loc" ] || [ -z "$threshold_files" ]; then
     config_file=""
-    if [ -f ".claude/agent-sop.config.json" ]; then
-      config_file=".claude/agent-sop.config.json"
-    elif [ -f "$HOME/.claude/agent-sop.config.json" ]; then
-      config_file="$HOME/.claude/agent-sop.config.json"
+    if [ -f ".$SOP_RUNTIME/agent-sop.config.json" ]; then
+      config_file=".$SOP_RUNTIME/agent-sop.config.json"
+    elif [ -f "$SOP_CONFIG_HOME/agent-sop.config.json" ]; then
+      config_file="$SOP_CONFIG_HOME/agent-sop.config.json"
     fi
     if [ -n "$config_file" ]; then
       # `|| true` keeps pipefail + errexit from killing us when a field is
@@ -371,7 +375,7 @@ if [ "$MODE" = "check-replication" ]; then
   # Resolve config: project scope wins over user scope, matching /update-agent-sop.
   config="$REPL_CONFIG_FILE"
   if [ -z "$config" ]; then
-    for candidate in ".claude/agent-sop.config.json" "$HOME/.claude/agent-sop.config.json"; do
+    for candidate in ".$SOP_RUNTIME/agent-sop.config.json" "$SOP_CONFIG_HOME/agent-sop.config.json"; do
       if [ -f "$candidate" ]; then config="$candidate"; break; fi
     done
   fi
@@ -394,7 +398,7 @@ if [ "$MODE" = "check-replication" ]; then
   # then pull "path": "sha" pairs. Restricted to the tracked extensions so a
   # nested object cannot inject a false key.
   manifest=$(sed -n '/"baseline_shas"[[:space:]]*:[[:space:]]*{/,/^[[:space:]]*}/p' "$config" \
-    | grep -oE '"[^"]+\.(md|sh|py)"[[:space:]]*:[[:space:]]*"[a-f0-9]{64}"' \
+    | grep -oE '"[^"]+\.(md|sh|py|toml|yaml)"[[:space:]]*:[[:space:]]*"[a-f0-9]{64}"' \
     | sed 's/"[[:space:]]*:[[:space:]]*"/|/; s/^"//; s/"$//' || true)
 
   if [ -z "$manifest" ]; then
@@ -404,7 +408,7 @@ if [ "$MODE" = "check-replication" ]; then
 
   # Excluded files are never synced, so they can never be out of sync.
   excluded=$(sed -n '/"exclude"[[:space:]]*:[[:space:]]*\[/,/\]/p' "$config" \
-    | grep -oE '"[^"]+\.(md|sh|py)"' | tr -d '"' || true)
+    | grep -oE '"[^"]+\.(md|sh|py|toml|yaml)"' | tr -d '"' || true)
 
   # Session-changed files: committed in range plus working tree. Fixture mode
   # supplies the list directly so the check is testable without a repo.
@@ -463,9 +467,12 @@ if [ "$MODE" = "check-replication" ]; then
     current=$(sha_of "$path")
 
     case "$path" in
-      .claude/*)
+      .claude/*|.codex/*|.agents/skills/*)
         # User-scope mirror: the copy that actually executes in every session.
         mirror="$home_root/$path"
+        if [ "$SOP_RUNTIME" = codex ]; then
+          case "$path" in .codex/*) mirror="${CODEX_HOME:-$home_root/.codex}/${path#.codex/}" ;; esac
+        fi
         if [ ! -f "$mirror" ]; then
           stale_mirror="$stale_mirror
   $path -> $mirror (mirror missing)"
@@ -605,7 +612,7 @@ legal_paths_from() {
 # P84/P92 work) were tagged [Bug]/[Refactor] and exempt, and the reviews that
 # did run found a HIGH and two CRITICALs. Tag is a poor proxy for risk here.
 sop_self_mod_paths() {
-  printf '%s\n' "$1" | grep -E '^(docs/sop/|docs/guides/sop-|\.claude/agents/|\.claude/commands/|scripts/validate-)' || true
+  printf '%s\n' "$1" | grep -E '^(docs/sop/|docs/guides/sop-|\.claude/agents/|\.claude/commands/|\.agents/skills/|\.codex/agents/|scripts/validate-)' || true
 }
 
 session_changed_files() {
