@@ -9,11 +9,13 @@ instructions, work items, decisions and session records live in Markdown.
 
 ## What it does
 
+- Coordinates multiple agents and sessions working on the same repository, using
+  separate worktrees, shared handoffs and task/file ownership claims.
 - Gives a project a consistent place for instructions, a backlog and session history.
 - Provides commands to resume work, close a session and update the SOP files.
 - Checks backlog transitions, review records and unfinished session housekeeping.
 - Supplies hooks for context loading and, on code projects, session-end checks.
-- Shares handoffs across local worktrees and detects conflicting task/file claims.
+- Shares handoffs across local worktrees and refreshes context as other sessions work.
 - Keeps session identity stable as worktrees are added or removed.
 - Works with [ship-sop](https://github.com/mmjclayton/ship-sop) for code review gates.
 
