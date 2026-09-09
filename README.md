@@ -8,6 +8,8 @@ live in plain Markdown files, with shell scripts for routine checks.
 
 ## What it does
 
+- Coordinates multiple agents and sessions working on the same repository, using
+  separate Git worktrees and shared project handoffs.
 - Gives a project a consistent place for instructions, a backlog and session history.
 - Provides commands to resume work, close a session and update the SOP files.
 - Checks backlog transitions, review records and unfinished session housekeeping.
@@ -15,6 +17,12 @@ live in plain Markdown files, with shell scripts for routine checks.
 - Works with [ship-sop](https://github.com/mmjclayton/ship-sop) for code review gates.
 
 Claude and Codex share the same project records. You can use either or install both.
+
+Use one writer per worktree for parallel editing. See the
+[multi-agent workflow](docs/sop/multi-agent.md) for identities, shared records and
+merge discipline. Task/file ownership claims and expanded cross-worktree context
+refresh have also been implemented locally and are awaiting merge; they are not
+yet available from the default branch.
 
 ## Quick start
 
