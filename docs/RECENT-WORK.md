@@ -7,8 +7,9 @@ the sentinels.
 Moved out of `CLAUDE.md` on 2026-08-03 so it stops consuming context every session.
 
 <!-- recent-work-rollup:start -->
-*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-09-08.*
+*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-09-09.*
 
+- 2026-09-09 `solo`: README and GitHub About update
 - 2026-09-08 `solo`: Review evidence and parallel-session continuity hardening
 - 2026-09-08 `solo`: Native Codex runtime support
 - 2026-09-08 `solo`: Codex merge and automatic-cycle verification
