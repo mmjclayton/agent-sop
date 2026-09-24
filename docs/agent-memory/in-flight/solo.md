@@ -1,1 +1,1 @@
-(2026-09-24): P110 merged to main (PR #29, ac93962) with ship-sop P32 (PR #15). Next: ship-sop P33 path-scoped reviewer enablement, which touches sop-lib.sh here (config validation, receipt coverage, demand text). Native-model pilot stays deferred (AUD 0).
+(2026-09-24): P111 shipped (PR #30) with ship-sop P33 (PR #16); P110 merged (PR #29). User-scope Claude hooks refreshed; the Codex hook copy still holds the 8 Sep library. Next: ship-sop P34 (run and round counts in Claude receipts) when authorised; native-model pilot stays deferred (AUD 0).
