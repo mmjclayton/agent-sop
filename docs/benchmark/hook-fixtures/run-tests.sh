@@ -311,6 +311,32 @@ for badcase in 'paths-not-array:"^scripts/"' 'paths-bad-regex:["("]'; do
     if [ "$HOOK_EXIT" = 2 ] && grep -q "configuration invalid" "$HOOK_ERR"; then ok "stop-shipsop-$BADNAME-invalid"; else bad "stop-shipsop-$BADNAME-invalid" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
 done
 
+# ── Receipt run counts (ship-sop P34 / agent-sop P112) ───────────────────────
+# A version-2 receipt carries launches, rechecks and block_rounds per reviewer;
+# version 1 stays valid. Each case fails against the pre-P112 validator, which
+# accepted version 1 only.
+V2="$TMP/v2"; make_repo "$V2" with-code
+cp "$SHIP/ship-sop.config.json" "$V2/"
+(cd "$V2" && $GIT add -A >/dev/null && $GIT commit -q -m "chore: config" && $GIT push -q origin main 2>/dev/null)
+git -C "$V2" checkout -q -b feat/counted
+commit_code "$V2" "feat: counted work"
+commit_record "$V2" "recorded"
+make_receipt "$V2" "$TMP/v2-base.json"
+jq '.schema_version = 2' "$TMP/v2-base.json" > "$V2/docs/reviews/20260924-130000-ship-auto.json"
+(cd "$V2" && $GIT add -A >/dev/null && $GIT commit -q -m "docs: v2 receipt without counts")
+run_hook "$STOP" "$V2" ''
+if grep -q "@security-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-v2-receipt-without-counts-does-not-cover"; else bad "stop-shipsop-v2-receipt-without-counts-does-not-cover" "stderr='$(cat "$HOOK_ERR")'"; fi
+make_receipt "$V2" "$TMP/v2-base.json"
+jq '.schema_version = 2 | .reviewers |= map(. + {launches: 1, rechecks: 2, block_rounds: 4, usage: null})' "$TMP/v2-base.json" > "$V2/docs/reviews/20260924-131000-ship-auto.json"
+(cd "$V2" && $GIT add -A >/dev/null && $GIT commit -q -m "docs: v2 receipt with impossible rounds")
+run_hook "$STOP" "$V2" ''
+if grep -q "@security-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-v2-receipt-more-block-rounds-than-runs-does-not-cover"; else bad "stop-shipsop-v2-receipt-more-block-rounds-than-runs-does-not-cover" "stderr='$(cat "$HOOK_ERR")'"; fi
+make_receipt "$V2" "$TMP/v2-base.json"
+jq '.schema_version = 2 | .reviewers |= map(. + {launches: 1, rechecks: 2, block_rounds: 2, usage: null})' "$TMP/v2-base.json" > "$V2/docs/reviews/20260924-132000-ship-auto.json"
+(cd "$V2" && $GIT add -A >/dev/null && $GIT commit -q -m "docs: v2 receipt with counts")
+run_hook "$STOP" "$V2" ''
+if ! grep -q "@security-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-v2-receipt-with-counts-covers"; else bad "stop-shipsop-v2-receipt-with-counts-covers" "stderr='$(cat "$HOOK_ERR")'"; fi
+
 # ── Project type (P102) ──────────────────────────────────────────────────────
 # The operator's rule: ship-sop fires for coding and for nothing else. One
 # function decides what "coding" is; these cases pin it.
