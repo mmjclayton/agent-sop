@@ -1262,7 +1262,7 @@ Implemented and verified locally on `fix/review-continuity-hardening`. All nine 
 
 `[SHIPPED - 2026-09-24] [Feature]`
 
-Merged via PR #30 (2d4cf7d) with ship-sop P33 (PR #16, 1ace2d8); CI green on main in both. User-scope Claude hooks refreshed the same day.
+Merged via PR #30 (2d4cf7d) with ship-sop P33 (PR #16, 1ace2d8); CI green on main in both. User-scope Claude and Codex hooks refreshed the same day.
 
 The agent-sop half of ship-sop P33. `sop-lib.sh` gains one rule, `sop_agents_in_scope`: an enabled reviewer without `paths` is in scope for every range; one with `paths` only when a path changed in `base..head` matches one of its patterns (jq regular expressions); an empty `paths` never. The Stop-hook demand lists the in-scope set and is silent when it is empty; the receipt validator requires exactly the in-scope reviewers for the receipt's own range and still holds any extra reviewer to its threshold; `sop_policy_valid` accepts `paths` only as an array of non-empty patterns that compile.
 
