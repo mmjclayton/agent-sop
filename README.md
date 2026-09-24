@@ -21,6 +21,12 @@ instructions, work items, decisions and session records live in Markdown.
 
 Claude and Codex share the same project records. You can use either or install both.
 
+Use one writer per worktree for parallel editing. See the
+[multi-agent workflow](docs/sop/multi-agent.md) for identities, shared records and
+merge discipline. Task/file ownership claims and expanded cross-worktree context
+refresh have also been implemented locally and are awaiting merge; they are not
+yet available from the default branch.
+
 ## Quick start
 
 You need Git, Bash, `jq`, and the agent runtime you want to use. Python 3 is needed
