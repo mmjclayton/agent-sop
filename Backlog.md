@@ -1277,7 +1277,9 @@ Source: the 2026-09-24 gate-yield review of eleven Opportunity Scan receipts (se
 
 ### P112 - Receipt schema version 2: run counts per reviewer
 
-`[IN PROGRESS] [Iteration]`
+`[SHIPPED - 2026-09-24] [Iteration]`
+
+Merged via PR #31 (178a22c) with ship-sop P34 (PR #17). User-scope Claude and Codex hook libraries refreshed the same day.
 
 The agent-sop half of ship-sop P34. `sop_receipt_valid` accepts `schema_version` 1 (unchanged) and 2. A version-2 reviewer entry must carry `launches` (integer, at least 1), `rechecks` (integer, at least 0) and `block_rounds` (integer, at least 0, never more than launches plus rechecks), and may carry `usage` (an object, or null when the runtime exposes nothing). Receipts carry no cost field today, so the 24 September gate-cost figure was an estimate; the counts are the measured proxy.
 

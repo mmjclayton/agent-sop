@@ -1,1 +1,1 @@
-(2026-09-24): P111 shipped (PR #30) with ship-sop P33 (PR #16); P110 merged (PR #29). User-scope Claude and Codex hooks, /ship and the Codex ship skill refreshed from main. Next: ship-sop P34 (run and round counts in Claude receipts) when authorised; native-model pilot stays deferred (AUD 0).
+(2026-09-24): P110 merged (PR #29); P111 (PR #30) and P112 (PR #31) shipped with ship-sop P33/P34. Nothing authorised next. Native-model pilot stays deferred (AUD 0). main is unprotected; the operator holds the protection commands.
