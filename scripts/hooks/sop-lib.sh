@@ -426,6 +426,10 @@ sop_agents_in_scope() {
 }
 
 # Validate completion and derive threshold decisions, independently of prose verdicts.
+# schema_version 1 receipts stay valid; version 2 (ship-sop P34) adds per-reviewer
+# run counts - launches (fresh agents, at least one), rechecks (re-reviews with
+# context intact), block_rounds (rounds that returned BLOCK, never more than the
+# runs) - and an optional usage object the runtime may supply; null when it cannot.
 sop_receipt_valid() {
     local root="$1" receipt="$2" cfg sha base required tree scope
     cfg=$(sop_effective_config "$root")
@@ -440,7 +444,7 @@ sop_receipt_valid() {
       def rank: {CRITICAL:4,HIGH:3,MEDIUM:2,LOW:1,INFO:0,never:99}[.];
       def text: type == "string" and length > 0;
       . as $r |
-      .schema_version == 1 and .policy_sha256 == $policy and
+      (.schema_version | IN(1, 2)) and .policy_sha256 == $policy and
       (.head | test("^[0-9a-f]{40}$")) and (.base | test("^[0-9a-f]{40}$")) and
       (.tree | test("^[0-9a-f]{40}$")) and
       (.tests.status | IN("PASS", "NOT_AVAILABLE")) and (.tests.evidence | text) and
@@ -448,6 +452,13 @@ sop_receipt_valid() {
       ([.reviewers[].name] | length == (unique | length)) and
       all(.reviewers[]; (.name | text) and .verdict == "PASS" and
         (.version | text) and (.model | text) and
+        (if $r.schema_version == 2 then
+           (.launches | type == "number" and . >= 1 and floor == .) and
+           (.rechecks | type == "number" and . >= 0 and floor == .) and
+           (.block_rounds | type == "number" and . >= 0 and floor == .) and
+           (.block_rounds <= .launches + .rechecks) and
+           ((.usage // null) | type == "object" or . == null)
+         else true end) and
         (.findings | type == "array" and all(.[];
           (.severity | IN("CRITICAL","HIGH","MEDIUM","LOW","INFO")) and
           (.file | text) and (.line | type == "number" and . > 0 and floor == .) and (.message | text)))) and
