@@ -85,7 +85,7 @@ fi
 KNOWN_TOP_LEVEL='trigger agents release artifacts $schema'
 KNOWN_TRIGGER='mode throttle'
 KNOWN_THROTTLE='min_diff_lines skip_docs_only cooldown_seconds skip_branch_patterns'
-KNOWN_AGENT='enabled block_on auto_file_backlog'
+KNOWN_AGENT='enabled block_on paths auto_file_backlog'
 KNOWN_RELEASE='auto_publish default_branch version_source'
 KNOWN_ARTIFACTS='retain_ship_artifact_days'
 
@@ -259,12 +259,18 @@ done < <(git diff --name-only "$BASE..HEAD")
 
 # ── Build the gate plan from config ───────────────────────────────────────────
 
+# Reviewer scope by path (P33): an enabled agent with `paths` joins the plan
+# only when a changed path matches one of its patterns. Same rule as
+# agent-sop's sop_agents_in_scope, which the Stop hook and the receipt
+# validator read; a missing `paths` means every diff, an empty one never.
+CHANGED_FILES_JSON=$(git diff --no-renames --name-only "$BASE..HEAD" | jq -R . | jq -sc .)
+IN_SCOPE='select(.value.enabled == true) | . as $a | select(($a.value | has("paths") | not) or any($files[]; . as $f | any($a.value.paths[]; . as $p | $f | test($p))))'
 if [ "$DOCS_ONLY" = true ]; then
     # On docs-only diffs, run only advisory gates. A gate is advisory iff its
     # block_on is "never" — hard-blocking gates (CRITICAL/HIGH/MEDIUM) are skipped.
-    ENABLED_AGENTS=$(jq -r '.agents | to_entries[] | select(.value.enabled == true and .value.block_on == "never") | .key' "$CONFIG")
+    ENABLED_AGENTS=$(jq -r --argjson files "$CHANGED_FILES_JSON" ".agents | to_entries[] | $IN_SCOPE | select(.value.block_on == \"never\") | .key" "$CONFIG")
 else
-    ENABLED_AGENTS=$(jq -r '.agents | to_entries[] | select(.value.enabled == true) | .key' "$CONFIG")
+    ENABLED_AGENTS=$(jq -r --argjson files "$CHANGED_FILES_JSON" ".agents | to_entries[] | $IN_SCOPE | .key" "$CONFIG")
 fi
 
 if [ -z "$ENABLED_AGENTS" ]; then

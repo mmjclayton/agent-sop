@@ -386,13 +386,19 @@ sop_policy_valid() {
       (.agents | type == "object" and all(to_entries[];
         (.key | test("^[a-z0-9][a-z0-9-]*$")) and
         (.value.enabled | type == "boolean") and
-        (.value | prop("block_on"; "CRITICAL") | IN("CRITICAL", "HIGH", "MEDIUM", "never"))))
+        (.value | prop("block_on"; "CRITICAL") | IN("CRITICAL", "HIGH", "MEDIUM", "never")) and
+        ((.value | prop("paths"; [])) | type == "array" and all(.[]; type == "string" and length > 0 and (test("[\\r\\n]") | not)))))
     ' "$1" >/dev/null 2>&1 || return 1
     local pat result
     while IFS= read -r pat; do
         printf '' | grep -E -- "$pat" >/dev/null 2>&1; result=$?
         [ "$result" -le 1 ] || return 1
     done < <(jq -r '.trigger.throttle.skip_branch_patterns[]?' "$1")
+    # Reviewer path scopes are matched by jq (the demand and the receipt
+    # validator share one implementation), so each must compile there.
+    while IFS= read -r pat; do
+        jq -en --arg p "$pat" '"" | test($p) | true' >/dev/null 2>&1 || return 1
+    done < <(jq -r '.agents[] | .paths[]?' "$1")
     return 0
 }
 
@@ -400,13 +406,37 @@ sop_policy_digest() {
     { printf 'ship-receipt-v1\n'; jq -Sc . "$1"; } | sop_sha256
 }
 
+# sop_changed_files_json <root> <base> <head> — JSON array of every path the
+# range touches (both sides of a rename), for reviewer scope decisions.
+sop_changed_files_json() {
+    git -C "$1" diff --no-renames --name-only "$2..$3" 2>/dev/null | jq -R . | jq -sc .
+}
+
+# sop_agents_in_scope <config> <files-json> — JSON array of {key, block_on} for
+# every enabled reviewer whose scope the range enters. A reviewer without
+# `paths` is in scope for every range; one with `paths` only when a changed
+# path matches one of its patterns; an empty `paths` never. The gate demand,
+# the receipt validator and /ship all read this one rule (ship-sop P33).
+sop_agents_in_scope() {
+    jq -c --argjson files "$2" '
+      [.agents | to_entries[] | select(.value.enabled == true) | . as $a |
+        select(($a.value | has("paths") | not) or
+               any($files[]; . as $f | any($a.value.paths[]; . as $p | $f | test($p)))) |
+        {key: $a.key, block_on: ($a.value.block_on // "CRITICAL")}]' "$1" 2>/dev/null || printf '[]'
+}
+
 # Validate completion and derive threshold decisions, independently of prose verdicts.
 sop_receipt_valid() {
-    local root="$1" receipt="$2" cfg sha base required tree
+    local root="$1" receipt="$2" cfg sha base required tree scope
     cfg=$(sop_effective_config "$root")
     jq -se 'length == 1' "$receipt" >/dev/null 2>&1 || return 1
     sop_policy_valid "$cfg" || return 1
-    jq -e --slurpfile cfg "$cfg" --arg policy "$(sop_policy_digest "$cfg")" '
+    sha=$(jq -r '.head // ""' "$receipt"); base=$(jq -r '.base // ""' "$receipt")
+    [ "$(printf '%s\n%s\n' "$sha" "$base" | grep -Ec '^[0-9a-f]{40}$')" = 2 ] || return 1
+    # Only reviewers in scope for the receipt's own range are required (P33);
+    # any extra reviewer present is still held to its threshold below.
+    scope=$(sop_agents_in_scope "$cfg" "$(sop_changed_files_json "$root" "$base" "$sha")")
+    jq -e --slurpfile cfg "$cfg" --argjson scope "$scope" --arg policy "$(sop_policy_digest "$cfg")" '
       def rank: {CRITICAL:4,HIGH:3,MEDIUM:2,LOW:1,INFO:0,never:99}[.];
       def text: type == "string" and length > 0;
       . as $r |
@@ -421,15 +451,14 @@ sop_receipt_valid() {
         (.findings | type == "array" and all(.[];
           (.severity | IN("CRITICAL","HIGH","MEDIUM","LOW","INFO")) and
           (.file | text) and (.line | type == "number" and . > 0 and floor == .) and (.message | text)))) and
-      all($cfg[0].agents | to_entries[] | select(.value.enabled); . as $a |
+      all($scope[]; . as $a |
         ([$r.reviewers[] | select(.name == $a.key)] | length == 1) and
         all($r.reviewers[] | select(.name == $a.key) | .findings[];
-          (.severity | rank) < ($a.value.block_on // "CRITICAL" | rank))) and
+          (.severity | rank) < ($a.block_on | rank))) and
       all(.reviewers[]; . as $review |
         ($cfg[0].agents[$review.name].block_on // "CRITICAL") as $threshold |
         all(.findings[]; (.severity | rank) < ($threshold | rank)))
     ' "$receipt" >/dev/null 2>&1 || return 1
-    sha=$(jq -r .head "$receipt"); base=$(jq -r .base "$receipt")
     tree=$(git -C "$root" rev-parse "$sha^{tree}" 2>/dev/null) || return 1
     [ "$tree" = "$(jq -r .tree "$receipt")" ] || return 1
     git -C "$root" merge-base --is-ancestor "$base" "$sha" 2>/dev/null || return 1
@@ -466,7 +495,7 @@ sop_shipsop_covered() {
 # by nothing here any more — documentation extensions are always excluded
 # from the count; the field survives for /ship's manual mode and old configs.
 sop_shipsop_gate() {
-    local root="$1" cfg mode branch pat base head lines min report agents
+    local root="$1" cfg mode branch pat base head lines min report agents scope
     cfg="$root/ship-sop.config.json"
     [ -f "$cfg" ] || { printf ''; return; }
     sop_have_jq || { printf ''; return; }
@@ -502,12 +531,18 @@ sop_shipsop_gate() {
     # ancestor of HEAD with no code change since. "No code change" uses the
     # same docs filter as the trigger, so committing the report itself — or
     # any later docs-only commit — does not un-cover the branch.
+    # Reviewer scope by path (ship-sop P33): only enabled reviewers whose
+    # `paths` the range enters are demanded, and when none is there is no
+    # gate to run — the same rule the receipt validator applies.
+    scope=$(sop_agents_in_scope "$cfg" "$(sop_changed_files_json "$root" "$base" "$head")")
+    [ "$scope" != "[]" ] || { printf ''; return; }
+
     if sop_shipsop_covered "$root" "$head"; then
         printf ''
         return
     fi
 
-    agents=$(jq -r '.agents | to_entries[] | select(.value.enabled == true) | "  - @\(.key) (block_on: \(.value.block_on // "CRITICAL"))"' "$cfg" 2>/dev/null)
+    agents=$(jq -r '.[] | "  - @\(.key) (block_on: \(.block_on))"' <<< "$scope" 2>/dev/null)
     report="docs/reviews/$(date +%Y%m%d-%H%M%S)-ship-auto.md"
 
     printf 'ship-sop gate (auto-mode per ship-sop.config.json): %s code lines on %s vs %s (%s..%s) have no gate report.\n' \

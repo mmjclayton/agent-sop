@@ -1257,3 +1257,19 @@ Validate structured ship receipts and invalid policy; classify executable instru
 Authorised by the user following the 2026-09-08 full review. This explicitly changes enforcement policy. Acceptance: discriminating regression fixtures, complete existing suites, independent isolated review, preserved consumer customisations and documented migration.
 
 Implemented and verified locally on `fix/review-continuity-hardening`. All nine fixture suites pass; full-range findings were corrected and all three configured reviewers passed the pinned correction range. Validated receipt recorded. Claude/Codex installations and resume snapshots updated. Remains IN PROGRESS until merge; publication and a budgeted native-model comparison are separate decisions.
+
+### P111 - Reviewer scope by path in the ship gate library
+
+`[IN PROGRESS] [Feature]`
+
+The agent-sop half of ship-sop P33. `sop-lib.sh` gains one rule, `sop_agents_in_scope`: an enabled reviewer without `paths` is in scope for every range; one with `paths` only when a path changed in `base..head` matches one of its patterns (jq regular expressions); an empty `paths` never. The Stop-hook demand lists the in-scope set and is silent when it is empty; the receipt validator requires exactly the in-scope reviewers for the receipt's own range and still holds any extra reviewer to its threshold; `sop_policy_valid` accepts `paths` only as an array of non-empty patterns that compile.
+
+Source: the 2026-09-24 gate-yield review of eleven Opportunity Scan receipts (security-reviewer zero blocking there, a CRITICAL in this repository's shell on 5 September). Decision record in opportunity-scan `docs/agent-memory/decisions/2026-09-24_client_two-reviewers-carry-the-gate.md`.
+
+**Acceptance criteria:**
+- Hook fixtures: scoped reviewer not demanded on a non-matching range and demanded on a matching one; a receipt without the out-of-scope reviewer covers; one missing an in-scope reviewer does not; every reviewer out of scope leaves stop and push silent; `paths` as a string or an uncompilable pattern is an invalid policy
+- A config with no `paths` anywhere produces the same demand and the same receipt verdicts as before
+- shellcheck clean; all nine suites pass
+
+---
+
