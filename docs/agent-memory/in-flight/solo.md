@@ -1,1 +1,1 @@
-(2026-09-24): P110 merged (PR #29); P111 (PR #30) and P112 (PR #31) shipped with ship-sop P33/P34. Nothing authorised next. Native-model pilot stays deferred (AUD 0). main is unprotected; the operator holds the protection commands.
+(2026-09-24): P110 merged (PR #29); P111 (PR #30) and P112 (PR #31) shipped with ship-sop P33/P34. Nothing authorised next. Native-model pilot stays deferred (AUD 0). main is protected since this evening (required CI check, enforce_admins, auto-merge on): every commit goes via PR.
