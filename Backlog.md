@@ -1246,7 +1246,9 @@ Merged to main in PR #26 (`999b31c`) on 2026-09-08.
 
 ### P110 - Review evidence, continuity and operating-cost hardening
 
-`[IN PROGRESS] [Refactor]`
+`[SHIPPED - 2026-09-24] [Refactor]`
+
+Merged to main via PR #29 (ac93962) on 2026-09-24 with ship-sop P32 (PR #15, 5fe6e61); CI green on main in both repositories. The native-model comparison pilot stays deferred (AUD 0 budget).
 
 review: docs/reviews/20260908-hardening-ship-auto.md
 

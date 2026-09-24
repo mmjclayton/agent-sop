@@ -1,1 +1,1 @@
-(2026-09-08): P110 implemented and verified locally on fix/review-continuity-hardening. Review: docs/reviews/20260908-hardening-ship-auto.md. Next: publish/merge when authorised; native-model pilot deferred at user direction (AUD 0 budget). No implementation blocker remains.
+(2026-09-24): P110 merged to main (PR #29, ac93962) with ship-sop P32 (PR #15). Next: ship-sop P33 path-scoped reviewer enablement, which touches sop-lib.sh here (config validation, receipt coverage, demand text). Native-model pilot stays deferred (AUD 0).
