@@ -22,9 +22,10 @@ the shared priority block in CLAUDE.md; on Codex-only projects put it in
 AGENTS.md. Do not maintain duplicate priority blocks.
 
 The repo's `scripts/resolve-resume-path.sh` remains the only resume path resolver.
-Its legacy `.claude/projects/.../memory` storage is deliberately shared between
-runtimes, including Codex-only installs. It is SOP data storage, not a dependency
-on an installed Claude executable. Existing snapshots are not moved or renamed.
+Its `.claude/agent-sop/projects/<root-digest>/memory` storage is shared between
+runtimes and needs no Claude executable. Existing slug-based snapshots require
+explicit `--migrate-legacy` after confirming ownership with `--legacy-dir`;
+original snapshots are preserved. See multi-agent.md for migration and identity.
 
 ## Hooks
 
@@ -52,8 +53,8 @@ create an independent clone in `mktemp -d`, check out the exact review commit,
 and run a separate `codex exec --sandbox read-only` process there. Disable hooks
 for these reviewer processes to avoid recursive SOP sessions. The runner ignores
 user configuration and execution rules, and disables plugins, apps, delegation
-and computer/browser tools. Authentication is retained; the CLI default model
-is used. The temporary clone is untrusted, so its project config is not loaded. Pass the range and
+and computer/browser tools. Authentication is retained; the CLI default model is used unless
+SHIP_REVIEW_MODEL explicitly selects one. Reviewer telemetry is kept locally. The temporary clone is untrusted, so its project config is not loaded. Pass the range and
 reviewer instructions on stdin, return findings inline, and have the parent write
 the report. The ship-sop `scripts/codex-review.sh` implements this boundary.
 A path mentioned in a subagent prompt does not isolate a process. Do not use

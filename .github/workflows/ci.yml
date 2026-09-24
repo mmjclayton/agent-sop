@@ -1,0 +1,20 @@
+name: SOP fixtures
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y jq shellcheck
+      - name: Regression suites
+        run: |
+          for suite in docs/benchmark/*-fixtures/run-tests.sh; do
+            bash "$suite" || exit 1
+          done
+      - name: Runtime policy lint
+        run: shellcheck -S warning scripts/hooks/*.sh scripts/resolve-resume-path.sh scripts/refresh-in-flight.sh

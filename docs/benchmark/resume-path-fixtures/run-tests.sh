@@ -46,11 +46,8 @@ for repo in "$PROJ_A" "$PROJ_B"; do
     )
 done
 
-MEM_A="$FAKE_HOME/.claude/projects/-$TMP-home-Projects-alpha/memory"
-MEM_A=$(printf '%s' "$PROJ_A" | sed 's|[^a-zA-Z0-9-]|-|g' | sed 's|--*|-|g' | sed 's|^-||')
-MEM_A="$FAKE_HOME/.claude/projects/-$MEM_A/memory"
-MEM_B=$(printf '%s' "$PROJ_B" | sed 's|[^a-zA-Z0-9-]|-|g' | sed 's|--*|-|g' | sed 's|^-||')
-MEM_B="$FAKE_HOME/.claude/projects/-$MEM_B/memory"
+MEM_A=$(bash "$RESOLVER" --root "$PROJ_A" --home "$FAKE_HOME" --dir)
+MEM_B=$(bash "$RESOLVER" --root "$PROJ_B" --home "$FAKE_HOME" --dir)
 mkdir -p "$MEM_A" "$MEM_B"
 
 pass=0
@@ -169,7 +166,7 @@ if command -v git >/dev/null 2>&1; then
     )
 
     if [ -d "$TMP/home/Projects/multi-sibling" ]; then
-        expected_hash=$(printf '%s' "$REPO" | { shasum -a 256 2>/dev/null || sha256sum; } | cut -c1-6)
+        expected_hash=solo
         got=$(env -u CLAUDE_AGENT_ID bash "$RESOLVER" --home "$FAKE_HOME" --root "$REPO" --agent-id 2>/dev/null)
         if [ "$got" = "$expected_hash" ]; then
             echo "PASS: multi-worktree-agent-id-is-path-hash (exit 0)"; pass=$((pass + 1))

@@ -60,6 +60,21 @@ bad()  { echo "FAIL: $1 — $2"; fail=$((fail + 1)); failed="$failed $1"; }
 
 # ── Fixture builders ──────────────────────────────────────────────────────────
 
+# Test receipt builder: successful reviewers for this fixture's configured policy.
+make_receipt() (
+    . "$HOOKS_DIR/sop-lib.sh"
+    local root="$1" output="$2" head
+    head=$(git -C "$root" rev-parse HEAD)
+    jq -n --arg head "$head" --arg base "$(sop_range_base "$root")" \
+      --arg tree "$(git -C "$root" rev-parse 'HEAD^{tree}')" \
+      --arg policy "$(sop_policy_digest "$root/ship-sop.config.json")" \
+      --slurpfile cfg "$root/ship-sop.config.json" \
+      '{schema_version:1,head:$head,base:$base,tree:$tree,policy_sha256:$policy,
+        tests:{status:"PASS",evidence:"fixture tests"},
+        reviewers:[$cfg[0].agents|to_entries[]|select(.value.enabled)|
+          {name:.key,version:"fixture-v1",model:"fixture",verdict:"PASS",findings:[]}]}' > "$output"
+)
+
 # make_repo <dir> [with-sop|with-code]
 # Creates a bare origin at <dir>.git, clones it to <dir>, makes an initial
 # commit on main and pushes so origin/main exists. With "with-sop", installs
@@ -212,6 +227,7 @@ if [ "$HOOK_EXIT" = 2 ] && grep -q "@security-reviewer" "$HOOK_ERR" && grep -q "
 
 HEADSHA=$(head_of "$SHIP")
 printf '# ship report\n\nCovers: %s\n' "$HEADSHA" > "$SHIP/docs/reviews/20260904-100000-ship-auto.md"
+make_receipt "$SHIP" "$SHIP/docs/reviews/20260904-100000-ship-auto.json"
 (cd "$SHIP" && $GIT add -A >/dev/null && $GIT commit -q -m "docs: ship report")
 run_hook "$STOP" "$SHIP" ''
 # The report commit is itself a commit after the last session record — so the
@@ -293,7 +309,7 @@ SUPER="$TMP/super"; make_repo "$SUPER" with-code
 SUPER_DIR=$(dirname "$(bash "$SUPER/scripts/resolve-resume-path.sh" --root "$(git -C "$SUPER" rev-parse --show-toplevel)" --home "$HOME")")
 mkdir -p "$SUPER_DIR" && printf '**SUPERSEDED - 2026-08-07.** Use the per-agent file.\n\n## What is next\n- stale\n' > "$SUPER_DIR/project_resume.md"
 SESSION_ID=ctx-super run_hook "$CTX" "$SUPER" ''
-if grep -q "^Resume snapshot: (none found" "$HOOK_OUT" && ! grep -q "SUPERSEDED" "$HOOK_OUT"; then ok "ctx-superseded-legacy-resume-not-served"; else bad "ctx-superseded-legacy-resume-not-served" "out='$(grep -A1 'Resume snapshot' "$HOOK_OUT" | head -2)'"; fi
+if grep -q "^Resume snapshot: .*marked superseded" "$HOOK_OUT" && ! grep -q "^- stale$" "$HOOK_OUT"; then ok "ctx-superseded-legacy-resume-not-served"; else bad "ctx-superseded-legacy-resume-not-served" "out='$(grep -A1 'Resume snapshot' "$HOOK_OUT" | head -2)'"; fi
 
 # The notice's own "carry on" instruction — add a line to the in-flight file —
 # must not re-fire it (seen live on the first P103 run); any other tracker
@@ -429,6 +445,7 @@ git -C "$LOOSE" checkout -q main && git -C "$LOOSE" checkout -q -b feat/covered
 commit_code "$LOOSE" "feat: code to cover"
 commit_record "$LOOSE" "recorded"
 printf '# report\n\nCovers: %s\n' "$(head_of "$LOOSE")" > "$LOOSE/docs/reviews/20260904-120000-ship-auto.md"
+make_receipt "$LOOSE" "$LOOSE/docs/reviews/20260904-120000-ship-auto.json"
 (cd "$LOOSE" && $GIT add -A >/dev/null && $GIT commit -q -m "docs: ship report")
 (cd "$LOOSE" && for i in $(seq 1 20); do echo "more $i" >> notes.md; done && $GIT add -A >/dev/null && $GIT commit -q -m "docs: more notes")
 run_hook "$PUSH" "$LOOSE" "$(push_json 'git push -u origin feat/covered')"
@@ -478,6 +495,7 @@ run_hook "$PUSH" "$GATED" "$(push_json "git commit -m 'then git push'")"
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-verb-in-commit-message-silent"; else bad "push-verb-in-commit-message-silent" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
 
 printf '# report\n\nCovers: %s\n' "$(head_of "$GATED")" > "$GATED/docs/reviews/20260904-110000-ship-auto.md"
+make_receipt "$GATED" "$GATED/docs/reviews/20260904-110000-ship-auto.json"
 run_hook "$PUSH" "$GATED" "$(push_json 'git push -u origin feat/push')"
 if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-shipsop-covered-allowed"; else bad "push-shipsop-covered-allowed" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
 

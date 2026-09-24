@@ -25,7 +25,7 @@ If a block headed `--- Agent SOP context: <project> ---` is in this session, the
 ls docs/agent-memory/decisions docs/agent-memory/gotchas 2>/dev/null | sort -r | head -10
 ```
 
-Open the entries whose names touch today's work. Gotchas are the file later sessions most often read again; read them before touching the area they name.
+Search filenames and content for today's topic and affected paths before limiting by recency. Open relevant entries even when they are older. Gotchas are the file later sessions most often read again; read them before touching the area they name.
 
 ## Step 3: The work item
 
@@ -40,3 +40,10 @@ Judgement stays with the session: the item's acceptance criteria and open questi
 ## Step 4: Report
 
 One paragraph: the item, what the block says is in flight or drifting, and anything that contradicts the item (a sibling worktree with uncommitted edits, a stale in-flight line). Then begin.
+
+For parallel editing, inspect the installed `sop-worktree-claim.sh status` from
+this worktree. Claim a unique session ID, task ID and intended source paths before
+editing. Use the runtime's user hook directory (`~/.codex/scripts/hooks/agent-sop`
+or `~/.claude/scripts/hooks/agent-sop`). A conflicting claim must be reconciled;
+never release another session without first inspecting its work. Read-only review
+sessions do not claim writing ownership.

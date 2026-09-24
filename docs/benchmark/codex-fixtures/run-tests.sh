@@ -9,6 +9,10 @@ unset CODEX_HOME
 mkdir -p "$WORK/project" "$WORK/dual" "$WORK/claude"
 bash "$SOURCE/setup.sh" "$WORK/project" --runtime codex --code > "$WORK/install.log"
 test -f "$WORK/project/AGENTS.md"
+rm "$AGENT_SOP_USER_HOME/.codex/scripts/hooks/agent-sop/resolve-resume-path.sh"
+bash "$SOURCE/scripts/sync-sop-files.sh" --runtime codex --root "$WORK/project" --apply > "$WORK/resolver-upgrade.log"
+test -f "$AGENT_SOP_USER_HOME/.codex/scripts/hooks/agent-sop/resolve-resume-path.sh"
+printf 'PASS: Codex sync restores the trusted resolver dependency\n'
 jq -e '(.baseline_shas | length) > 0' "$AGENT_SOP_USER_HOME/.codex/agent-sop.config.json" >/dev/null
 test ! -e "$WORK/project/CLAUDE.md"
 test ! -e "$AGENT_SOP_USER_HOME/.claude"

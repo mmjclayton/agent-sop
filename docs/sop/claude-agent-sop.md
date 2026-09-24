@@ -22,12 +22,12 @@ The shared standard operating procedure for Claude Code and Codex sessions on a 
 |---|---|---|
 | `CLAUDE.md` | operator and session | the harness, every session |
 | `Backlog.md` | session | the context hook (in-progress headings) and the session (one item's range, never the whole file) |
-| `docs/agent-memory/decisions/`, `gotchas/` | session, one file per entry | later sessions by filename, then by need; gotchas are the entry most often read again |
+| `docs/agent-memory/decisions/`, `gotchas/` | session, one file per entry | later sessions by task/path, then by need; gotchas are the entry most often read again |
 | `docs/agent-memory/in-flight/<agent-id>.md` | session | the context hook |
 | `docs/agent-memory.md` | scripts (In-Flight block) and the operator (Key Documents, Key Source Files, Preferences) | `/restart-sop` when hooks are absent |
 | `docs/recent-work/` | session, one file per session | the rollup script; the context hook shows the three newest titles |
 | `docs/RECENT-WORK.md` | `scripts/refresh-rollup.sh` | the context hook |
-| `docs/reviews/` | session, after a review run | the validator (`review:` citations), the push gate (`Covers:` lines), later reviews |
+| `docs/reviews/` | session, after a review run | the validator (`review:` citations), the push gate (validated JSON receipts), later reviews |
 | `docs/build-plans/phase-N.md` | operator and session, as planning | the session on an interrupted phase |
 | resume snapshot, `project_resume_<agent-id>.md` | session, overwritten each close | the context hook (first 80 lines), the drift validator |
 
@@ -45,7 +45,7 @@ The shared standard operating procedure for Claude Code and Codex sessions on a 
 
 ## 2. Session start
 
-With the user-scope hooks installed (`scripts/install-hooks.sh`), the context hook prints the resume snapshot, the recent sessions and every non-default fact on the first prompt inside the project. `/restart-sop` then does the two things that stay a judgement: list the newest decisions and gotchas and open the relevant ones; locate the Backlog item with `grep -n "^### P<n>"` and read only its range.
+With the user-scope hooks installed (`scripts/install-hooks.sh`), the context hook prints the resume snapshot, the recent sessions and every non-default fact on the first prompt inside the project. `/restart-sop` then does the two things that stay a judgement: search decisions and gotchas by task/path, using recency as a secondary filter; locate the Backlog item with `grep -n "^### P<n>"` and read only its range.
 
 Without hooks, read the resume snapshot at the resolver's `--read` path and `git log --oneline -10` first.
 

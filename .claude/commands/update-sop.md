@@ -38,7 +38,7 @@ For each item shipping this session as `[Feature]` or `[Refactor]`, a reviewer t
 - b. SOP self-modification: any change under `docs/sop/`, `docs/guides/sop-*`, `.claude/agents/`, `.claude/commands/`, `scripts/validate-*` fires the turn for every item shipping, whatever its tag or size;
 - c. a path listed in `agent-sop.config.json#review_triggers[]`, or a security path (`auth`, `login`, `session`, `token`, `password`, `credential`, `jwt`, `oauth`, `crypto`, `encrypt`, `signing`, `csrf`, `cors`, `xss`, `payment`, `billing`, `stripe`, `webhook`, `sanitize`, `escape_`, `raw_query`, matched against changed paths) which also routes to `security-reviewer`.
 
-On a code project with ship-sop `trigger.mode: "auto"`, the gate run the Stop hook demands **is** this turn: launch the config's enabled agents with `isolation: "worktree"`, read-only, wait for every result, write `docs/reviews/<YYYYMMDD-HHMMSS>-ship-auto.md` with `Covers: <sha>` after any fix commit. Otherwise launch `code-reviewer` (or `security-reviewer` for trigger c) the same way and write `docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md` from the review template. Either way the session writes the artefact; agents return findings inline.
+On a code project with ship-sop `trigger.mode: "auto"`, run the installed `/ship` workflow once. It launches every enabled reviewer in isolated worktrees, collects real results and tests, and uses the trusted receipt tool to produce a validated `docs/reviews/<stamp>-ship-auto.json` plus companion Markdown. Only the JSON receipt qualifies; a Markdown `Covers:` line does not. A fix commit requires fresh review of that commit, never relabelling earlier evidence. Missing receipt tooling is INCOMPLETE and requires upgrading both packages. Otherwise launch `code-reviewer` (or `security-reviewer` for trigger c) in an isolated read-only worktree and write `docs/reviews/YYYY-MM-DD_<agent-id>_P<n>.md` from the review template. Either way the session writes the artefact; agents return findings inline.
 
 Then, on the Backlog entry, one line under the status line:
 
@@ -53,7 +53,7 @@ The skip must name its own P-number and use that enumerated set. Under trigger b
 bash scripts/validate-state-transitions.sh --assert-review docs/reviews/<file>.md || exit 1
 ```
 
-A not-yet-written artefact and a never-run review look identical to the assertion; wait for the reviewer, do not write the file by hand.
+A not-yet-written artefact and a never-run review look identical to the assertion. Wait for actual reviewer results before writing the report; never invent evidence.
 
 ## Step 3: Backlog
 
@@ -108,3 +108,7 @@ git add Backlog.md docs/ && git commit -m "docs: session end housekeeping — <w
 ```
 
 Name the files; never `git add -A` after a review. Report in one paragraph: what shipped, which validators ran, what remains.
+
+If this session holds a worktree writer claim, release it with the installed
+`sop-worktree-claim.sh release <session-id>` after recording the handoff. Only the
+coordinating session writes shared close-out records.

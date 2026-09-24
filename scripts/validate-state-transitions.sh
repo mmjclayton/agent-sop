@@ -182,9 +182,8 @@ if [ "$MODE" = "check-drift" ]; then
     # docs/guides/cross-layer-rules.md Tier A.
     #
     # `|| resolver_status=$?` is load-bearing under `set -e`: the resolver
-    # exits 1 when no resume file exists (first session) and 2 when the repo
-    # root is the home directory. Both are conditions this check degrades
-    # through, not crashes on, so the status is captured rather than fatal.
+    # exits 1 when no resume file exists and 2 on unsafe/ambiguous resolution.
+    # Capture the status so diagnostics survive; only absence may skip drift.
     resolver="$(cd "$(dirname "$0")" && pwd)/resolve-resume-path.sh"
     resolver_status=0
     resolver_err=$(mktemp)
@@ -203,9 +202,9 @@ if [ "$MODE" = "check-drift" ]; then
     if [ "$resolver_status" != "0" ]; then
       resume_file=""
     fi
-    if [ "$resolver_status" = "2" ]; then
-      echo "check-drift: repo root is the home directory — the memory directory there is" >&2
-      echo "  the harness catch-all shared across projects, not project-scoped. Drift check skipped." >&2
+    if [ "$resolver_status" -gt 1 ]; then
+      echo "check-drift: resume resolution failed; repair the reported cause before closing." >&2
+      exit "$resolver_status"
     fi
   fi
 

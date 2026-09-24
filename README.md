@@ -1,19 +1,22 @@
 # Agent SOP
 
-A shared workflow for Claude Code and Codex that helps each session pick up where
-the last one stopped. Project context, work items, decisions and session records
-live in plain Markdown files, with shell scripts for routine checks.
+Portable project context and session coordination for Claude Code and Codex.
+Help each session resume work and coordinate parallel tasks using plain-file
+handoffs, worktree ownership claims and automated workflow checks. Project
+instructions, work items, decisions and session records live in Markdown.
 
 [MIT licensed](LICENSE). No database, background service or MCP server required.
 
 ## What it does
 
 - Coordinates multiple agents and sessions working on the same repository, using
-  separate Git worktrees and shared project handoffs.
+  separate worktrees, shared handoffs and task/file ownership claims.
 - Gives a project a consistent place for instructions, a backlog and session history.
 - Provides commands to resume work, close a session and update the SOP files.
 - Checks backlog transitions, review records and unfinished session housekeeping.
 - Supplies hooks for context loading and, on code projects, session-end checks.
+- Shares handoffs across local worktrees and refreshes context as other sessions work.
+- Keeps session identity stable as worktrees are added or removed.
 - Works with [ship-sop](https://github.com/mmjclayton/ship-sop) for code review gates.
 
 Claude and Codex share the same project records. You can use either or install both.
@@ -88,8 +91,27 @@ session with tests, review evidence and an updated record of what comes next.
 
 Commands, skills and hooks install at user scope and can serve multiple projects.
 Claude uses `~/.claude`; Codex uses `~/.codex` (or `CODEX_HOME`) and
-`~/.agents/skills`. Resume snapshots use the shared legacy memory location;
-`scripts/resolve-resume-path.sh` returns the correct path for the project.
+`~/.agents/skills`. Both runtimes share resume snapshots under
+`~/.claude/agent-sop/projects/<root-digest>/memory`. Always use
+`scripts/resolve-resume-path.sh` to resolve the path; older storage requires
+explicit migration as described below.
+
+## Multiple agents and sessions
+
+Use one writer per Git worktree. The restart workflow directs agents to inspect
+and acquire local ownership claims before parallel editing. Claims detect a
+second writer in the same worktree, duplicate tasks and overlapping file paths;
+disjoint work can proceed in separate worktrees.
+
+The context hook discovers handoffs from local worktrees and sends compact refresh
+notices when HEAD, session presence or claims change. Presence expires after
+30 minutes; ownership claims remain until explicitly released. One coordinating
+session integrates shared backlog and rollup changes.
+
+Claims are cooperative and local to linked worktrees. They do not coordinate
+separate clones or machines, or prevent writes by an agent that ignores them.
+See the [parallel-session guide](docs/guides/multi-agent-parallel-sessions.md)
+for setup, ownership, handoffs and recovery.
 
 ## Automatic checks
 
@@ -98,14 +120,18 @@ When loaded and trusted by the runtime, the hooks:
 - Load project context at session start or the first prompt.
 - Request missing session records and tracker updates when a code session stops.
 - Request a ship-sop review and block supported push/PR commands when its automatic
-  review gate applies and the committed code is not covered by a report.
+  review gate applies and the committed code lacks a validated review receipt.
 
 Non-code projects use the manual session-close workflow. These are agent hooks,
 not repository permissions: they do not govern pushes made in another terminal.
 
-**Codex verification:** a fresh-session test completed the full automatic cycle:
+**Earlier Codex runtime verification:** a fresh-session test completed the automatic cycle:
 production Stop continuation, all configured reviewers, a covering report and a
 successful push to a local Git remote. See the [runtime test record](docs/reviews/2026-09-08_codex-auto-runtime.md).
+That test predates the structured receipt contract. The
+[hardening review and verification record](docs/reviews/20260908-hardening-ship-auto.md)
+documents the subsequent receipt, migration and coordination checks, including
+five simultaneous overlapping-claim races that each produced exactly one owner.
 Start Codex in the project root; other installations still need working, trusted hooks.
 
 See [Codex setup and runtime details](docs/sop/codex.md) for hook installation,
@@ -125,3 +151,18 @@ done
 
 Historical experiments are in [docs/benchmark](docs/benchmark/). Propose changes
 through a pull request.
+
+## Upgrade and diagnostics
+
+Review coverage now requires a validated JSON receipt; Markdown-only reports are
+history. Upgrade Agent SOP and ship-sop together. Executable instruction files
+count as code for review invalidation, and invalid configured policy blocks
+supported publication operations.
+
+Resume storage uses a full root digest to avoid path-slug collisions. Inspect
+`bash scripts/resolve-resume-path.sh --legacy-dir`, confirm the snapshots belong
+to this repository, then run `--migrate-legacy`. Existing files are preserved.
+
+Run `bash scripts/hooks/sop-doctor.sh --runtime codex --root /path/to/project`
+from this checkout for configuration, installed-policy and reviewer diagnostics.
+A local marker or registered hook is not proof of live runtime enforcement.

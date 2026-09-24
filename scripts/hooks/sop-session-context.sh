@@ -26,22 +26,66 @@ CWD=$(sop_field '.cwd')
 [ -n "$CWD" ] || CWD="$PWD"
 ROOT=$(sop_repo_root "$CWD")
 sop_is_sop_repo "$ROOT" || exit 0
+AGENT=$(sop_agent_id "$ROOT" 2>&1) || { printf '[agent-sop] Identity unavailable: %s\n' "$AGENT"; exit 0; }
 
 SESSION=$(sop_field '.session_id')
 [ -n "$SESSION" ] || SESSION="nosession"
 SOURCE=$(sop_field '.source')
 
+# Live presence is local to this Git repository, shared across linked worktrees.
+# It is advisory, not a write lock; one active writer per worktree remains required.
+COMMON=$(git -C "$ROOT" rev-parse --git-common-dir 2>/dev/null)
+case "$COMMON" in /*) ;; *) COMMON="$ROOT/$COMMON" ;; esac
+PRESENCE="$COMMON/agent-sop/sessions"
+SESSION_KEY=$(printf '%s' "$SESSION" | sop_sha256)
+NOW=$(date +%s)
+PRESENCE_WARNING=''
+if mkdir -p "$PRESENCE" 2>/dev/null && mkdir "$PRESENCE/.lock" 2>/dev/null; then
+    trap 'rmdir "$PRESENCE/.lock" 2>/dev/null || true' EXIT
+    TEMP=$(mktemp "$PRESENCE/.presence.XXXXXX") || TEMP=''
+    if [ -n "$TEMP" ] && jq -n --arg root "$ROOT" --arg session "$SESSION_KEY" --argjson updated "$NOW" \
+      '{root:$root,session:$session,updated:$updated}' > "$TEMP" && mv "$TEMP" "$PRESENCE/$SESSION_KEY.json"; then :
+    else PRESENCE_WARNING='unavailable: could not publish this session presence'; fi
+    [ -z "$TEMP" ] || rm -f "$TEMP"
+    # Every publisher takes this lock: pruning cannot delete a concurrent refresh.
+    find "$PRESENCE" -maxdepth 1 -type f -name '*.json' -mmin +30 -delete 2>/dev/null || \
+      PRESENCE_WARNING='unavailable: expired presence cleanup failed'
+    rmdir "$PRESENCE/.lock" || PRESENCE_WARNING='unavailable: presence lock could not be released'
+    trap - EXIT
+else PRESENCE_WARNING='unavailable: presence directory is not writable or busy'; fi
+OTHER=$(sop_registry_read "$PRESENCE" 2>/dev/null) || OTHER='[{"status":"unavailable: invalid or unreadable session registry"}]'
+if ! printf '%s' "$OTHER" | jq -e 'all(.[]; .status != null or
+  ((.root | type == "string" and length > 0) and (.session | type == "string" and length > 0) and
+   (.updated | type == "number" and . >= 0)))' >/dev/null; then
+    OTHER='[{"status":"unavailable: invalid session presence fields"}]'
+fi
+OTHER=$(printf '%s' "$OTHER" | jq -c --arg session "$SESSION_KEY" --argjson cutoff "$((NOW - 1800))" \
+  '[.[] | select(.status != null or (.session != $session and .updated > $cutoff)) | del(.updated)] | sort_by(.root,.session)')
+if [ -n "$PRESENCE_WARNING" ]; then OTHER=$(printf '%s' "$OTHER" | jq -c --arg warning "$PRESENCE_WARNING" '. + [{status:$warning}]'); fi
+CLAIMS=$(sop_registry_read "$COMMON/agent-sop/claims" 2>/dev/null) || CLAIMS='[{"status":"unavailable: invalid or unreadable claim registry"}]'
+CURRENT_HEAD=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)
+CONTEXT_KEY=$(printf '%s|%s|%s' "$CURRENT_HEAD" "$OTHER" "$CLAIMS" | sop_sha256)
 MARKER_DIR="$(sop_state_dir)/sessions/$SESSION"
 MARKER="$MARKER_DIR/$(sop_repo_key "$ROOT").ctx"
 case "$SOURCE" in
     compact|clear) ;;
-    *) [ -f "$MARKER" ] && exit 0 ;;
+    *)
+        if [ -f "$MARKER" ]; then
+            if [ "$(cat "$MARKER")" != "$CONTEXT_KEY" ]; then
+                printf '[agent-sop] Context changed: HEAD %s. Refresh affected task context before editing. Other active sessions: %s; writer claims: %s\n' "$CURRENT_HEAD" "$(printf '%s' "$OTHER" | jq -c .)" "$CLAIMS"
+                printf '%s' "$CONTEXT_KEY" > "$MARKER"
+            fi
+            exit 0
+        fi ;;
 esac
-mkdir -p "$MARKER_DIR" 2>/dev/null && : > "$MARKER" 2>/dev/null
+mkdir -p "$MARKER_DIR" 2>/dev/null && printf '%s' "$CONTEXT_KEY" > "$MARKER" 2>/dev/null
+if [ "$CLAIMS" != '[]' ]; then printf '[agent-sop] Writer/task claims: %s\n' "$CLAIMS"; fi
+if [ "$OTHER" != '[]' ]; then
+    printf '[agent-sop] Other active sessions (30-minute presence lease): %s. Use one writer per worktree; coordinate task and path ownership.\n' "$(printf '%s' "$OTHER" | jq -c .)"
+fi
 
 NAME=$(basename "$ROOT")
 BRANCH=$(git -C "$ROOT" branch --show-current 2>/dev/null)
-AGENT=$(sop_agent_id "$ROOT")
 PTYPE=$(sop_project_type "$ROOT")
 DECLARED=$(sop_declared_project_type "$ROOT")
 SIGNALS=$(sop_code_signals "$ROOT" | paste -sd, - | sed 's/,/, /g')
@@ -60,19 +104,40 @@ fi
 
 # ── Resume snapshot ───────────────────────────────────────────────────────────
 RESUME_TEXT="(none found — first session on this project for agent-id $AGENT, or no resolver in scripts/)"
-if [ -f "$ROOT/scripts/resolve-resume-path.sh" ]; then
-    RESUME_PATH=$(bash "$ROOT/scripts/resolve-resume-path.sh" --read --root "$ROOT" --home "${HOME:-}" 2>/dev/null)
+RESOLVER=$(sop_resolver) || { RESOLVER=''; RESUME_TEXT="Trusted resolver unavailable: update Agent SOP installation"; }
+if [ -n "$RESOLVER" ]; then
+    RESUME_ERROR=$(mktemp)
+    RESUME_PATH=$(bash "$RESOLVER" --read --root "$ROOT" --home "${HOME:-}" 2> "$RESUME_ERROR")
+    [ ! -s "$RESUME_ERROR" ] || RESUME_TEXT="$(cat "$RESUME_ERROR")"
+    rm -f "$RESUME_ERROR"
     if [ -n "$RESUME_PATH" ] && [ -f "$RESUME_PATH" ]; then
         RESUME_TEXT="$RESUME_PATH
 $(head -80 "$RESUME_PATH")"
     fi
 fi
 
-# ── In-flight lines for this agent ────────────────────────────────────────────
-INFLIGHT="(none)"
-if [ -s "$ROOT/docs/agent-memory/in-flight/$AGENT.md" ]; then
-    INFLIGHT=$(head -10 "$ROOT/docs/agent-memory/in-flight/$AGENT.md")
-fi
+# Read all local worktree handoffs, bounded to keep coordination context small.
+INFLIGHT=""
+while IFS= read -r wt; do
+    [ -n "$wt" ] || continue
+    if [ -L "$wt/docs" ] || [ -L "$wt/docs/agent-memory" ] || [ -L "$wt/docs/agent-memory/in-flight" ]; then
+        INFLIGHT="$INFLIGHT
+$wt: skipped symlinked handoff directory"
+        continue
+    fi
+    for file in "$wt"/docs/agent-memory/in-flight/*.md; do
+        [ ! -L "$file" ] && [ -f "$file" ] || continue
+        [ -s "$file" ] || continue
+        [ "$(basename "$file")" != README.md ] || continue
+        INFLIGHT="$INFLIGHT
+$wt / $(basename "$file"):
+$(head -5 "$file")"
+    done
+done <<EOF
+$(git -C "$ROOT" worktree list --porcelain | sed -n 's/^worktree //p')
+EOF
+INFLIGHT=$(printf '%s\n' "$INFLIGHT" | head -30)
+[ -n "$INFLIGHT" ] || INFLIGHT="(none)"
 
 # ── Recent sessions (rollup between sentinels, else directory listing) ────────
 RECENT=""
@@ -140,7 +205,7 @@ if [ "${WT_COUNT:-1}" -gt 1 ] 2>/dev/null; then
 $(git -C "$ROOT" worktree list --porcelain 2>/dev/null | awk '/^worktree /{sub(/^worktree /, ""); print}')
 EOF
     if [ -n "$DIRTY_SIBS" ]; then
-        SIBLINGS="$WT_COUNT worktrees; sibling worktree(s) with uncommitted edits:$DIRTY_SIBS — branch-mutating git ops here can wipe them"
+        SIBLINGS="$WT_COUNT worktrees; sibling worktree(s) with uncommitted edits:$DIRTY_SIBS — coordinate ownership before operations targeting those worktrees or shared refs"
     else
         SIBLINGS="$WT_COUNT worktrees, all siblings clean"
     fi

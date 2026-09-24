@@ -4,8 +4,8 @@
 # docs/agent-memory/in-flight/<agent-id>.md per-agent files.
 #
 # Idempotent: given identical directory contents, produces identical output.
-# Two parallel agents only ever write their own per-agent file, so concurrent
-# /update-sop runs cannot collide on this section. Post-merge regeneration
+# Two parallel agents only ever write their own per-agent file, but shared derived files still require
+# a single writer per worktree. Unique temporary files prevent temporary-name collisions. Post-merge regeneration
 # always converges because the inputs (per-agent files) merge cleanly when
 # filenames are distinct.
 #
@@ -40,16 +40,17 @@ if ! grep -q '<!-- in-flight:start -->' "$MEMORY_MD"; then
 fi
 
 TMP=$(mktemp)
-trap 'rm -f "$TMP"' EXIT
+OUTPUT=$(mktemp "${MEMORY_MD}.XXXXXX")
+trap 'rm -f "$TMP" "$OUTPUT"' EXIT
 
 {
     echo "<!-- in-flight:start -->"
-    echo "*Auto-generated from \`${INFLIGHT_DIR}/\`. Last refreshed: $(date +%Y-%m-%d).*"
+    echo "*Auto-generated from \`${INFLIGHT_DIR}/\`.*"
     echo ""
 
     FOUND=0
     if [ -d "$INFLIGHT_DIR" ] && ls "$INFLIGHT_DIR"/*.md >/dev/null 2>&1; then
-        for f in $(ls "$INFLIGHT_DIR"/*.md 2>/dev/null | sort); do
+        for f in "$INFLIGHT_DIR"/*.md; do
             base=$(basename "$f" .md)
             [ "$base" = "README" ] && continue
             agent_id="$base"
@@ -84,6 +85,6 @@ awk -v repl_file="$TMP" '
         next
     }
     !skip { print }
-' "$MEMORY_MD" > "${MEMORY_MD}.tmp" && mv "${MEMORY_MD}.tmp" "$MEMORY_MD"
+' "$MEMORY_MD" > "$OUTPUT" && { if cmp -s "$OUTPUT" "$MEMORY_MD"; then :; elif [ -L "$MEMORY_MD" ]; then cat "$OUTPUT" > "$MEMORY_MD"; else mv "$OUTPUT" "$MEMORY_MD"; fi; }
 
 echo "In-Flight Work refreshed: $MEMORY_MD"

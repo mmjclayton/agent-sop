@@ -72,7 +72,7 @@ mkdir -p "$MARKER_DIR" 2>/dev/null && printf '%s' "$SIG" > "$MARKER" 2>/dev/null
 # ── Compose the reason ────────────────────────────────────────────────────────
 NAME=$(basename "$ROOT")
 BRANCH=$(git -C "$ROOT" branch --show-current 2>/dev/null)
-AGENT=$(sop_agent_id "$ROOT")
+AGENT=$(sop_agent_id "$ROOT" 2>&1) || { printf 'Agent SOP identity unavailable: %s\n' "$AGENT" >&2; exit 2; }
 LAST=$(sop_last_record_commit "$ROOT")
 LAST_LABEL="the start of history"
 [ -n "$LAST" ] && LAST_LABEL="the last session record ($(printf '%s' "$LAST" | cut -c1-7))"

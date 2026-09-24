@@ -3,6 +3,9 @@
 **Date:** 2026-09-04
 **Agent:** solo
 
+**Coverage rule superseded 2026-09-08:** see `2026-09-08_solo_receipts-and-local-coordination.md`.
+The Markdown stamp rule below is historical; current coverage requires validated JSON.
+
 Three choices in `scripts/hooks/sop-stop-drift.sh`, each ruling out an alternative that was tried or proposed elsewhere.
 
 **Exit 2, not stdout.** Claude Code writes `Stop` hook stdout to the debug log and never shows it to the model; only `SessionStart`, `UserPromptSubmit`, `UserPromptExpansion` and `PostModelSwitch` stdout becomes context. Exit 2 with the reason on stderr is the documented way a Stop hook makes Claude continue. ship-sop's hook design ("stdout from Stop hooks is piped into the next turn's context") was wrong about this, which is the second reason its directives were never acted on. Every Stop hook in this repo prints its reason to stderr and exits 2, or prints nothing and exits 0.

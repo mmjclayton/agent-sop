@@ -56,6 +56,8 @@ HOME_OVERRIDE=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
+        --migrate-legacy) MODE="migrate" ;;
+        --legacy-dir) MODE="legacy-dir" ;;
         --read)     MODE="read" ;;
         --dir)      MODE="dir" ;;
         --agent-id) MODE="agent-id" ;;
@@ -96,6 +98,16 @@ if [ "$ROOT" = "$HOME_DIR" ]; then
     exit 2
 fi
 
+IS_MAIN=false
+if [ "$MODE" != dir ] && [ "$MODE" != legacy-dir ] &&
+   [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ]; then
+    GIT_DIR=$(git -C "$ROOT" rev-parse --absolute-git-dir) || { echo 'resolve-resume-path: Git identity lookup failed' >&2; exit 2; }
+    COMMON_DIR=$(git -C "$ROOT" rev-parse --git-common-dir) || { echo 'resolve-resume-path: common Git directory lookup failed' >&2; exit 2; }
+    COMMON_DIR=$(cd "$ROOT" && cd "$COMMON_DIR" && pwd -P) || { echo 'resolve-resume-path: common Git directory unavailable' >&2; exit 2; }
+    GIT_DIR=$(cd "$GIT_DIR" && pwd -P) || { echo 'resolve-resume-path: private Git directory unavailable' >&2; exit 2; }
+    [ "$GIT_DIR" != "$COMMON_DIR" ] || IS_MAIN=true
+fi
+
 resolve_agent_id() {
     if [ -n "${AGENT_SOP_AGENT_ID:-}" ]; then
         printf '%s' "$AGENT_SOP_AGENT_ID"
@@ -111,29 +123,22 @@ resolve_agent_id() {
         return 0
     fi
 
-    # Only an exact count of 1 means solo. An empty or 0 count means the
-    # worktree count could not be determined, and falling through to the path
-    # hash is the conservative answer: a hash is unique per worktree, whereas
-    # guessing `solo` would collide with every sibling. Kept byte-identical to
-    # the copies this replaced (restart-sop.md:64, update-sop.md:37) — a
-    # divergence here would silently rename every affected project's resume
-    # file and strand the old one.
-    local count
-    count=$(git -C "$ROOT" worktree list 2>/dev/null | wc -l | tr -d '[:space:]')
-    if [ "$count" = "1" ]; then
+    # Main worktrees, including submodules and separate Git directories, keep solo.
+    # Only linked worktrees have distinct private and common Git directories.
+    if [ "$IS_MAIN" = true ]; then
         printf 'solo'
         return 0
     fi
 
-    if command -v shasum >/dev/null 2>&1; then
-        printf '%s' "$ROOT" | shasum -a 256 | cut -c1-6
-    else
-        printf '%s' "$ROOT" | sha256sum | cut -c1-6
-    fi
+    local hash
+    hash=$(printf '%s' "$ROOT" | { shasum -a 256 2>/dev/null || sha256sum; } | cut -c1-6)
+    [[ "$hash" =~ ^[0-9a-f]{6}$ ]] || { echo 'resolve-resume-path: identity hashing failed' >&2; return 1; }
+    printf '%s' "$hash"
 }
 
-AGENT_ID=$(resolve_agent_id)
+AGENT_ID=$(resolve_agent_id) || exit 2
 [ -z "$AGENT_ID" ] && AGENT_ID="solo"
+case "$AGENT_ID" in *[!a-zA-Z0-9_-]*|.|..) echo 'resolve-resume-path: invalid agent identity' >&2; exit 2 ;; esac
 
 if [ "$MODE" = "agent-id" ]; then
     printf '%s\n' "$AGENT_ID"
@@ -145,7 +150,90 @@ fi
 # the observed single-hyphen convention. Kept byte-identical to the derivation
 # previously inlined in restart-sop.md and validate-state-transitions.sh.
 PROJECT_HASH=$(printf '%s' "$ROOT" | sed 's|[^a-zA-Z0-9-]|-|g' | sed 's|--*|-|g' | sed 's|^-||')
-MEMORY_DIR="$HOME_DIR/.claude/projects/-$PROJECT_HASH/memory"
+LEGACY_DIR="$HOME_DIR/.claude/projects/-$PROJECT_HASH/memory"
+ROOT_DIGEST=$(printf '%s' "$ROOT" | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)
+[[ "$ROOT_DIGEST" =~ ^[0-9a-f]{64}$ ]] || { echo 'resolve-resume-path: root hashing failed; no safe storage path' >&2; exit 2; }
+MEMORY_DIR="$HOME_DIR/.claude/agent-sop/projects/$ROOT_DIGEST/memory"
+OLD_HASH=$(printf '%s' "$ROOT_DIGEST" | cut -c1-6)
+check_main_conflict() {
+    local dir="$1"
+    if [ "$AGENT_ID" = solo ] && [ "$IS_MAIN" = true ] &&
+       [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ] &&
+       [ -f "$dir/project_resume_solo.md" ] && [ -f "$dir/project_resume_$OLD_HASH.md" ] &&
+       ! cmp -s "$dir/project_resume_solo.md" "$dir/project_resume_$OLD_HASH.md"; then
+        echo "Resume conflict: $dir contains differing solo and $OLD_HASH snapshots. Reconcile their content into solo and archive the hash snapshot before resuming; preserve originals." >&2
+        return 1
+    fi
+}
+if [ "$MODE" = legacy-dir ]; then printf '%s\n' "$LEGACY_DIR"; exit 0; fi
+if [ "$MODE" = migrate ]; then
+    MIGRATION_TEMP=''
+    MIGRATION_LIST=''
+    trap '[ -z "$MIGRATION_TEMP" ] || rm -f "$MIGRATION_TEMP"; [ -z "$MIGRATION_LIST" ] || rm -f "$MIGRATION_LIST"' EXIT
+    copy_new_snapshot() {
+        local source="$1" destination="$2"
+        MIGRATION_TEMP=$(mktemp "${destination}.migrate.XXXXXX") || return 1
+        if ! cp "$source" "$MIGRATION_TEMP" || ! cmp -s "$source" "$MIGRATION_TEMP"; then
+            echo "Migration copy failed: $source" >&2
+            rm -f "$MIGRATION_TEMP"; MIGRATION_TEMP=''; return 1
+        fi
+        if ! ln "$MIGRATION_TEMP" "$destination"; then
+            echo "Migration publish failed: $destination" >&2
+            rm -f "$MIGRATION_TEMP"; MIGRATION_TEMP=''; return 1
+        fi
+        rm -f "$MIGRATION_TEMP"; MIGRATION_TEMP=''
+    }
+    # Explicit operator action: legacy slugs can collide, so never auto-claim them.
+    [ -d "$LEGACY_DIR" ] || { echo 'No legacy directory to migrate.' >&2; exit 1; }
+    [ -r "$LEGACY_DIR" ] && [ -x "$LEGACY_DIR" ] || { echo "Legacy storage unreadable: $LEGACY_DIR" >&2; exit 2; }
+    MIGRATION_LIST=$(mktemp) || { echo 'Migration enumeration storage unavailable' >&2; exit 2; }
+    find -H "$LEGACY_DIR" -maxdepth 1 -name 'project_resume*.md' -print0 > "$MIGRATION_LIST" || {
+        echo "Legacy snapshot enumeration failed: $LEGACY_DIR" >&2; exit 2;
+    }
+    check_main_conflict "$LEGACY_DIR" || exit 2
+    check_main_conflict "$MEMORY_DIR" || exit 2
+    mkdir -p "$MEMORY_DIR" || { echo "Migration destination unavailable: $MEMORY_DIR" >&2; exit 2; }
+    # Preflight all destinations before copying, so a failed repeat migration
+    # cannot reintroduce a stale hash snapshot beside an updated canonical file.
+    incoming_solo="$LEGACY_DIR/project_resume_solo.md"
+    [ ! -f "$MEMORY_DIR/project_resume_solo.md" ] || incoming_solo="$MEMORY_DIR/project_resume_solo.md"
+    incoming_hash="$LEGACY_DIR/project_resume_$OLD_HASH.md"
+    [ ! -f "$MEMORY_DIR/project_resume_$OLD_HASH.md" ] || incoming_hash="$MEMORY_DIR/project_resume_$OLD_HASH.md"
+    if [ "$AGENT_ID" = solo ] && [ "$IS_MAIN" = true ] &&
+       [ -f "$incoming_solo" ] && [ -f "$incoming_hash" ] && ! cmp -s "$incoming_solo" "$incoming_hash"; then
+        echo 'Migration conflict: differing main snapshot generations require reconciliation before copying.' >&2
+        exit 2
+    fi
+    while IFS= read -r -d '' source; do
+        [ -f "$source" ] && [ -r "$source" ] || { echo "Invalid or unreadable legacy snapshot: $source" >&2; exit 2; }
+        target="$MEMORY_DIR/$(basename "$source")"
+        [ ! -e "$target" ] || cmp -s "$source" "$target" || { echo "Migration conflict: $target" >&2; exit 2; }
+    done < "$MIGRATION_LIST"
+    while IFS= read -r -d '' source; do
+        [ -f "$source" ] && [ -r "$source" ] || { echo "Invalid or unreadable legacy snapshot: $source" >&2; exit 2; }
+        target="$MEMORY_DIR/$(basename "$source")"
+        if [ -e "$target" ]; then
+            cmp -s "$source" "$target" || { echo "Migration conflict: $target" >&2; exit 2; }
+        else copy_new_snapshot "$source" "$target" || exit 2; fi
+    done < "$MIGRATION_LIST"
+    check_main_conflict "$MEMORY_DIR" || exit 2
+    if [ "$AGENT_ID" = solo ] && [ "$IS_MAIN" = true ] &&
+       [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ] &&
+       [ -f "$MEMORY_DIR/project_resume_$OLD_HASH.md" ]; then
+        # Establish one active main snapshot; a later normal close must not conflict
+        # with the historical hash generation retained by this explicit migration.
+        hash_snapshot="$MEMORY_DIR/project_resume_$OLD_HASH.md"
+        archive_snapshot="$MEMORY_DIR/archive/project_resume_$OLD_HASH.md"
+        mkdir -p "$MEMORY_DIR/archive" || exit 1
+        if [ -e "$archive_snapshot" ]; then
+            cmp -s "$hash_snapshot" "$archive_snapshot" || { echo "Migration conflict: $archive_snapshot" >&2; exit 2; }
+        else copy_new_snapshot "$hash_snapshot" "$archive_snapshot" || exit 2; fi
+        [ -f "$MEMORY_DIR/project_resume_solo.md" ] || copy_new_snapshot "$hash_snapshot" "$MEMORY_DIR/project_resume_solo.md" || exit 2
+        rm "$hash_snapshot" || exit 1
+    fi
+    printf '%s\n' "$MEMORY_DIR"
+    exit 0
+fi
 
 if [ "$MODE" = "dir" ]; then
     printf '%s\n' "$MEMORY_DIR"
@@ -154,6 +242,18 @@ fi
 
 PER_AGENT="$MEMORY_DIR/project_resume_${AGENT_ID}.md"
 LEGACY="$MEMORY_DIR/project_resume.md"
+if [ "$MODE" = read ]; then
+    if { [ -e "$MEMORY_DIR" ] || [ -L "$MEMORY_DIR" ]; } &&
+       { [ ! -d "$MEMORY_DIR" ] || [ ! -r "$MEMORY_DIR" ] || [ ! -x "$MEMORY_DIR" ]; }; then
+        echo "Resume storage unavailable: $MEMORY_DIR" >&2; exit 2
+    fi
+    check_main_conflict "$MEMORY_DIR" || exit 2
+fi
+# Pre-hardening main worktrees could switch from solo to their path hash.
+if [ "$MODE" = read ] && [ "$AGENT_ID" = solo ] && [ ! -f "$PER_AGENT" ] &&
+   [ -z "${AGENT_SOP_AGENT_ID:-}${CLAUDE_AGENT_ID:-}" ] && [ ! -f "$ROOT/.sop-agent-id" ]; then
+    [ ! -f "$MEMORY_DIR/project_resume_$OLD_HASH.md" ] || PER_AGENT="$MEMORY_DIR/project_resume_$OLD_HASH.md"
+fi
 
 # Write target is always the per-agent filename in the project-scoped directory.
 # Deterministic by construction: never depends on where the session was launched
@@ -169,6 +269,12 @@ fi
 # `project_resume.md` inside it belongs to this project. The same fallback
 # against a session-owned directory is what let a foreign project's file be
 # selected before P96.
+for snapshot in "$PER_AGENT" "$LEGACY"; do
+    if { [ -e "$snapshot" ] || [ -L "$snapshot" ]; } &&
+       { [ ! -f "$snapshot" ] || [ ! -r "$snapshot" ]; }; then
+        echo "Resume snapshot unreadable: $snapshot" >&2; exit 2
+    fi
+done
 if [ -f "$PER_AGENT" ]; then
     printf '%s\n' "$PER_AGENT"
     exit 0
@@ -193,4 +299,14 @@ if [ -f "$LEGACY" ]; then
     exit 0
 fi
 
+if { [ -e "$LEGACY_DIR" ] || [ -L "$LEGACY_DIR" ]; } &&
+   { [ ! -d "$LEGACY_DIR" ] || [ ! -r "$LEGACY_DIR" ] || [ ! -x "$LEGACY_DIR" ]; }; then
+    echo "Legacy storage unavailable: $LEGACY_DIR" >&2
+    exit 2
+fi
+for source in "$LEGACY_DIR"/project_resume*.md; do
+    [ -f "$source" ] || continue
+    echo "Legacy snapshots require explicit ownership confirmation: inspect $LEGACY_DIR then run --migrate-legacy for this root." >&2
+    exit 2
+done
 exit 1
