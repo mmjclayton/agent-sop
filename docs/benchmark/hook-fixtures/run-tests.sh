@@ -63,15 +63,18 @@ bad()  { echo "FAIL: $1 — $2"; fail=$((fail + 1)); failed="$failed $1"; }
 # Test receipt builder: successful reviewers for this fixture's configured policy.
 make_receipt() (
     . "$HOOKS_DIR/sop-lib.sh"
-    local root="$1" output="$2" head
+    # Optional third argument: a JSON array of reviewer names to include; null
+    # (the default) writes every enabled reviewer.
+    local root="$1" output="$2" names="${3:-null}" head
     head=$(git -C "$root" rev-parse HEAD)
     jq -n --arg head "$head" --arg base "$(sop_range_base "$root")" \
       --arg tree "$(git -C "$root" rev-parse 'HEAD^{tree}')" \
       --arg policy "$(sop_policy_digest "$root/ship-sop.config.json")" \
-      --slurpfile cfg "$root/ship-sop.config.json" \
+      --slurpfile cfg "$root/ship-sop.config.json" --argjson names "$names" \
       '{schema_version:1,head:$head,base:$base,tree:$tree,policy_sha256:$policy,
         tests:{status:"PASS",evidence:"fixture tests"},
         reviewers:[$cfg[0].agents|to_entries[]|select(.value.enabled)|
+          . as $e|select($names == null or ($names | index($e.key)) != null)|
           {name:.key,version:"fixture-v1",model:"fixture",verdict:"PASS",findings:[]}]}' > "$output"
 )
 
@@ -242,6 +245,71 @@ git -C "$DOCS" checkout -q -b feat/docs
 commit_record "$DOCS" "recorded"
 run_hook "$STOP" "$DOCS" ''
 if ! grep -q "@security-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-docs-only-no-gate"; else bad "stop-shipsop-docs-only-no-gate" "stderr='$(cat "$HOOK_ERR")'"; fi
+
+# ── Reviewer scope by path (ship-sop P33 / agent-sop P111) ───────────────────
+# An enabled reviewer with `paths` joins the gate only when the range touches
+# a matching file; the demand, the receipt validator and the push gate read
+# the same rule. Each case fails against the pre-P111 library, which keyed on
+# `enabled` alone.
+SCOPED="$TMP/scoped"; make_repo "$SCOPED" with-code
+cat > "$SCOPED/ship-sop.config.json" <<'JSON'
+{ "trigger": { "mode": "auto", "throttle": { "min_diff_lines": 10, "skip_branch_patterns": ["^wip/"] } },
+  "agents": { "security-reviewer": { "enabled": true, "block_on": "CRITICAL", "paths": ["^scripts/", "\\.sh$"] },
+              "code-reviewer": { "enabled": true, "block_on": "HIGH" } } }
+JSON
+(cd "$SCOPED" && $GIT add -A >/dev/null && $GIT commit -q -m "chore: scoped config" && $GIT push -q origin main 2>/dev/null)
+git -C "$SCOPED" checkout -q -b feat/js-only
+commit_code "$SCOPED" "feat: js work"
+commit_record "$SCOPED" "recorded"
+run_hook "$STOP" "$SCOPED" ''
+if [ "$HOOK_EXIT" = 2 ] && grep -q "@code-reviewer" "$HOOK_ERR" && ! grep -q "security-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-scoped-agent-out-of-scope-not-demanded"; else bad "stop-shipsop-scoped-agent-out-of-scope-not-demanded" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+
+# A receipt from the in-scope reviewer alone covers the branch.
+make_receipt "$SCOPED" "$SCOPED/docs/reviews/20260924-100000-ship-auto.json" '["code-reviewer"]'
+(cd "$SCOPED" && $GIT add -A >/dev/null && $GIT commit -q -m "docs: ship report")
+run_hook "$STOP" "$SCOPED" ''
+if ! grep -q "@code-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-scoped-receipt-without-out-of-scope-agent-covers"; else bad "stop-shipsop-scoped-receipt-without-out-of-scope-agent-covers" "stderr='$(cat "$HOOK_ERR")'"; fi
+
+# A shell script enters the range: the scoped reviewer is demanded, a receipt
+# that lacks it does not cover, and one that carries it does.
+(cd "$SCOPED" && mkdir -p scripts && for i in $(seq 1 12); do echo "echo $i" >> scripts/run.sh; done && $GIT add -A >/dev/null && $GIT commit -q -m "feat: shell work")
+commit_record "$SCOPED" "recorded-again"
+run_hook "$STOP" "$SCOPED" ''
+if [ "$HOOK_EXIT" = 2 ] && grep -q "@security-reviewer" "$HOOK_ERR" && grep -q "@code-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-scoped-agent-in-scope-demanded"; else bad "stop-shipsop-scoped-agent-in-scope-demanded" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+make_receipt "$SCOPED" "$SCOPED/docs/reviews/20260924-110000-ship-auto.json" '["code-reviewer"]'
+(cd "$SCOPED" && $GIT add -A >/dev/null && $GIT commit -q -m "docs: partial ship report")
+run_hook "$STOP" "$SCOPED" ''
+if grep -q "@security-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-scoped-receipt-missing-in-scope-agent-does-not-cover"; else bad "stop-shipsop-scoped-receipt-missing-in-scope-agent-does-not-cover" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+make_receipt "$SCOPED" "$SCOPED/docs/reviews/20260924-120000-ship-auto.json"
+(cd "$SCOPED" && $GIT add -A >/dev/null && $GIT commit -q -m "docs: full ship report")
+run_hook "$STOP" "$SCOPED" ''
+if ! grep -q "@security-reviewer" "$HOOK_ERR"; then ok "stop-shipsop-scoped-full-receipt-covers"; else bad "stop-shipsop-scoped-full-receipt-covers" "stderr='$(cat "$HOOK_ERR")'"; fi
+
+# Every enabled reviewer out of scope: no gate at stop, and the push proceeds.
+NOSCOPE="$TMP/noscope"; make_repo "$NOSCOPE" with-code
+jq '.agents |= with_entries(.value.paths = ["^scripts/"])' "$SCOPED/ship-sop.config.json" > "$NOSCOPE/ship-sop.config.json"
+(cd "$NOSCOPE" && $GIT add -A >/dev/null && $GIT commit -q -m "chore: config" && $GIT push -q origin main 2>/dev/null)
+git -C "$NOSCOPE" checkout -q -b feat/js
+commit_code "$NOSCOPE" "feat: js work"
+commit_record "$NOSCOPE" "recorded"
+run_hook "$STOP" "$NOSCOPE" ''
+if ! grep -q "ship-sop gate" "$HOOK_ERR"; then ok "stop-shipsop-every-agent-out-of-scope-silent"; else bad "stop-shipsop-every-agent-out-of-scope-silent" "stderr='$(cat "$HOOK_ERR")'"; fi
+run_hook "$PUSH" "$NOSCOPE" "$(push_json 'git push -u origin feat/js')"
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "push-shipsop-every-agent-out-of-scope-allowed"; else bad "push-shipsop-every-agent-out-of-scope-allowed" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+
+# A malformed scope is an invalid policy, not a silent skip: `paths` must be an
+# array of patterns that compile.
+for badcase in 'paths-not-array:"^scripts/"' 'paths-bad-regex:["("]'; do
+    BADNAME=${badcase%%:*}; BADVAL=${badcase#*:}
+    BAD="$TMP/$BADNAME"; make_repo "$BAD" with-code
+    jq --argjson v "$BADVAL" '.agents["security-reviewer"].paths = $v' "$SCOPED/ship-sop.config.json" > "$BAD/ship-sop.config.json"
+    (cd "$BAD" && $GIT add -A >/dev/null && $GIT commit -q -m "chore: config" && $GIT push -q origin main 2>/dev/null)
+    git -C "$BAD" checkout -q -b feat/js
+    commit_code "$BAD" "feat: js work"
+    commit_record "$BAD" "recorded"
+    run_hook "$STOP" "$BAD" ''
+    if [ "$HOOK_EXIT" = 2 ] && grep -q "configuration invalid" "$HOOK_ERR"; then ok "stop-shipsop-$BADNAME-invalid"; else bad "stop-shipsop-$BADNAME-invalid" "exit $HOOK_EXIT stderr='$(cat "$HOOK_ERR")'"; fi
+done
 
 # ── Project type (P102) ──────────────────────────────────────────────────────
 # The operator's rule: ship-sop fires for coding and for nothing else. One
