@@ -1293,6 +1293,9 @@ The agent-sop half of ship-sop P34. `sop_receipt_valid` accepts `schema_version`
 
 `[SHIPPED - 2026-09-30] [Feature]`
 review: docs/reviews/20260930-111100-ship-auto.md
+replication deferred (P113): installed copies and baseline SHAs are refreshed from main after the PR merges; ship-sop replication follows through its own PR
+
+The status tag travels inside the PR because main accepts no direct commit. Until the PR merges the work is on `feat/p113-memory-index-check` only, and the hook is not installed on any machine.
 
 Requested by Matt, 30 Sep 2026, after the home-directory `MEMORY.md` reached 24.8KB against a 25,000 byte load limit and two entries were cut off. `scripts/hooks/sop-memory-index.sh` runs as a user-scope `PostToolUse(Write|Edit|MultiEdit)` hook on Claude Code. It reports the byte count, line count and longest lines when an index is at or over 80 per cent of 25,000 bytes or 200 lines, once per size reached in a session, and runs outside SOP projects as well. `--file <path>` prints the report by hand.
 
@@ -1307,6 +1310,7 @@ Requested by Matt, 30 Sep 2026, after the home-directory `MEMORY.md` reached 24.
 
 `[SHIPPED - 2026-09-30] [Iteration]`
 review: docs/reviews/20260930-111100-ship-auto.md
+replication deferred (P114): installed copies and baseline SHAs are refreshed from main after the PR merges; ship-sop replication follows through its own PR
 
 Requested by Matt, 30 Sep 2026. Sessions closed with `/update-sop` and then wrote the same state into harness memory, because the SOP said nothing about it and the harness instructs saving project memories. The SOP (Section 1), `/update-sop` Step 5 and the Codex `update-sop` skill now state that project state is recorded in the project only, with one pointer line per project allowed in the index.
 
