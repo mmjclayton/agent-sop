@@ -8,6 +8,8 @@
 #                            auto-mode is on and no gate report covers HEAD
 #   sop-project-type.sh      prints code|non-code — the one rule the ship gate, the context
 #                            block and the slash commands all read (P102)
+#   sop-memory-index.sh      PostToolUse(Write|Edit) — reports a harness memory index that is
+#                            near its load limit, once per size reached (P113)
 #   ../install-hooks.sh      registers the hooks in a settings.json idempotently
 #
 # Fixtures are real repositories with a bare origin, built in a temp dir, so
@@ -33,8 +35,9 @@ CTX="$HOOKS_DIR/sop-session-context.sh"
 STOP="$HOOKS_DIR/sop-stop-drift.sh"
 PUSH="$HOOKS_DIR/sop-push-gate.sh"
 PTYPE="$HOOKS_DIR/sop-project-type.sh"
+MEMIDX="$HOOKS_DIR/sop-memory-index.sh"
 
-for f in "$CTX" "$STOP" "$PUSH" "$PTYPE" "$INSTALLER"; do
+for f in "$CTX" "$STOP" "$PUSH" "$PTYPE" "$MEMIDX" "$INSTALLER"; do
     if [ ! -f "$f" ]; then
         echo "Missing: $f" >&2
         exit 2
@@ -150,6 +153,17 @@ head_of() { git -C "$1" rev-parse HEAD; }
 # feeds the hook a JSON with no command, and the hook is then silent for the
 # wrong reason (found when the first P102 push cases passed vacuously).
 push_json() { printf ',"tool_name":"Bash","tool_input":{"command":"%s"}' "$1"; }
+
+# write_json <tool> <file-path> — the PostToolUse fields for a memory-index case.
+write_json() { printf ',"tool_name":"%s","tool_input":{"file_path":"%s"}' "$1" "$2"; }
+
+# make_index <path> <entries> <hook-bytes> — an index of <entries> one-line
+# entries, each carrying a hook of <hook-bytes> bytes.
+make_index() {
+    mkdir -p "$(dirname "$1")"
+    awk -v n="$2" -v w="$3" 'BEGIN { h = sprintf("%" w "s", ""); gsub(/ /, "x", h)
+        for (i = 1; i <= n; i++) printf "- [Entry %d](feedback_%d.md) - %s\n", i, i, h }' > "$1"
+}
 
 # ── Stop hook ─────────────────────────────────────────────────────────────────
 
@@ -668,6 +682,125 @@ mkdir -p "$SOP/.ship" && echo "# stale" > "$SOP/.ship/.pending-auto-fire.md"
 SESSION_ID=ctx-4 run_hook "$CTX" "$SOP" ''
 if grep -qi "legacy ship-sop directive" "$HOOK_OUT"; then ok "ctx-legacy-directive-flagged"; else bad "ctx-legacy-directive-flagged" "out='$(cat "$HOOK_OUT")'"; fi
 
+# ── Memory index (P113) ───────────────────────────────────────────────────────
+# The limits are the harness's: the index loads its first 200 lines or 25,000
+# bytes. The hook speaks from 80 per cent of either.
+
+MEM="$TMP/claude/projects/-home/memory"
+MEMSTATE="AGENT_SOP_STATE_DIR=$TMP/state-mem"
+
+make_index "$MEM/MEMORY.md" 40 100
+SESSION_ID=m1 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "$MEMSTATE"
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ] && [ ! -s "$HOOK_OUT" ]; then ok "memory-index-silent-under-threshold"; else bad "memory-index-silent-under-threshold" "exit $HOOK_EXIT: $(cat "$HOOK_ERR")"; fi
+
+# 100 entries of about 210 bytes: over 20,000 bytes, under 160 lines.
+make_index "$MEM/MEMORY.md" 100 180
+BYTES=$(wc -c < "$MEM/MEMORY.md" | tr -d ' ')
+SESSION_ID=m2 run_hook "$MEMIDX" "$TMP" "$(write_json Edit "$MEM/MEMORY.md")" "$MEMSTATE"
+if [ "$HOOK_EXIT" = 2 ] && grep -q "$BYTES of 25000 bytes" "$HOOK_ERR" && grep -q '100 of 200 lines' "$HOOK_ERR"; then ok "memory-index-reports-near-byte-limit"; else bad "memory-index-reports-near-byte-limit" "exit $HOOK_EXIT bytes $BYTES: $(cat "$HOOK_ERR")"; fi
+if grep -q '100 lines over 200 bytes' "$HOOK_ERR" && [ "$(grep -cE '^  line [0-9]+ \([0-9]+ bytes\): - \[Entry' "$HOOK_ERR")" = 5 ]; then ok "memory-index-lists-long-lines"; else bad "memory-index-lists-long-lines" "$(cat "$HOOK_ERR")"; fi
+
+# Same session, same size: said once, not again. A larger index is a new fact.
+SESSION_ID=m2 run_hook "$MEMIDX" "$TMP" "$(write_json Edit "$MEM/MEMORY.md")" "$MEMSTATE"
+if [ "$HOOK_EXIT" = 0 ] && [ ! -s "$HOOK_ERR" ]; then ok "memory-index-silent-when-size-unchanged"; else bad "memory-index-silent-when-size-unchanged" "exit $HOOK_EXIT: $(cat "$HOOK_ERR")"; fi
+make_index "$MEM/MEMORY.md" 101 180
+SESSION_ID=m2 run_hook "$MEMIDX" "$TMP" "$(write_json Edit "$MEM/MEMORY.md")" "$MEMSTATE"
+if [ "$HOOK_EXIT" = 2 ] && grep -q '101 of 200 lines' "$HOOK_ERR"; then ok "memory-index-reports-again-when-larger"; else bad "memory-index-reports-again-when-larger" "exit $HOOK_EXIT: $(cat "$HOOK_ERR")"; fi
+
+# 170 short entries: under 20,000 bytes, over 160 lines.
+make_index "$MEM/MEMORY.md" 170 20
+SESSION_ID=m3 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "$MEMSTATE"
+if [ "$HOOK_EXIT" = 2 ] && grep -q '170 of 200 lines' "$HOOK_ERR" && ! grep -q 'lines over 200 bytes' "$HOOK_ERR"; then ok "memory-index-reports-near-line-limit"; else bad "memory-index-reports-near-line-limit" "exit $HOOK_EXIT: $(cat "$HOOK_ERR")"; fi
+
+# Only the index: a topic file beside it, an index outside a memory directory
+# and a Bash call are all someone else's business.
+make_index "$MEM/MEMORY.md" 100 180
+make_index "$MEM/feedback_big.md" 100 180
+make_index "$TMP/docs/MEMORY.md" 100 180
+SESSION_ID=m4 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/feedback_big.md")" "$MEMSTATE"; E1=$HOOK_EXIT
+SESSION_ID=m4 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$TMP/docs/MEMORY.md")" "$MEMSTATE"; E2=$HOOK_EXIT
+SESSION_ID=m4 run_hook "$MEMIDX" "$TMP" "$(push_json "cat $MEM/MEMORY.md")" "$MEMSTATE"; E3=$HOOK_EXIT
+SESSION_ID=m4 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$TMP/none/memory/MEMORY.md")" "$MEMSTATE"; E4=$HOOK_EXIT
+if [ "$E1$E2$E3$E4" = 0000 ]; then ok "memory-index-ignores-everything-but-the-index"; else bad "memory-index-ignores-everything-but-the-index" "exits $E1 $E2 $E3 $E4"; fi
+
+# The thresholds are inclusive: 160 lines and 20,000 bytes report, one less does not.
+make_index "$MEM/MEMORY.md" 159 20
+SESSION_ID=m5 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "$MEMSTATE"; B1=$HOOK_EXIT
+make_index "$MEM/MEMORY.md" 160 20
+SESSION_ID=m5 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "$MEMSTATE"; B2=$HOOK_EXIT
+head -c 19999 /dev/zero | tr '\0' 'x' > "$MEM/MEMORY.md"
+SESSION_ID=m6 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "$MEMSTATE"; B3=$HOOK_EXIT
+head -c 20000 /dev/zero | tr '\0' 'x' > "$MEM/MEMORY.md"
+SESSION_ID=m6 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "$MEMSTATE"; B4=$HOOK_EXIT
+if [ "$B1$B2$B3$B4" = 0202 ] && grep -q '20000 of 25000 bytes' "$HOOK_ERR" && grep -q '1 of 200 lines' "$HOOK_ERR"; then ok "memory-index-thresholds-are-inclusive"; else bad "memory-index-thresholds-are-inclusive" "exits $B1 $B2 $B3 $B4: $(cat "$HOOK_ERR")"; fi
+
+# An empty index is silent; a path with spaces is read like any other.
+: > "$MEM/MEMORY.md"
+SESSION_ID=m7 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "$MEMSTATE"; S1=$HOOK_EXIT
+SPACED="$TMP/with space/memory/MEMORY.md"
+make_index "$SPACED" 170 20
+SESSION_ID=m7 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$SPACED")" "$MEMSTATE"
+if [ "$S1" = 0 ] && [ "$HOOK_EXIT" = 2 ] && grep -q '170 of 200 lines' "$HOOK_ERR"; then ok "memory-index-empty-file-and-spaced-path"; else bad "memory-index-empty-file-and-spaced-path" "exits $S1 $HOOK_EXIT: $(cat "$HOOK_ERR")"; fi
+
+# MultiEdit reaches the hook: the script accepts it and the installer matches it.
+make_index "$MEM/MEMORY.md" 170 20
+SESSION_ID=m8 run_hook "$MEMIDX" "$TMP" "$(write_json MultiEdit "$MEM/MEMORY.md")" "$MEMSTATE"
+if [ "$HOOK_EXIT" = 2 ]; then ok "memory-index-reports-on-multiedit"; else bad "memory-index-reports-on-multiedit" "exit $HOOK_EXIT"; fi
+
+# An index that exists and cannot be read is said, never passed over (review finding, HIGH).
+if [ "$(id -u)" != 0 ]; then
+    chmod 000 "$MEM/MEMORY.md"
+    SESSION_ID=m9 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "$MEMSTATE"
+    chmod 644 "$MEM/MEMORY.md"
+    if [ "$HOOK_EXIT" = 2 ] && grep -q 'cannot read' "$HOOK_ERR"; then ok "memory-index-unreadable-is-reported"; else bad "memory-index-unreadable-is-reported" "exit $HOOK_EXIT: $(cat "$HOOK_ERR")"; fi
+else
+    ok "memory-index-unreadable-is-reported (skipped as root: every file is readable)"
+fi
+
+# No session id: nothing to key a marker on, so it reports each time and writes no marker.
+NOSESS="$TMP/state-nosess"
+printf '{"cwd":"%s","tool_name":"Write","tool_input":{"file_path":"%s"}}' "$TMP" "$MEM/MEMORY.md" > "$TMP/nosess.json"
+AGENT_SOP_STATE_DIR="$NOSESS" bash "$MEMIDX" < "$TMP/nosess.json" >/dev/null 2>&1; N1=$?
+AGENT_SOP_STATE_DIR="$NOSESS" bash "$MEMIDX" < "$TMP/nosess.json" >/dev/null 2>&1; N2=$?
+if [ "$N1$N2" = 22 ] && [ -z "$(find "$NOSESS" -type f 2>/dev/null)" ]; then ok "memory-index-no-session-id-reports-each-time"; else bad "memory-index-no-session-id-reports-each-time" "exits $N1 $N2; files: $(find "$NOSESS" -type f 2>/dev/null)"; fi
+
+# A session id is a directory name, never a path (review finding, MEDIUM).
+ESCAPE="$TMP/state-escape"
+SESSION_ID='../../escaped' run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "AGENT_SOP_STATE_DIR=$ESCAPE/a/b"
+if [ "$HOOK_EXIT" = 2 ] && [ ! -e "$ESCAPE/escaped" ] && [ ! -e "$ESCAPE/a/escaped" ] && [ -n "$(find "$ESCAPE/a/b/sessions" -type f 2>/dev/null)" ]; then ok "memory-index-session-id-cannot-leave-state-dir"; else bad "memory-index-session-id-cannot-leave-state-dir" "exit $HOOK_EXIT; $(find "$ESCAPE" 2>/dev/null | tr '\n' ' ')"; fi
+
+# A marker that is not two numbers suppresses nothing.
+CORRUPT="$TMP/state-corrupt"
+SESSION_ID=m10 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "AGENT_SOP_STATE_DIR=$CORRUPT"
+for m in "$CORRUPT"/sessions/m10/memory-index-*; do echo 'not numbers' > "$m"; done
+SESSION_ID=m10 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "AGENT_SOP_STATE_DIR=$CORRUPT"
+if [ "$HOOK_EXIT" = 2 ]; then ok "memory-index-corrupt-marker-does-not-suppress"; else bad "memory-index-corrupt-marker-does-not-suppress" "exit $HOOK_EXIT: $(cat "$HOOK_ERR")"; fi
+
+# A state directory that cannot be written is named in the report.
+BLOCKED="$TMP/state-blocked"; : > "$BLOCKED"
+SESSION_ID=m11 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "AGENT_SOP_STATE_DIR=$BLOCKED"
+if [ "$HOOK_EXIT" = 2 ] && grep -q 'will repeat' "$HOOK_ERR" && grep -q "$BLOCKED" "$HOOK_ERR"; then ok "memory-index-unwritable-state-is-named"; else bad "memory-index-unwritable-state-is-named" "exit $HOOK_EXIT: $(cat "$HOOK_ERR")"; fi
+
+# Text echoed from the index carries no control bytes into the report.
+make_index "$MEM/MEMORY.md" 100 180
+printf -- '- [Bad\033[31m\007](x.md) - %0250d\n' 0 >> "$MEM/MEMORY.md"
+SESSION_ID=m12 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/MEMORY.md")" "$MEMSTATE"
+if [ "$HOOK_EXIT" = 2 ] && grep -q 'line 101' "$HOOK_ERR" && ! LC_ALL=C grep -q "$(printf '[\033\007]')" "$HOOK_ERR"; then ok "memory-index-report-strips-control-bytes"; else bad "memory-index-report-strips-control-bytes" "exit $HOOK_EXIT"; fi
+
+# Without jq the hook cannot read its input; it says so rather than going quiet.
+NOJQ="$TMP/nojq-bin"; mkdir -p "$NOJQ"
+for t in bash cat dirname awk wc tr sort head mkdir date shasum sha256sum cksum git sed grep; do
+    src=$(command -v "$t" 2>/dev/null) && ln -sf "$src" "$NOJQ/$t"
+done
+printf '{"session_id":"m13","cwd":"%s","tool_name":"Write","tool_input":{"file_path":"%s"}}' "$TMP" "$MEM/MEMORY.md" > "$TMP/nojq.json"
+NOJQ_ERR=$(PATH="$NOJQ" AGENT_SOP_STATE_DIR="$TMP/state-mem" "$NOJQ/bash" "$MEMIDX" < "$TMP/nojq.json" 2>&1 >/dev/null); NOJQ_EXIT=$?
+if [ "$NOJQ_EXIT" = 1 ] && printf '%s' "$NOJQ_ERR" | grep -q 'jq'; then ok "memory-index-says-when-jq-is-missing"; else bad "memory-index-says-when-jq-is-missing" "exit $NOJQ_EXIT: $NOJQ_ERR"; fi
+
+# Run by hand it always reports, and never fails the caller.
+make_index "$MEM/MEMORY.md" 40 100
+MANUAL=$(bash "$MEMIDX" --file "$MEM/MEMORY.md" 2>&1); MEXIT=$?
+if [ "$MEXIT" = 0 ] && printf '%s' "$MANUAL" | grep -q '40 of 200 lines'; then ok "memory-index-manual-report"; else bad "memory-index-manual-report" "exit $MEXIT: $MANUAL"; fi
+
 # ── Installer ─────────────────────────────────────────────────────────────────
 
 SETTINGS="$TMP/settings.json"
@@ -687,6 +820,9 @@ if [ "$INST1" = 0 ] && [ "$INST2" = 0 ] \
    && [ "$(count SessionStart 'sop-session-context')" = 1 ] \
    && [ "$(count UserPromptSubmit 'sop-session-context')" = 1 ] \
    && [ "$(count PreToolUse 'sop-push-gate')" = 1 ] \
+   && [ "$(count PostToolUse 'sop-memory-index')" = 1 ] \
+   && [ "$(jq -r '[.hooks.PostToolUse[]? | select(any(.hooks[]?; (.command // "") | test("sop-memory-index"))) | .matcher] | join(",")' "$SETTINGS")" = 'Write|Edit|MultiEdit' ] \
+   && [ -x "$DEST/sop-memory-index.sh" ] \
    && [ "$(count Stop 'existing-stop')" = 1 ] \
    && [ "$(count PreToolUse 'existing-pre')" = 1 ] \
    && [ "$(jq -r .model "$SETTINGS")" = x ] \
@@ -708,7 +844,7 @@ if [ -x "$OLDDEST/sop-project-type.sh" ] && ! grep -q '^# old$' "$OLDDEST/sop-li
 # A user's unrelated hook that merely shares a filename must survive uninstall (review finding, LOW).
 jq '.hooks.Stop += [ { "matcher": "*", "hooks": [ { "type": "command", "command": "node /other-tool/sop-stop-drift.sh" } ] } ]' "$SETTINGS" > "$SETTINGS.tmp" && mv "$SETTINGS.tmp" "$SETTINGS"
 bash "$INSTALLER" --settings "$SETTINGS" --dest "$DEST" --uninstall >/dev/null 2>&1
-if [ "$(count Stop "bash .$DEST/sop-stop-drift")" = 0 ] && [ "$(count Stop 'existing-stop')" = 1 ] && [ "$(count Stop 'other-tool/sop-stop-drift')" = 1 ] && [ "$(count PreToolUse 'sop-push-gate')" = 0 ] && [ "$(jq '.hooks.UserPromptSubmit // [] | length' "$SETTINGS")" = 0 ]; then
+if [ "$(count Stop "bash .$DEST/sop-stop-drift")" = 0 ] && [ "$(count Stop 'existing-stop')" = 1 ] && [ "$(count Stop 'other-tool/sop-stop-drift')" = 1 ] && [ "$(count PreToolUse 'sop-push-gate')" = 0 ] && [ "$(count PostToolUse 'sop-memory-index')" = 0 ] && [ "$(jq '.hooks.UserPromptSubmit // [] | length' "$SETTINGS")" = 0 ]; then
     ok "installer-uninstall-removes-only-ours"
 else
     bad "installer-uninstall-removes-only-ours" "$(jq -c .hooks "$SETTINGS")"

@@ -1,0 +1,103 @@
+{
+  "schema_version": 2,
+  "base": "f19b08b7067249fefa549027017747549b914dee",
+  "head": "783cfe7d8c561ffa6bb7d5aea0740358bccf692f",
+  "tree": "f2d5cd49cd999c85360687627c6daa8242662472",
+  "policy_sha256": "2bf3e7532a015bebf17f7553468f92f27d5b777be7d19cb8aca33e5e8b07e494",
+  "tests": {
+    "status": "PASS",
+    "evidence": "At 783cfe7: all nine docs/benchmark/*-fixtures/run-tests.sh suites exit 0 (hook-fixtures 122 passed, 0 failed; archive 13, codex 18, drift 5, priorities 16, reliability 26, resume-path 20, state-transition 30, sync 25); shellcheck -S warning on scripts/hooks/*.sh, scripts/install-hooks.sh, scripts/resolve-resume-path.sh and scripts/refresh-in-flight.sh exits 0. code-reviewer ran all nine suites on a git archive extract of 783cfe7 with the same result."
+  },
+  "reviewers": [
+    {
+      "name": "security-reviewer",
+      "version": "7f43a9e27d8aed8f8a55b4fd970e5c33cf83902f896ade200da05efb15d9bda0",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 1,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "scripts/hooks/sop-memory-index.sh",
+          "line": 66,
+          "message": "Up to 60 printable bytes of a long index line are echoed into the model context. Accepted: the excerpt identifies the entry to trim."
+        },
+        {
+          "severity": "LOW",
+          "file": "scripts/hooks/sop-memory-index.sh",
+          "line": 99,
+          "message": "Path rule allows .. segments and symlinks; marker key falls back to cksum. Hook only reads size and line counts. Accepted."
+        }
+      ]
+    },
+    {
+      "name": "code-reviewer",
+      "version": "f6420e5df2c684f2da46628e1c1c264dbb865ac3130701ff8025111b392bd677",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 1,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "scripts/hooks/sop-memory-index.sh",
+          "line": 87,
+          "message": "With jq absent the hook prints a line and exits 1 on every Write, Edit or MultiEdit, before the path is known. Accepted."
+        },
+        {
+          "severity": "LOW",
+          "file": "scripts/hooks/sop-memory-index.sh",
+          "line": 47,
+          "message": "printable strips control bytes and leaves the printable tail of an escape sequence. Harmless; no change."
+        },
+        {
+          "severity": "LOW",
+          "file": "scripts/hooks/sop-memory-index.sh",
+          "line": 99,
+          "message": "Path rule also matches a project-local memory/MEMORY.md. Accepted."
+        }
+      ]
+    },
+    {
+      "name": "silent-failure-hunter",
+      "version": "004ce0389356e0666d80c89cef39ad895ab326b3f7d19d34d23c70ab249a795d",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 1,
+      "block_rounds": 1,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "scripts/install-hooks.sh",
+          "line": 174,
+          "message": "ensure skips a same-command entry, so an install made from 4e99b7f would keep the Write|Edit matcher. Accepted: 4e99b7f was never installed or pushed."
+        },
+        {
+          "severity": "LOW",
+          "file": "scripts/hooks/sop-doctor.sh",
+          "line": 53,
+          "message": "memory_index_hook_registered is printed; no fixture asserts it and false does not fail the doctor. Accepted for this change."
+        },
+        {
+          "severity": "LOW",
+          "file": "scripts/hooks/sop-memory-index.sh",
+          "line": 103,
+          "message": "A missing file after a matching write exits 0 without a trace. Accepted."
+        },
+        {
+          "severity": "LOW",
+          "file": "scripts/hooks/sop-memory-index.sh",
+          "line": 88,
+          "message": "Missing-jq notice exits 1, shown only in verbose mode. Accepted."
+        }
+      ]
+    }
+  ]
+}

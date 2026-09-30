@@ -26,7 +26,8 @@ session-end section and docs/sop/codex.md. Preserve the user's task scope.
 6. Write substantive decisions/gotchas, refresh in-flight state, write a session
    record under docs/recent-work, and refresh the rollup. Overwrite the resolved
    resume snapshot with what changed, what's next and blockers. Preserve the
-   shared legacy memory location; never guess a path.
+   shared legacy memory location; never guess a path. Project state stays in
+   these project files; do not copy it into a runtime's global memory store.
 7. Commit only files belonging to the task when authorized by the workflow;
    respect an explicit request to leave changes uncommitted. Summarize changes,
    test/review results and any remaining work. Publication requires its own

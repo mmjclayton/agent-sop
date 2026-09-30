@@ -87,6 +87,8 @@ bash scripts/refresh-in-flight.sh           # regenerates the In-Flight block of
 
 Remove this session's line from `docs/agent-memory/in-flight/<agent-id>.md` if the work is done; leave it if it carries over.
 
+Harness memory (P114): the files above and Step 6 are this project's record. Write none of it to the harness memory directory or its `MEMORY.md` index: what shipped, what is next, P-numbers, review outcomes and resume points stay in the project. The index may hold one pointer line per project (name, path, one-line purpose). A rule that applies across projects, or a fact about the operator, still belongs in harness memory.
+
 ## Step 6: Resume snapshot and session record
 
 ```bash

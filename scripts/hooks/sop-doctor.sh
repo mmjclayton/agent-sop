@@ -35,6 +35,7 @@ INSTALLED=true; REGISTERED=false; MISSING_HOOKS='[]'
 DEST="$CONFIG_HOME/scripts/hooks/agent-sop"
 REQUIRED=(sop-lib.sh sop-stop-drift.sh sop-push-gate.sh sop-session-context.sh sop-project-type.sh resolve-resume-path.sh sop-worktree-claim.sh)
 [ "$RUNTIME" != codex ] || REQUIRED+=(sop-codex-hook.sh)
+[ "$RUNTIME" != claude ] || REQUIRED+=(sop-memory-index.sh)
 for dependency in "${REQUIRED[@]}"; do
     if [ ! -f "$DEST/$dependency" ] || [ ! -r "$DEST/$dependency" ]; then
         INSTALLED=false
@@ -46,6 +47,14 @@ if [ -f "$SETTINGS" ]; then
     [ "$RUNTIME" != codex ] || EXPECTED="bash \"$DEST/sop-codex-hook.sh\" Stop"
     jq -e --arg expected "$EXPECTED" '[.hooks.Stop[]?.hooks[]?.command // ""] |
       any(.[]; . == $expected)' "$SETTINGS" >/dev/null 2>&1 && REGISTERED=true
+fi
+# Claude Code only: the memory index check is registered on its own event, so a
+# registered Stop hook says nothing about it.
+MEMORY_REGISTERED=null
+if [ "$RUNTIME" = claude ]; then
+    MEMORY_REGISTERED=false
+    [ ! -f "$SETTINGS" ] || { jq -e --arg expected "bash \"$DEST/sop-memory-index.sh\"" '[.hooks.PostToolUse[]?.hooks[]?.command // ""] |
+      any(.[]; . == $expected)' "$SETTINGS" >/dev/null 2>&1 && MEMORY_REGISTERED=true; }
 fi
 OBSERVED=false
 KEY=$(sop_repo_key "$ROOT")
@@ -60,10 +69,10 @@ if [ -f "$RESOLVER" ] && [ -r "$RESOLVER" ]; then
     RESUME_NOTE=$(cat "$ERROR"); rm -f "$ERROR"
 else RESUME_NOTE='Installed trusted resolver unavailable; update Agent SOP'; fi
 jq -n --arg root "$ROOT" --arg runtime "$RUNTIME" --arg policy "$POLICY" --arg resume "$RESUME" --arg resume_note "$RESUME_NOTE" \
-    --argjson installed "$INSTALLED" --argjson registered "$REGISTERED" --argjson observed "$OBSERVED" \
+    --argjson installed "$INSTALLED" --argjson registered "$REGISTERED" --argjson observed "$OBSERVED" --argjson memory_registered "$MEMORY_REGISTERED" \
     --argjson current "$CURRENT" --argjson missing "$MISSING" --argjson missing_hooks "$MISSING_HOOKS" --arg resolver "$RESOLVER" \
     '{root:$root,runtime:$runtime,policy:$policy,hooks_installed:$installed,
-      stop_hook_registered:$registered,local_context_marker_seen:$observed,
+      stop_hook_registered:$registered,memory_index_hook_registered:$memory_registered,local_context_marker_seen:$observed,
       installed_policy_matches_this_doctor:$current,missing_reviewers:$missing,missing_hook_files:$missing_hooks,
       resume:$resume,resume_diagnostic:$resume_note,resume_resolver:$resolver,
       runtime_enforcement:"unverified by doctor; validate in a real session"}'
