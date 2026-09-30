@@ -33,6 +33,8 @@ The shared standard operating procedure for Claude Code and Codex sessions on a 
 
 **Path rule (P96):** the resume snapshot lives in the machine-local memory directory derived from the git root, at the path `bash scripts/resolve-resume-path.sh` prints (`--read` for the read target). Never hand-construct it: the harness names its directories after the launch path, so a hand-built path lands in another project's directory.
 
+**Harness memory (P114):** the harness keeps its own memory directory and loads the `MEMORY.md` index in it, up to 200 lines or 25,000 bytes, into every session launched from the same directory. Project state is recorded in the files above and nowhere else. The index holds at most one pointer line per project (name, path, one-line purpose), plus what no project owns: rules that apply across projects and facts about the operator. `scripts/hooks/sop-memory-index.sh` reports an index at 80 per cent of either limit (P113).
+
 **Entry files:** `YYYY-MM-DD_<agent-id>_<slug>.md`; slug kebab-case, no underscores. Body: a title line, `**Date:**`, `**Agent:**`, then the content (`**Commits:**` on session records). A decision says what was chosen over what and why; a gotcha says the surprise, the prior expectation, and the rule that prevents a repeat (P54). Data-model invariants and named utilities that a reader of the schema would miss belong in gotchas too.
 
 **Project type:** `CLAUDE.md` opens with `**Project type:** code` or `non-code`. One rule, `scripts/hooks/sop-project-type.sh`, reads it (heuristics in `compliance-checklist.md` apply when the line is absent); the ship gate, the Stop hook, `/update-sop`, `/finish` and `/ship` all follow it (P102, P103).
