@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# agent-sop PostToolUse(Write|Edit) hook — reports a harness memory index that
-# is near its load limit (P113).
+# agent-sop PostToolUse(Write|Edit|MultiEdit) hook — reports a harness memory
+# index that is near its load limit (P113).
 #
 # The harness loads the first 200 lines or 25,000 bytes of a memory directory's
 # MEMORY.md, whichever comes first, and says so only after entries have already
@@ -16,6 +16,14 @@
 # It reports, never refuses: the write has happened by the time it runs. It is
 # not limited to SOP projects, because the index that overflows is the one
 # shared by every session launched from the home directory.
+#
+# What it cannot see: a write made through Bash (`sed -i`, `>>`) never reaches
+# a Write|Edit|MultiEdit hook, and the path is matched as the tool gave it, so
+# a relative path or a symlink into a directory of another name is not
+# followed. `--file` covers both by hand.
+#
+# A check that cannot run says so. Missing jq and an unreadable index both
+# leave a line on stderr; neither is reported as a quiet pass.
 #
 # Lengths are bytes, not characters: sop-lib.sh exports LC_ALL=C, and bytes are
 # what the harness limit counts.
@@ -32,39 +40,54 @@ LIMIT_LINES=200
 LINE_BYTES=200
 WARN_PERCENT=80
 LONGEST_SHOWN=5
+EXCERPT_BYTES=60
 
-# index_report <file> — the facts, one per line.
+# printable — stdin with every byte outside printable ASCII removed, so text
+# taken from a path or an index line cannot carry control bytes into a report.
+printable() { tr -cd '\40-\176'; }
+
+# is_count <value> — true for a non-empty string of digits.
+is_count() { case "${1:-}" in ''|*[!0-9]*) return 1 ;; *) return 0 ;; esac; }
+
+index_bytes() { wc -c < "$1" 2>/dev/null | tr -d ' '; }
+index_lines() { awk 'END { print NR }' "$1" 2>/dev/null; }
+
+# index_report <file> <bytes> <lines> — the facts, one per line.
 index_report() {
-    local file="$1" bytes lines long
-    bytes=$(wc -c < "$file" | tr -d ' ')
-    lines=$(awk 'END { print NR }' "$file")
+    local file="$1" bytes="$2" lines="$3" long
     long=$(awk -v max="$LINE_BYTES" 'length($0) > max { n++ } END { print n + 0 }' "$file")
     printf '%s of %s bytes (%s%%), %s of %s lines (%s%%)\n' \
         "$bytes" "$LIMIT_BYTES" "$((bytes * 100 / LIMIT_BYTES))" \
         "$lines" "$LIMIT_LINES" "$((lines * 100 / LIMIT_LINES))"
-    [ "$long" -gt 0 ] || return 0
+    is_count "$long" && [ "$long" -gt 0 ] || return 0
     printf '%s lines over %s bytes; the longest:\n' "$long" "$LINE_BYTES"
-    awk -v max="$LINE_BYTES" 'length($0) > max { printf "%d %d %s\n", length($0), NR, substr($0, 1, 60) }' "$file" |
+    awk -v max="$LINE_BYTES" -v cut="$EXCERPT_BYTES" \
+        'length($0) > max { printf "%d %d %s\n", length($0), NR, substr($0, 1, cut) }' "$file" |
         sort -rn | head -n "$LONGEST_SHOWN" |
-        while read -r len nr text; do printf '  line %s (%s bytes): %s\n' "$nr" "$len" "$text"; done
+        while read -r len nr text; do
+            printf '  line %s (%s bytes): %s\n' "$nr" "$len" "$(printf '%s' "$text" | printable)"
+        done
 }
 
-# index_over_threshold <file> — true at or over the warning share of a limit.
-index_over_threshold() {
-    local bytes lines
-    bytes=$(wc -c < "$1" | tr -d ' ')
-    lines=$(awk 'END { print NR }' "$1")
-    [ "$bytes" -ge $((LIMIT_BYTES * WARN_PERCENT / 100)) ] ||
-        [ "$lines" -ge $((LIMIT_LINES * WARN_PERCENT / 100)) ]
+# measure <file> — sets BYTES and LINES; false when the file cannot be measured.
+measure() {
+    [ -r "$1" ] || return 1
+    BYTES=$(index_bytes "$1")
+    LINES=$(index_lines "$1")
+    is_count "$BYTES" && is_count "$LINES"
 }
 
 if [ "${1:-}" = "--file" ]; then
     [ -f "${2:-}" ] || { echo "sop-memory-index: no such file: ${2:-}" >&2; exit 1; }
-    index_report "$2"
+    measure "$2" || { echo "sop-memory-index: cannot read $2" >&2; exit 1; }
+    index_report "$2" "$BYTES" "$LINES"
     exit 0
 fi
 
-sop_have_jq || exit 0
+if ! sop_have_jq; then
+    echo "[agent-sop] sop-memory-index: jq is not installed, so the memory index size check is off." >&2
+    exit 1
+fi
 sop_read_input
 
 case "$(sop_field '.tool_name')" in
@@ -78,31 +101,57 @@ case "$FILE" in
     *) exit 0 ;;
 esac
 [ -f "$FILE" ] || exit 0
+SHOWN=$(printf '%s' "$FILE" | printable)
 
-index_over_threshold "$FILE" || exit 0
+if ! measure "$FILE"; then
+    printf '[agent-sop] sop-memory-index: cannot read %s, so its size was not checked.\n' "$SHOWN" >&2
+    exit 2
+fi
+
+[ "$BYTES" -ge $((LIMIT_BYTES * WARN_PERCENT / 100)) ] ||
+    [ "$LINES" -ge $((LIMIT_LINES * WARN_PERCENT / 100)) ] || exit 0
 
 # Once per size reached: the marker holds the largest size this session has
 # been told about, so a trim followed by regrowth to the same size is quiet
-# and any growth past it is a new fact.
+# and any growth past it is a new fact. A session id is used as a directory
+# name only when it is one; anything else is hashed. With no session id there
+# is nothing to key on, so there is no marker and the report repeats.
 SESSION=$(sop_field '.session_id')
-[ -n "$SESSION" ] || SESSION=unknown
-MARKER_DIR="$(sop_state_dir)/sessions/$SESSION"
-MARKER="$MARKER_DIR/memory-index-$(printf '%s' "$FILE" | sop_sha256)"
-BYTES=$(wc -c < "$FILE" | tr -d ' ')
-LINES=$(awk 'END { print NR }' "$FILE")
-if [ -f "$MARKER" ]; then
-    read -r TOLD_BYTES TOLD_LINES < "$MARKER" || true
-    if [ "$BYTES" -le "${TOLD_BYTES:-0}" ] && [ "$LINES" -le "${TOLD_LINES:-0}" ]; then exit 0; fi
+case "$SESSION" in
+    ''|.|..|*[!A-Za-z0-9._-]*) [ -z "$SESSION" ] || SESSION=$(printf '%s' "$SESSION" | sop_sha256) ;;
+esac
+
+MARKER=""; TOLD_BYTES=0; TOLD_LINES=0
+if [ -n "$SESSION" ]; then
+    MARKER_DIR="$(sop_state_dir)/sessions/$SESSION"
+    MARKER="$MARKER_DIR/memory-index-$(printf '%s' "$FILE" | sop_sha256)"
+    if [ -f "$MARKER" ]; then
+        read -r TOLD_BYTES TOLD_LINES < "$MARKER" || true
+        if is_count "$TOLD_BYTES" && is_count "$TOLD_LINES"; then
+            if [ "$BYTES" -le "$TOLD_BYTES" ] && [ "$LINES" -le "$TOLD_LINES" ]; then exit 0; fi
+        else
+            TOLD_BYTES=0; TOLD_LINES=0
+        fi
+    fi
 fi
-mkdir -p "$MARKER_DIR" 2>/dev/null && printf '%s %s\n' "$BYTES" "$LINES" > "$MARKER" 2>/dev/null
+
+MARKER_NOTE=""
+if [ -n "$MARKER" ]; then
+    [ "$BYTES" -gt "$TOLD_BYTES" ] && TOLD_BYTES=$BYTES
+    [ "$LINES" -gt "$TOLD_LINES" ] && TOLD_LINES=$LINES
+    if ! { mkdir -p "$MARKER_DIR" && printf '%s %s\n' "$TOLD_BYTES" "$TOLD_LINES" > "$MARKER"; } 2>/dev/null; then
+        MARKER_NOTE="This report will repeat on every write: the state directory $(sop_state_dir | printable) cannot be written."
+    fi
+fi
 
 {
-    printf '[agent-sop] memory index near its load limit: %s\n' "$FILE"
-    index_report "$FILE"
+    printf '[agent-sop] memory index near its load limit: %s\n' "$SHOWN"
+    index_report "$FILE" "$BYTES" "$LINES"
     printf 'The harness loads the first %s lines or %s bytes and drops the rest. ' "$LIMIT_LINES" "$LIMIT_BYTES"
     printf 'Keep each entry to one line under %s bytes and move detail into its topic file. ' "$LINE_BYTES"
     printf 'State of an Agent SOP project belongs in that project (/update-sop), with one pointer line here. '
     printf 'Change or remove index lines only with the user'"'"'s agreement; topic files stay on disk.\n'
+    [ -z "$MARKER_NOTE" ] || printf '%s\n' "$MARKER_NOTE"
 } >&2
 
 exit 2

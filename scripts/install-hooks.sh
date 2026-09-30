@@ -182,7 +182,7 @@ NEW=$(jq \
     | ensure("UserPromptSubmit"; $all; $prompt; 10)
     | ensure("Stop"; $all; $stop; 20)
     | ensure("PreToolUse"; "Bash"; $push; 10)
-    | if $runtime == "claude" then ensure("PostToolUse"; "Write|Edit"; $memory; 10) else . end
+    | if $runtime == "claude" then ensure("PostToolUse"; "Write|Edit|MultiEdit"; $memory; 10) else . end
 ' "$SETTINGS" 2>/dev/null) || { echo "install-hooks: could not parse $SETTINGS" >&2; exit 1; }
 
 if [ "$DRY_RUN" = true ]; then
@@ -201,5 +201,5 @@ echo "install-hooks: scripts in $DEST"
 echo "  SessionStart + UserPromptSubmit  -> sop-session-context.sh (replaces /restart-sop Steps 0-4)"
 echo "  Stop                             -> sop-stop-drift.sh      (session-end drift, exit 2 with the gap)"
 echo "  PreToolUse(Bash)                 -> sop-push-gate.sh       (refuses push/PR when ship-sop auto has no report for HEAD)"
-[ "$RUNTIME" != claude ] || echo "  PostToolUse(Write|Edit)          -> sop-memory-index.sh    (reports a memory index near its load limit)"
+[ "$RUNTIME" != claude ] || echo "  PostToolUse(Write|Edit|MultiEdit) -> sop-memory-index.sh    (reports a memory index near its load limit)"
 exit 0
