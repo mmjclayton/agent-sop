@@ -31,5 +31,5 @@ Cleared 2026-08-03. The previous line tracked branch `fix/p66-p73-validator-and-
 <!-- in-flight:start -->
 *Auto-generated from `docs/agent-memory/in-flight/`.*
 
-- solo (2026-09-08): P110 implemented and verified locally on fix/review-continuity-hardening. Review: docs/reviews/20260908-hardening-ship-auto.md. Next: publish/merge when authorised; native-model pilot deferred at user direction (AUD 0 budget). No implementation blocker remains.
+- solo (2026-09-24): P110 merged (PR #29); P111 (PR #30) and P112 (PR #31) shipped with ship-sop P33/P34. Native-model pilot stays deferred (AUD 0). main is protected since this evening (required CI check, enforce_admins, auto-merge on): every commit goes via PR.
 <!-- in-flight:end -->
