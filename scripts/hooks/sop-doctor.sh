@@ -35,6 +35,7 @@ INSTALLED=true; REGISTERED=false; MISSING_HOOKS='[]'
 DEST="$CONFIG_HOME/scripts/hooks/agent-sop"
 REQUIRED=(sop-lib.sh sop-stop-drift.sh sop-push-gate.sh sop-session-context.sh sop-project-type.sh resolve-resume-path.sh sop-worktree-claim.sh)
 [ "$RUNTIME" != codex ] || REQUIRED+=(sop-codex-hook.sh)
+[ "$RUNTIME" != claude ] || REQUIRED+=(sop-memory-index.sh)
 for dependency in "${REQUIRED[@]}"; do
     if [ ! -f "$DEST/$dependency" ] || [ ! -r "$DEST/$dependency" ]; then
         INSTALLED=false

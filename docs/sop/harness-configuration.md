@@ -91,7 +91,11 @@ Stdout from a `Stop` hook is written to the debug log and never shown to the mod
 
 Refuses `git push` and `gh pr create` when ship-sop auto-mode applies on a code project and no report covers HEAD — matched on what would execute (simple command, `bash -c` / `sh -c` / `eval` body, command substitution), never on text inside a quoted argument. The only surface among the three that can actually refuse. `SOP_SKIP_GATE=1` in the command bypasses once and is appended to `.ship/bypass.log`.
 
-All three resolve the repository from the hook's `cwd` input, not the launch directory, and stay silent outside SOP projects. Whether a project is code is one rule for every consumer — `sop_project_type` in `sop-lib.sh`, run as `scripts/hooks/sop-project-type.sh`: an explicit `**Project type:**` line in CLAUDE.md, else the heuristics in `compliance-checklist.md` — so the ship gate, the context block, `/update-sop` and `/ship` cannot disagree about it (P102). Fixture suite: `docs/benchmark/hook-fixtures/run-tests.sh`.
+### b3. PostToolUse(Write|Edit) — memory index size (shipped: `scripts/hooks/sop-memory-index.sh`)
+
+Claude Code loads the first 200 lines or 25,000 bytes of a memory directory's `MEMORY.md` and warns only once entries have been cut off. The hook exits 2 with the byte count, the line count and the five longest lines when a write leaves the index at or over 80 per cent of either limit, once per size reached in a session. It reports and cannot refuse, since the write has already happened. It is the one hook that also runs outside SOP projects: the index that overflows is the one shared by sessions launched from the home directory. Claude Code only. By hand: `bash ~/.claude/scripts/hooks/agent-sop/sop-memory-index.sh --file <path>`.
+
+The first three resolve the repository from the hook's `cwd` input, not the launch directory, and stay silent outside SOP projects. Whether a project is code is one rule for every consumer — `sop_project_type` in `sop-lib.sh`, run as `scripts/hooks/sop-project-type.sh`: an explicit `**Project type:**` line in CLAUDE.md, else the heuristics in `compliance-checklist.md` — so the ship gate, the context block, `/update-sop` and `/ship` cannot disagree about it (P102). Fixture suite: `docs/benchmark/hook-fixtures/run-tests.sh`.
 
 ### c. Pre-commit quality gate
 

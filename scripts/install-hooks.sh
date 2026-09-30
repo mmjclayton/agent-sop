@@ -55,7 +55,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 source_file() { if [ "$1" = resolve-resume-path.sh ]; then printf '%s/../%s' "$SRC" "$1"; else printf '%s/%s' "$SRC" "$1"; fi; }
-FILES="resolve-resume-path.sh sop-worktree-claim.sh sop-doctor.sh sop-lib.sh sop-session-context.sh sop-stop-drift.sh sop-push-gate.sh sop-project-type.sh sop-codex-hook.sh"
+FILES="resolve-resume-path.sh sop-worktree-claim.sh sop-doctor.sh sop-lib.sh sop-session-context.sh sop-stop-drift.sh sop-push-gate.sh sop-project-type.sh sop-codex-hook.sh sop-memory-index.sh"
 for f in $FILES; do
     if [ ! -f "$(source_file "$f")" ]; then
         echo "install-hooks: missing $SRC/$f" >&2
@@ -66,6 +66,8 @@ done
 CTX_CMD="bash \"$DEST/sop-session-context.sh\""
 STOP_CMD="bash \"$DEST/sop-stop-drift.sh\""
 PUSH_CMD="bash \"$DEST/sop-push-gate.sh\""
+# Claude Code only: the memory index is a Claude Code harness file.
+MEMORY_CMD="bash \"$DEST/sop-memory-index.sh\""
 
 if [ "$RUNTIME" = codex ]; then
     CTX_CMD="bash \"$DEST/sop-codex-hook.sh\" SessionStart"
@@ -162,7 +164,7 @@ fi
 NEW=$(jq \
     --arg all "$([ "$RUNTIME" = codex ] && echo ".*" || echo "*")" \
     --arg runtime "$RUNTIME" --arg legacy "bash \"${AGENT_SOP_USER_HOME:-$HOME}/.claude/scripts/hooks/agent-sop/" \
-    --arg ctx "$CTX_CMD" --arg prompt "$PROMPT_CMD" --arg stop "$STOP_CMD" --arg push "$PUSH_CMD" '
+    --arg ctx "$CTX_CMD" --arg prompt "$PROMPT_CMD" --arg stop "$STOP_CMD" --arg push "$PUSH_CMD" --arg memory "$MEMORY_CMD" '
     def ensure(ev; m; cmd; t):
         .hooks[ev] = ((.hooks[ev] // []) |
             if any(.[]?.hooks[]?; (.command // "") == cmd) then .
@@ -180,6 +182,7 @@ NEW=$(jq \
     | ensure("UserPromptSubmit"; $all; $prompt; 10)
     | ensure("Stop"; $all; $stop; 20)
     | ensure("PreToolUse"; "Bash"; $push; 10)
+    | if $runtime == "claude" then ensure("PostToolUse"; "Write|Edit"; $memory; 10) else . end
 ' "$SETTINGS" 2>/dev/null) || { echo "install-hooks: could not parse $SETTINGS" >&2; exit 1; }
 
 if [ "$DRY_RUN" = true ]; then
@@ -198,4 +201,5 @@ echo "install-hooks: scripts in $DEST"
 echo "  SessionStart + UserPromptSubmit  -> sop-session-context.sh (replaces /restart-sop Steps 0-4)"
 echo "  Stop                             -> sop-stop-drift.sh      (session-end drift, exit 2 with the gap)"
 echo "  PreToolUse(Bash)                 -> sop-push-gate.sh       (refuses push/PR when ship-sop auto has no report for HEAD)"
+[ "$RUNTIME" != claude ] || echo "  PostToolUse(Write|Edit)          -> sop-memory-index.sh    (reports a memory index near its load limit)"
 exit 0
