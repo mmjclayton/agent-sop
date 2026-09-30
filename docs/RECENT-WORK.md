@@ -9,6 +9,7 @@ Moved out of `CLAUDE.md` on 2026-08-03 so it stops consuming context every sessi
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-09-30.*
 
+- 2026-09-30 `solo`: P113 and P114 merged and installed
 - 2026-09-30 `solo`: Memory index size check and harness memory rule
 - 2026-09-24 `solo`: Receipt schema version 2 with run counts
 - 2026-09-24 `solo`: Reviewer scope by path in the ship gate library
