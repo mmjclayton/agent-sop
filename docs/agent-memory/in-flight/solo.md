@@ -1,2 +1,3 @@
 (2026-09-24): P110 merged (PR #29); P111 (PR #30) and P112 (PR #31) shipped with ship-sop P33/P34. Native-model pilot stays deferred (AUD 0). main is protected since this evening (required CI check, enforce_admins, auto-merge on): every commit goes via PR.
 (2026-09-30): P113 and P114 merged via PR #33 (6d89a77). Hook installed and registered on this machine, installed commands and baseline SHAs refreshed the same day. ship-sop replication is ship-sop P36, on its own PR. Nothing else in flight.
+(2026-10-07): research digests moved into docs/research/ (PR #36, 5af9db2); the scheduled scanner now writes there, so each run leaves an uncommitted digest for the next session to commit via PR. Nothing else in flight.
