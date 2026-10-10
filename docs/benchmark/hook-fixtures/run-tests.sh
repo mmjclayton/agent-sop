@@ -860,6 +860,16 @@ else
     bad "installer-preserves-symlinked-settings" "link=$([ -L "$LINK" ] && echo yes || echo no) real=$(jq -c '.hooks // {} | keys' "$REAL" 2>/dev/null)"
 fi
 
+# --dry-run writes nothing: no settings file, no settings directory, no scripts (independent review, P118).
+DRYSET="$TMP/dry-home/settings.json"; DRYDEST="$TMP/dry-dest"
+bash "$INSTALLER" --settings "$DRYSET" --dest "$DRYDEST" --dry-run > "$TMP/dry-out" 2>&1; DRY=$?
+if [ "$DRY" = 0 ] && [ ! -e "$TMP/dry-home" ] && [ ! -e "$DRYDEST" ] \
+   && [ "$(jq '[.hooks.Stop[]?.hooks[]?.command | select(test("sop-stop-drift"))] | length' "$TMP/dry-out")" = 1 ]; then
+    ok "installer-dry-run-writes-nothing"
+else
+    bad "installer-dry-run-writes-nothing" "exit=$DRY home=$([ -e "$TMP/dry-home" ] && echo created || echo absent) dest=$([ -e "$DRYDEST" ] && echo created || echo absent) out='$(head -3 "$TMP/dry-out")'"
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 echo ""

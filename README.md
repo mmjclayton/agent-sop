@@ -81,14 +81,17 @@ If you installed with `--dest`, `--settings`, `AGENT_SOP_USER_HOME` or a custom
 stay registered.
 
 To preview the hook registration, run `bash scripts/install-hooks.sh --dry-run`
-from this checkout. It prints the settings file as it would be written and changes
-no existing file; if no settings file exists yet, it creates an empty one.
+from this checkout. It prints the settings file as it would be written and writes
+nothing.
 `--no-hooks` skips hook registration during setup.
 
 What the hooks can refuse: on code projects with a `ship-sop.config.json`, the
 agent's own `git push` and `gh pr create` are refused when that file is invalid, or
 when its automatic gate is on, the code diff is at or over the configured
-`min_diff_lines` and no validated review receipt covers HEAD.
+`min_diff_lines` and no validated review receipt covers HEAD. A change to agent
+instruction files (`AGENTS.md`, `CLAUDE.md`, `SKILL.md`, `.agents/`, `.claude/`,
+`.codex/`, `docs/sop/`, `docs/guides/sop-*`) needs a receipt whatever its size,
+and counts toward the code diff.
 Prefix the command with `SOP_SKIP_GATE=1` to bypass once; the bypass is logged to
 `.ship/bypass.log`. No other command is refused, and pushes from another terminal
 are unaffected. On code projects the Stop hook may also keep the agent working for

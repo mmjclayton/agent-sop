@@ -159,7 +159,9 @@ if [ "$DRY_RUN" = false ]; then
 fi
 
 # ── Register hooks ────────────────────────────────────────────────────────────
-[ -f "$SETTINGS" ] || { mkdir -p "$(dirname "$SETTINGS")"; echo '{}' > "$SETTINGS"; }
+# A missing settings file is read as {}; only a real install creates it, so --dry-run writes nothing.
+CURRENT='{}'
+[ ! -f "$SETTINGS" ] || CURRENT=$(cat "$SETTINGS") || { echo "install-hooks: could not read $SETTINGS" >&2; exit 1; }
 
 NEW=$(jq \
     --arg all "$([ "$RUNTIME" = codex ] && echo ".*" || echo "*")" \
@@ -183,14 +185,15 @@ NEW=$(jq \
     | ensure("Stop"; $all; $stop; 20)
     | ensure("PreToolUse"; "Bash"; $push; 10)
     | if $runtime == "claude" then ensure("PostToolUse"; "Write|Edit|MultiEdit"; $memory; 10) else . end
-' "$SETTINGS" 2>/dev/null) || { echo "install-hooks: could not parse $SETTINGS" >&2; exit 1; }
+' <<< "$CURRENT" 2>/dev/null) || { echo "install-hooks: could not parse $SETTINGS" >&2; exit 1; }
 
 if [ "$DRY_RUN" = true ]; then
     printf '%s\n' "$NEW"
     exit 0
 fi
 
-if [ "$NEW" != "$(cat "$SETTINGS")" ]; then
+if [ "$NEW" != "$CURRENT" ] || [ ! -f "$SETTINGS" ]; then
+    mkdir -p "$(dirname "$(resolve_settings_target)")" || exit 1
     backup_settings
     write_settings "$NEW"
     echo "install-hooks: registered hooks in $SETTINGS (backup written alongside)"
