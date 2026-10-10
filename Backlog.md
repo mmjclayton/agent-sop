@@ -1351,3 +1351,24 @@ Approved by Matt, 10 Oct 2026 ("proceed"), after R7 found that k=3 could not sep
 
 **Acceptance criteria:**
 - R8 reports, per arm, the session-2 judge median and range, the core-criterion count, locate_steps, wall time and tokens, with overlap stated for context vs SOP
+
+---
+
+### P121 - Session resume test: does agent-sop help a new session pick up unfinished work? (R9)
+
+`[IN PROGRESS] [Feature]`
+review: docs/reviews/20261011-083942-ship-auto.md
+
+Matt, 11 Oct 2026: agent-sop exists because a new session often lacked the context of the work in progress; the backlog plus the start and end routine are the fix. Approved on the same day as the R8 redesign ("go ahead with testing as per my instructions for what agent-sop is for"), on Codex with the fresh usage. Built by the ship-sop session on `feat/p121-resume-test` (worktree `~/Projects/agent-sop-p121`).
+
+- **Pair:** tasks 10 and 11 at hst-tracker 814b3b5, P5 (RPE per set). Session 1 builds the server side; its prompt alone carries three decisions, two of which apply only to the client (RPE only on the last set, blank by default; a "Track RPE" toggle, off by default). Session 2 is a fresh process in the same project and home, told only "Continue where we left off."
+- **End modes:** `ask` (the user says they are stopping; the End Prompt is sent in the same session, resumed by thread id) and `closed` (the session ends when the agent stops). One output directory per mode.
+- **Primary result, fixed before any run:** the decision score, the mean of task 11 criteria 1-3. Secondary: judge overall, session-2 time and tokens, session-1 scope (`changed_server`, `changed_client`), `read_session_records`.
+- **Threshold:** a difference counts only when the arm medians differ by 0.10 or more and the ranges do not overlap.
+- **Arms:** native, context and SOP. The context arm carries hst-tracker's own CLAUDE.md, which already includes the April agent-sop records routine, so native vs SOP is the cleanest contrast.
+- **Order:** a pilot of one pair per arm per end mode, with per-pair time and tokens reported to Matt, before any k>=5 run.
+
+**Acceptance criteria:**
+- Harness fixtures (`docs/benchmark/bench-fixtures/run-tests.sh`) pass and fail against the previous harness
+- Pilot: six valid pairs, judged, with per-pair time and tokens reported
+- After Matt sets k: per arm and end mode, the decision-score median and range, judge overall, and session-2 time and tokens, with flagged runs reported separately
