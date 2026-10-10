@@ -62,6 +62,27 @@ task_file() { local f; f=$(printf '%s/task-%02d-' "$TASK_DIR" "$1"); ls "$f"*.md
 task_prompt() { awk '/^## Prompt/{p=1;next} /^## /{p=0} p && /^>/{sub(/^> ?/,""); print}' "$(task_file "$1")"; }
 task_criteria() { awk '/^## Acceptance Criteria/{p=1;next} /^## /{p=0} p' "$(task_file "$1")"; }
 criteria_count() { task_criteria "$1" | grep -cE '^[0-9]+\.'; }
+# Optional "## Target" section: the file a dependent session should reach (continuity metric).
+task_target() { local f; f=$(task_file "$1"); [ -n "$f" ] || return 0; awk '/^## Target/{p=1;next} /^## /{p=0} p && NF {gsub(/`/,""); print; exit}' "$f"; }
+last_task() { local seq; IFS='+' read -r -a seq <<< "$1"; printf '%s' "${seq[$((${#seq[@]} - 1))]}"; }
+# Tree of the working copy, built in a private index so the agent's index is untouched.
+# Seeded from the arm commit so files the agent later gitignores stay in the base.
+snapshot_tree() {
+    local run=$1; rm -f "$run/snap.idx"
+    GIT_INDEX_FILE="$run/snap.idx" hgit -C "$run/proj" read-tree "$(cat "$run/arm-commit")"
+    GIT_INDEX_FILE="$run/snap.idx" hgit -C "$run/proj" add -A
+    GIT_INDEX_FILE="$run/snap.idx" hgit -C "$run/proj" write-tree
+}
+diff_base() { if [ -f "$1/diff-base" ]; then cat "$1/diff-base"; else cat "$1/arm-commit"; fi; }
+# Commands a session ran before it first touched the target path: null when the task has
+# no target, -1 when the session never touched it. A command or file change counts when it
+# names the path, so reading a note that names the file counts and an unnamed search does not.
+locate_steps() {
+    [ -n "$2" ] || { echo null; return; }
+    jq -s --arg t "$2" '[.[] | select(.type == "item.completed") | .item] as $items
+        | ([$items | to_entries[] | select((.value.command // "" | tostring | contains($t)) or ((.value.changes // []) | any((.path // "") | contains($t)))) | .key] | first) as $hit
+        | if $hit == null then -1 else [$items[:$hit][] | select(.type == "command_execution")] | length end' "$1" || echo null
+}
 
 # Runs a command in its own process group; on timeout the whole group is killed
 # and the status is $TIMED_OUT, so orphaned children cannot keep writing.
@@ -83,7 +104,7 @@ clean_env() { CLEAN=(env -i HOME="$1" CODEX_HOME="$1/.codex" PATH="$PATH" TERM=d
 hgit() {
     GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_AUTHOR_NAME=bench GIT_AUTHOR_EMAIL=bench@example.invalid \
     GIT_COMMITTER_NAME=bench GIT_COMMITTER_EMAIL=bench@example.invalid \
-    git -c core.hooksPath=/dev/null -c core.fsmonitor=false -c core.pager=cat -c diff.external= --no-pager "$@"
+    git -c core.hooksPath=/dev/null -c core.excludesFile=/dev/null -c core.fsmonitor=false -c core.pager=cat -c diff.external= --no-pager "$@"
 }
 
 # Puts back the harness's .git/config and removes hooks; refuses a .git the agent replaced.
@@ -91,7 +112,7 @@ restore_git() {
     local proj=$1 run=$2
     [ -d "$proj/.git" ] && [ ! -L "$proj/.git" ] || die ".git in $proj was replaced; run is unusable"
     rm -f "$proj/.git/config"; cp "$run/git-config.orig" "$proj/.git/config"
-    rm -rf "$proj/.git/hooks" "$proj/.git/info/exclude" "$proj/.git/info/attributes"
+    rm -rf "$proj/.git/hooks" "$proj/.git/info/exclude" "$proj/.git/info/attributes" "$proj/.git/info/grafts" "$proj/.git/objects/info/alternates"
 }
 
 isolated_home() {
@@ -197,25 +218,46 @@ one_run() {
     trap 'exit 130' INT; trap 'exit 143' TERM
     isolated_home "$run/home"
     prepare_arm "$run" "$arm"
-    prompt=$(task_prompt "$task"); [ -n "$prompt" ] || die "no prompt for task $task"
-    printf '%s\n' "$prompt" > "$run/prompt.txt"
     cp "$BENCH_TEMPLATE/.bench-baseline.json" "$run/baseline.json" || die "template has no .bench-baseline.json"
     [ "$arm" != sop ] || extra=(--dangerously-bypass-hook-trust)
-    log "start t$task $arm r$rep"
-    start=$(date +%s)
-    clean_env "$run/home"
-    with_timeout "$TIMEOUT" "${CLEAN[@]}" \
-        codex exec -C "$run/proj" -s workspace-write --add-dir "$run/proj/.git" -m "$MODEL" \
-        -c model_reasoning_effort="\"$EFFORT\"" -c approval_policy='"never"' \
-        -c sandbox_workspace_write.network_access=true \
-        ${extra[@]+"${extra[@]}"} --json -o "$run/last-message.md" - \
-        < "$run/prompt.txt" > "$run/events.jsonl" 2> "$run/stderr.log" || status=$?
-    local wall=$(( $(date +%s) - start ))
-    rm -f "$run/home/.codex/auth.json"
-    # Undo anything the agent wrote into .git that would run code under the harness.
-    restore_git "$run/proj" "$run"
+    # "5+9" runs task 5 then task 9 as separate sessions in the same project and home;
+    # only the last session is tested and judged, against where the earlier ones left off.
+    local seq i n sdir wall=0
+    IFS='+' read -r -a seq <<< "$task"; n=${#seq[@]}
+    for i in $(seq 1 "$n"); do
+        sdir="$run"; [ "$i" = "$n" ] || { sdir="$run/session-$i"; mkdir -p "$sdir"; }
+        prompt=$(task_prompt "${seq[$((i - 1))]}"); [ -n "$prompt" ] || die "no prompt for task ${seq[$((i - 1))]}"
+        printf '%s\n' "$prompt" > "$sdir/prompt.txt"
+        if [ "$i" != 1 ]; then
+            snapshot_tree "$run" > "$run/diff-base"
+            hgit -C "$run/proj" cat-file -e "$(cat "$run/diff-base")^{tree}" || die "no session-$((i - 1)) tree for $run"
+            install -m 600 "$AUTH" "$run/home/.codex/auth.json"
+        fi
+        log "start t$task $arm r$rep (session $i of $n, task ${seq[$((i - 1))]})"
+        start=$(date +%s); status=0
+        clean_env "$run/home"
+        with_timeout "$TIMEOUT" "${CLEAN[@]}" \
+            codex exec -C "$run/proj" -s workspace-write --add-dir "$run/proj/.git" -m "$MODEL" \
+            -c model_reasoning_effort="\"$EFFORT\"" -c approval_policy='"never"' \
+            -c sandbox_workspace_write.network_access=true \
+            ${extra[@]+"${extra[@]}"} --json -o "$sdir/last-message.md" - \
+            < "$sdir/prompt.txt" > "$sdir/events.jsonl" 2> "$sdir/stderr.log" || status=$?
+        wall=$(( $(date +%s) - start ))
+        rm -f "$run/home/.codex/auth.json"
+        # Undo anything the agent wrote into .git that would run code under the harness.
+        restore_git "$run/proj" "$run"
+        if [ "$i" != "$n" ]; then
+            usage_json "$sdir/events.jsonl" > "$sdir/usage.json" || { log "usage unreadable for session $i of $run"; echo null > "$sdir/usage.json"; }
+            jq -n --argjson session "$i" --arg task "${seq[$((i - 1))]}" --argjson exit "$status" --argjson wall "$wall" --slurpfile u "$sdir/usage.json" \
+                --argjson locate "$(locate_steps "$sdir/events.jsonl" "$(task_target "${seq[$((i - 1))]}")")" \
+                '{session:$session, task:$task, exit_code:$exit, wall_seconds:$wall, usage:$u[0], locate_steps:$locate}' > "$sdir/session.json"
+            # A later session is only meaningful if this one completed and did work.
+            [ "$status" = 0 ] || die "session $i of $run did not complete (exit $status)"
+            jq -e '.usage != null' "$sdir/session.json" >/dev/null || die "session $i of $run reported no usage"
+        fi
+    done
     hgit -C "$run/proj" add -A
-    hgit -C "$run/proj" diff --cached --stat --no-ext-diff --no-textconv "$(cat "$run/arm-commit")" > "$run/diffstat.txt"
+    hgit -C "$run/proj" diff --cached --stat --no-ext-diff --no-textconv "$(diff_base "$run")" > "$run/diffstat.txt"
     run_tests "$run"
     finish_run "$run" "$task" "$arm" "$rep" "$status" "$wall"
     log "end   t$task $arm r$rep exit=$status wall=${wall}s"
@@ -226,8 +268,9 @@ usage_json() { # per-turn usage, or null when the events carry none
 }
 
 finish_run() {
-    local run=$1 task=$2 arm=$3 rep=$4 status=$5 wall=$6 base changed usage s_pass s_fail c_pass c_fail
-    base=$(cat "$run/arm-commit")
+    local run=$1 task=$2 arm=$3 rep=$4 status=$5 wall=$6 base changed usage s_pass s_fail c_pass c_fail judged sessions
+    base=$(diff_base "$run"); judged=$(last_task "$task")
+    sessions=$(for f in "$run"/session-*/session.json; do if [ -f "$f" ]; then cat "$f"; fi; done | jq -s 'sort_by(.session)')
     read -r s_pass s_fail <<< "$(count_tests "$run/test-server.log")"
     read -r c_pass c_fail <<< "$(count_tests "$run/test-client.log")"
     changed=$(hgit -C "$run/proj" diff --cached --name-only "$base" | jq -R . | jq -s .)
@@ -236,13 +279,15 @@ finish_run() {
         --argjson exit "$status" --argjson wall "$wall" --argjson changed "$changed" --argjson timed_out_code "$TIMED_OUT" \
         --argjson s_exit "$(cat "$run/test-server.exit")" --argjson c_exit "$(cat "$run/test-client.exit")" \
         --argjson s_pass "$s_pass" --argjson s_fail "$s_fail" --argjson c_pass "$c_pass" --argjson c_fail "$c_fail" \
-        --argjson usage "$usage" --arg codex "$(codex --version)" '
-        {task:$task, arm:$arm, rep:$rep, model:$model, effort:$effort, codex:$codex, exit_code:$exit,
+        --argjson usage "$usage" --arg codex "$(codex --version)" --arg judged "$judged" --argjson sessions "$sessions" \
+        --argjson locate "$(locate_steps "$run/events.jsonl" "$(task_target "$judged")")" '
+        {task:$task, judged_task:$judged, earlier_sessions:$sessions, locate_steps:$locate, arm:$arm, rep:$rep, model:$model, effort:$effort, codex:$codex, exit_code:$exit,
          timed_out:($exit == $timed_out_code), wall_seconds:$wall, files_changed:$changed,
          tests:{server:{exit:$s_exit, passed:$s_pass, failed:$s_fail}, client:{exit:$c_exit, passed:$c_pass, failed:$c_fail}},
          tests_ran:($s_pass != null and $c_pass != null), usage:$usage}
         | .tests_suspect = ((.tests.server.exit != 0 and .tests.server.failed == 0) or (.tests.client.exit != 0 and .tests.client.failed == 0))
-        | .valid = ((.exit_code == 0 and .usage != null) or .timed_out)' > "$run/result.json.tmp"
+        | .valid = ((.exit_code == 0 and .usage != null) or .timed_out)
+        | .valid = (.valid and all(.earlier_sessions[]; .exit_code == 0 and .usage != null))' > "$run/result.json.tmp"
     mv "$run/result.json.tmp" "$run/result.json"
 }
 
@@ -252,7 +297,7 @@ DIFF_LIMIT=150000
 
 judge_packet() {
     local run=$1 task=$2 base diff
-    base=$(cat "$run/arm-commit")
+    base=$(diff_base "$run")
     diff=$(hgit -C "$run/proj" diff --cached --no-ext-diff --no-textconv "$base" -- . "${JUDGE_EXCLUDES[@]}") || die "diff failed for $run"
     echo "You are scoring one anonymous attempt at a coding task in a React/Express app."
     echo "Score only against the acceptance criteria. Do not reward or penalise process documents."
@@ -270,7 +315,7 @@ judge_packet() {
 
 judge_run() {
     local run=$1 task proj=$1/proj jh jdir n sha status=0
-    task=$(jq -er .task "$run/result.json") || die "unreadable result.json in $run"
+    task=$(jq -er '.judged_task // .task' "$run/result.json") || die "unreadable result.json in $run"
     jq -e '.valid == true' "$run/result.json" >/dev/null || { log "skipping invalid run $run"; return 0; }
     restore_git "$proj" "$run"
     judge_packet "$run" "$task" > "$run/judge-packet.md.tmp"
@@ -308,7 +353,7 @@ JSON
 
 report() {
     local out=$1 r d
-    { printf 'task\tarm\trep\tvalid\texit\ttimed_out\tjudge\tserver_exit\tserver_pass\tserver_fail\tclient_exit\tclient_pass\tclient_fail\twall_s\tinput_tokens\tcached_input\toutput_tokens\treasoning\n'
+    { printf 'task\tarm\trep\tvalid\texit\ttimed_out\tjudge\tserver_exit\tserver_pass\tserver_fail\tclient_exit\tclient_pass\tclient_fail\twall_s\tinput_tokens\tcached_input\toutput_tokens\treasoning\tlocate_steps\tearlier_wall_s\tearlier_output_tokens\n'
       for r in "$out"/runs/*/result.json; do
           [ -f "$r" ] || continue
           d=$(dirname "$r")
@@ -323,7 +368,9 @@ report() {
             def tok(f): if .usage == null or any(.usage[]; f == null) then "NA" else (.usage | map(f) | add) end;
             [.task, .arm, .rep, .valid, .exit_code, .timed_out, ($j // "NA"),
              .tests.server.exit, .tests.server.passed, .tests.server.failed, .tests.client.exit, .tests.client.passed, .tests.client.failed,
-             .wall_seconds, tok(.input_tokens), tok(.cached_input_tokens), tok(.output_tokens), tok(.reasoning_output_tokens)]
+             .wall_seconds, tok(.input_tokens), tok(.cached_input_tokens), tok(.output_tokens), tok(.reasoning_output_tokens),
+             .locate_steps, ((.earlier_sessions // []) | map(.wall_seconds) | add),
+             ((.earlier_sessions // []) | map(.usage // [] | map(.output_tokens // 0) | add) | add)]
             | map(if . == null then "NA" else . end) | @tsv' "$r"
       done; } > "$out/scores.tsv"
     column -t -s $'\t' "$out/scores.tsv"
@@ -337,15 +384,20 @@ report() {
 cmd="${1:-}"; shift || true
 case "$cmd" in
     template) build_template "${1:?template dir}" ;;
-    one) one_run "$@" ;;
+    one) out=$(cd "${1:?out dir}" && pwd -P); shift; one_run "$out" "$@" ;;
     judge-one) judge_run "$@" ;;
     run)
         out="${1:?out dir}"; shift
         k=1; tasks="5 7 8"; failed=0
         while [ $# -gt 0 ]; do case "$1" in -k) k=$2; shift 2 ;; --tasks) tasks=$2; shift 2 ;; *) die "unknown option $1" ;; esac; done
         [ -n "${BENCH_TEMPLATE:-}" ] && [ -f "$BENCH_TEMPLATE/.bench-baseline.json" ] || die "set BENCH_TEMPLATE to a template built by this script"
+        for t in $tasks; do
+            [[ $t =~ ^[1-9][0-9]*(\+[1-9][0-9]*)*$ ]] || die "bad task spec '$t' (use N or N+M)"
+            IFS='+' read -r -a parts <<< "$t"
+            for p in "${parts[@]}"; do [ -n "$(task_file "$p")" ] || die "no task file for $p"; done
+        done
         [ -f "$AUTH" ] || die "no Codex login at $AUTH"
-        mkdir -p "$out/runs"
+        mkdir -p "$out/runs"; out=$(cd "$out" && pwd -P)
         plan=$(for t in $tasks; do for r in $(seq 1 "$k"); do for a in "${ARMS[@]}"; do echo "$t $a $r"; done; done; done | perl -MList::Util=shuffle -e 'print shuffle <STDIN>')
         [ -n "$plan" ] || die "empty plan (check -k and --tasks)"
         printf '%s\n' "$plan" > "$out/plan.txt"

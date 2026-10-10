@@ -1311,3 +1311,20 @@ From an outside review of R6 that Matt passed on, 10 Oct 2026; the review recomm
 **Acceptance criteria:**
 - R7 reports median and range per task for native, context and SOP, with overlap stated for context vs SOP
 - R6 summary carries the confound note
+
+---
+
+### P120 - Dependent-session pair: does agent-sop pay off across sessions? (R8)
+
+`[BLOCKED] [Iteration]`
+
+**Blocked on:** the ChatGPT plan's Codex usage limit, hit at 17:45 on 10 Oct 2026 during the first R8 pair ("try again at Nov 9th, 2026 2:30 PM", per Codex). No R8 data was produced: one SOP pair completed session 1 and failed in session 2; the other eight failed in session 1. The harness pair mode and task 09 are built and were validated with one native smoke pair (both sessions completed; session 2 reached `logger.js` in 1 command). Unblocks when the quota resets, or if Matt chooses another billing route (plan upgrade or API key). An earlier session must complete (exit 0, usage reported); a session-1 timeout makes the pair invalid rather than scoring session 2 from a half-finished base. Re-run with `BENCH_ARMS="native context sop" codex-bench.sh run <out> -k 3 --tasks "5+9"`.
+
+Approved by Matt, 10 Oct 2026 ("proceed"), after R7 found that k=3 could not separate agent-sop from the project's own instructions on single-session tasks. The R7 recommendation was one small multi-session task pair in all three arms before any five-run expansion.
+
+- Pair (continuity methodology, pair 1): session 1 is task 05 (client tonnage bug); session 2 is new task 09, "Fix the related bug in the workout summary totals", whose fix is in the server endpoints that ignore count-twice. Session 2 is a new `codex exec` in the same project and isolated home, so whatever session 1 left (files, SOP records, resume snapshot, native Codex memory) carries over.
+- Harness: `codex-bench.sh` task spec `5+9` runs the sessions in order; only the last is tested and judged, against the tree where session 1 ended. `locate_steps` counts session-2 commands before it first touches `server/src/routes/logger.js`.
+- Run: native, context and SOP arms, k=3, 9 pairs, same template (814b3b5), model, judge and login as R7.
+
+**Acceptance criteria:**
+- R8 reports, per arm, the session-2 judge median and range, the core-criterion count, locate_steps, wall time and tokens, with overlap stated for context vs SOP

@@ -1,0 +1,115 @@
+{
+  "schema_version": 2,
+  "base": "beb793bc6524114df685ad17a735bbf9542e713b",
+  "head": "32a2d8b916210494940f66ec1989ee357c4aef95",
+  "tree": "46a446f67c7a9e094ca59121f7549b79618707cf",
+  "policy_sha256": "2bf3e7532a015bebf17f7553468f92f27d5b777be7d19cb8aca33e5e8b07e494",
+  "tests": {
+    "status": "PASS",
+    "evidence": "At 40d6173 (later commit is docs only): all nine docs/benchmark/*-fixtures/run-tests.sh suites exit 0; shellcheck -S warning clean on every tracked .sh. finish_run and report exercised by sourcing the harness functions against fake run folders: single-task run valid with earlier_sessions [] and locate_steps null; pair run diffs against the session-1 tree (only the session-2 file changed), locate_steps 1, report columns filled; pair with earlier usage null is invalid. One real native 5+9 pair (pre-fix commit) completed both sessions. R8 itself blocked by the Codex usage limit; no R8 data."
+  },
+  "reviewers": [
+    {
+      "name": "security-reviewer",
+      "version": "7f43a9e27d8aed8f8a55b4fd970e5c33cf83902f896ade200da05efb15d9bda0",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 1,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "MEDIUM",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 236,
+          "message": "A process left by session 1 that escapes the process-group kill could read the login re-installed for session 2. Accepted residual."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 236,
+          "message": "Diff-base and arm-commit objects live in agent-writable .git/objects. Accepted."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 259,
+          "message": "Final add -A uses the agent-writable index (assume-unchanged bits). Pre-existing; accepted."
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 67,
+          "message": "Fixed: private snapshot index seeded from arm commit; core.excludesFile=/dev/null; grafts and alternates removed; task specs validated."
+        }
+      ]
+    },
+    {
+      "name": "code-reviewer",
+      "version": "f6420e5df2c684f2da46628e1c1c264dbb865ac3130701ff8025111b392bd677",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 1,
+      "block_rounds": 1,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 273,
+          "message": "Fixed (was HIGH): finish_run aborted every single-task run when no earlier sessions existed."
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/tasks/task-09-summary-tonnage.md",
+          "line": 17,
+          "message": "Withdrawn by reviewer (was HIGH): premise checked at 814b3b5; the working copy had later fixes. Task now says to check the pinned commit."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/tasks/task-09-summary-tonnage.md",
+          "line": 23,
+          "message": "Criterion 3 wording; fixed ('one or both, never x4')."
+        }
+      ]
+    },
+    {
+      "name": "silent-failure-hunter",
+      "version": "004ce0389356e0666d80c89cef39ad895ab326b3f7d19d34d23c70ab249a795d",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 1,
+      "block_rounds": 1,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 273,
+          "message": "Fixed (was HIGH): single-task finish_run abort."
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 253,
+          "message": "Fixed (was HIGH): earlier session with exit 0 and no usage counted as valid; earlier timeouts now invalid."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 375,
+          "message": "earlier_output_tokens maps a missing field to 0. Accepted."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 70,
+          "message": "task_target assignment could abort on a direct one call with a missing task file; run validates first. Accepted."
+        }
+      ]
+    }
+  ]
+}
