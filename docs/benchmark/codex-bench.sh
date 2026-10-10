@@ -18,7 +18,8 @@
 #   codex-bench.sh judge <out>                        blind rubric scoring of every valid run
 #   codex-bench.sh report <out>                       scores.tsv plus per-arm counts
 #
-# Keep <out> outside the repository; only result.json, judge.json and
+# Keep <out> outside the repository (and, for the Claude runtime, outside your home
+# folder: its sandbox hides home, so a run there is refused); only result.json, judge.json and
 # last-message.md are meant to be copied into docs/benchmark/results/.
 # A run is valid when Codex exited 0 and reported usage, or when it hit the time
 # limit (an outcome of the attempt, scored on what it left; usage may be NA). Test
@@ -29,6 +30,10 @@
 # Environment:
 #   HST_REPO (~/Projects/hst-tracker)  BENCH_BASE_COMMIT (814b3b5)  BENCH_TEMPLATE (required for run)
 #   BENCH_ARMS ("native sop"; also "context")  BENCH_MODEL (gpt-6-luna)  BENCH_EFFORT (medium)  BENCH_JUDGE_EFFORT (high)  BENCH_TIMEOUT (1800 s)
+#   BENCH_RUNTIME (codex): "codex" runs `codex exec`; "claude" runs Claude Code
+#   headless (`claude -p`, P122) with the subscription token in BENCH_CLAUDE_TOKEN_FILE
+#   (~/.config/agent-sop-bench/claude-oauth-token, from `claude setup-token`). Claude's
+#   stream-json events are converted to the Codex event shape, so scoring is shared.
 #   BENCH_END_MODE (closed): how a session before the last ends (P121). "closed": the
 #   session ends when the agent stops, as when the user closes the window. "ask": the
 #   task's "## End Prompt" is sent in the same session first, as when the user says
@@ -44,11 +49,16 @@ HST_REPO="${HST_REPO:-$HOME/Projects/hst-tracker}"
 # 814b3b5 files B1, P57 and P62 (tasks 05, 07, 08) before any is built; 76b3b77, the
 # run-multi-round.sh pin, already ships all three.
 BASE_COMMIT="${BENCH_BASE_COMMIT:-814b3b5}"
-MODEL="${BENCH_MODEL:-gpt-6-luna}"
+RUNTIME="${BENCH_RUNTIME:-codex}"
+case "$RUNTIME" in codex|claude) ;; *) echo "codex-bench: BENCH_RUNTIME must be codex or claude" >&2; exit 2 ;; esac
+if [ "$RUNTIME" = claude ]; then MODEL="${BENCH_MODEL:-opus}"; else MODEL="${BENCH_MODEL:-gpt-6-luna}"; fi
 EFFORT="${BENCH_EFFORT:-medium}"
 JUDGE_EFFORT="${BENCH_JUDGE_EFFORT:-high}"
 TIMEOUT="${BENCH_TIMEOUT:-1800}"
 AUTH="${CODEX_HOME:-$HOME/.codex}/auth.json"
+CLAUDE_TOKEN_FILE="${BENCH_CLAUDE_TOKEN_FILE:-$HOME/.config/agent-sop-bench/claude-oauth-token}"
+# The agent's instruction file for the runtime under test.
+if [ "$RUNTIME" = claude ]; then INSTR=CLAUDE.md; else INSTR=AGENTS.md; fi
 # native: stack-only stub. context: the project's own CLAUDE.md as AGENTS.md plus its
 # docs/agent-memory.md, no agent-sop (protocol condition 1). sop: current Agent SOP
 # installed; setup.sh keeps the project's CLAUDE.md, so sop vs context isolates agent-sop.
@@ -75,13 +85,15 @@ first_message() { jq -rRn 'first(inputs | fromjson? | select(.type == "item.comp
 thread_id() { jq -rRn 'first(inputs | fromjson? | select(.type == "thread.started") | .thread_id) // ""' "$1"; }
 # Commands a session ran that name a place holding an earlier session's prompt: the
 # harness's own session folders (../session-N) or Codex's home and transcripts
-# (~/.codex, $HOME/.codex, the run's home/.codex, CODEX_HOME). A project's own .codex
-# folder (installed in the SOP arm) does not count (P121 leak check).
+# (~/.codex, $HOME/.codex, the run's home/.codex, CODEX_HOME) or Claude Code's stored
+# transcripts (.claude/projects/*.jsonl, a listing of ~/.claude/projects). A project's own
+# .codex or .claude folder and Claude's native memory files do not count: native memory
+# is part of the runtime under test and is recorded separately (native_memory_files).
 # Heuristic: true means such a command was seen; false means none was seen, not that
 # nothing was read (reads by hooks or through other tools are not visible here).
 read_session_records() {
     jq -sR '[split("\n")[] | fromjson? | select(.type == "item.completed") | .item | (.command // "") | tostring
-        | select(test("\\.\\./session-[0-9]+\\b|session-[0-9]+/(prompt|events|end|last-message|session\\.json|usage)|(~|\\$\\{?HOME\\}?|/home)/\\.codex|CODEX_HOME|\\.codex/sessions"))] | length > 0' "$1"
+        | select(test("\\.\\./session-[0-9]+\\b|session-[0-9]+/(prompt|events|end|last-message|session\\.json|usage)|(~|\\$\\{?HOME\\}?|/home)/\\.codex|CODEX_HOME|\\.codex/sessions|\\.claude/projects/[^ ]*\\.jsonl|((~|\\$\\{?HOME\\}?|/home)/\\.claude|\\$\\{?CLAUDE_CONFIG_DIR\\}?)/projects/?([ \"\u0027]|$)|\\$\\{?CLAUDE_CONFIG_DIR\\}?/projects/[^ ]*\\.jsonl"))] | length > 0' "$1"
 }
 task_criteria() { awk '/^## Acceptance Criteria/{p=1;next} /^## /{p=0} p' "$(task_file "$1")"; }
 criteria_count() { task_criteria "$1" | grep -cE '^[0-9]+\.'; }
@@ -121,6 +133,157 @@ with_timeout() {
 # A scrubbed environment: nothing from the operator's shell except PATH and locale.
 # Prefix a command with "${CLEAN[@]}" after calling clean_env <home>.
 clean_env() { CLEAN=(env -i HOME="$1" CODEX_HOME="$1/.codex" PATH="$PATH" TERM=dumb LANG="${LANG:-en_AU.UTF-8}"); }
+# Codex reads its login from auth.json in the isolated home (login_on/login_off).
+agent_env() { clean_env "$1"; }
+login_on() { if [ "$RUNTIME" = codex ]; then install -m 600 "$AUTH" "$1/.codex/auth.json"; fi; }
+login_off() { rm -f "$1/.codex/auth.json"; }
+login_check() {
+    if [ "$RUNTIME" = codex ]; then [ -f "$AUTH" ] || die "no Codex login at $AUTH"; else claude_token; fi
+}
+# The Claude Code subscription token (from `claude setup-token`), read once and kept in an
+# unexported variable. It reaches Claude only through the environment of the sandboxed
+# child (claude_exec), never a command line, so `ps` does not show it.
+CLAUDE_TOKEN=''
+claude_token() {
+    [ -z "$CLAUDE_TOKEN" ] || return 0
+    [ -r "$CLAUDE_TOKEN_FILE" ] || die "no Claude Code token at $CLAUDE_TOKEN_FILE (run claude setup-token and save it there)"
+    CLAUDE_TOKEN=$(tr -d '[:space:]' < "$CLAUDE_TOKEN_FILE")
+    [ -n "$CLAUDE_TOKEN" ] || die "Claude Code token file $CLAUDE_TOKEN_FILE is empty"
+}
+# Runs claude under the macOS sandbox (P122). Writes: only the session's home, working
+# folder and temp folder, so harness files elsewhere in the run cannot be altered.
+# Reads: nothing in the operator's home folder (credentials, Library, cloud drives,
+# other projects, the token), no other runs, and in this run only the same three
+# folders, so earlier sessions' prompts and harness files are out of reach. The
+# toolchain lives outside home.
+# No keychain, no LaunchServices or Apple Events (so nothing can be started outside the
+# sandbox), no pasteboard, and no inspecting or signalling processes outside it.
+# Reads are also closed for /Volumes, and file names in the operator's home are hidden
+# too. Outside home, file metadata and /private/var/folders and /tmp stay readable,
+# because node resolves parent paths and its per-user cache at startup; keep nothing
+# sensitive there. "(target others)" did not stop signals to outside processes in a
+# test, so signals and process info are denied and re-allowed for the same sandbox only.
+# Network stays open: Claude needs its API. Verified with the real client and server
+# suites (server 197/197) under this profile.
+# The environment is rebuilt from nothing in a subshell, so only these variables pass
+# (no proxy or CA settings: set them here if a network needs them).
+# claude_exec <root> <home> <cwd> <timeout> <stdin> <stdout> <stderr> <claude args...>
+claude_exec() {
+    local root=$1 home=$2 cwd=$3 t=$4 in=$5 out=$6 err=$7 oh runs tokdir prof; shift 7
+    claude_token
+    command -v sandbox-exec >/dev/null || die "sandbox-exec is required for the Claude runtime"
+    mkdir -p "$root/tmp"
+    root=$(cd "$root" && pwd -P); home=$(cd "$home" && pwd -P); cwd=$(cd "$cwd" && pwd -P)
+    oh=$(cd "$HOME" && pwd -P); runs=$(cd "$root/.." && pwd -P)
+    tokdir=$(cd "$(dirname "$CLAUDE_TOKEN_FILE")" && pwd -P)
+    # The run must live outside the operator's home: the profile hides home metadata, and
+    # a working folder under it cannot resolve its own path.
+    case "$root/" in "$oh"/*) die "Claude runs must be outside $oh (use an output folder under /tmp, for example); got $root" ;; esac
+    prof="$root.sb"
+    cat > "$prof" <<SB
+(version 1)
+(allow default)
+(deny file-write*)
+(allow file-write* (subpath "$home") (subpath "$cwd") (subpath "$root/tmp")
+    (literal "/dev/null") (literal "/dev/tty") (regex #"^/dev/fd/") (regex #"^/dev/ttys"))
+(deny file-read* (subpath "$oh") (subpath "$runs") (subpath "$tokdir") (subpath "/Volumes"))
+(allow file-read* (subpath "$home") (subpath "$cwd") (subpath "$root/tmp"))
+(allow file-read-metadata)
+(deny file-read-metadata (subpath "$oh"))
+(allow file-read-metadata (literal "$oh"))
+(allow file-read-metadata (subpath "$home") (subpath "$cwd") (subpath "$root/tmp"))
+(deny process-info*)
+(allow process-info* (target same-sandbox))
+(deny signal)
+(allow signal (target same-sandbox))
+(deny mach-lookup (global-name "com.apple.SecurityServer") (global-name "com.apple.securityd") (global-name "com.apple.secd")
+    (global-name-prefix "com.apple.security.") (global-name-prefix "com.apple.coreservices.launchservicesd")
+    (global-name-prefix "com.apple.lsd.") (global-name "com.apple.coreservices.appleevents") (global-name-prefix "com.apple.pasteboard"))
+SB
+    (
+        cd "$cwd" || exit 1
+        local keep_path=$PATH keep_lang=${LANG:-en_AU.UTF-8} tok=$CLAUDE_TOKEN v
+        while read -r v; do unset "$v" 2>/dev/null || true; done < <(compgen -e)
+        export PATH="$keep_path" LANG="$keep_lang" TERM=dumb HOME="$home" CODEX_HOME="$home/.codex" \
+            CLAUDE_CONFIG_DIR="$home/.claude" TMPDIR="$root/tmp" CLAUDE_CODE_OAUTH_TOKEN="$tok"
+        with_timeout "$t" sandbox-exec -f "$prof" claude "$@" < "$in" > "$out" 2> "$err"
+    )
+    local st=$?; rm -f "$prof"; return "$st"
+}
+# Fails the run if the token appears anywhere in its files, after redacting it. The
+# pattern is passed on a file descriptor and the replacement through the environment.
+scrub_token() {
+    local root=$1 hits
+    [ "$RUNTIME" = claude ] && [ -n "$CLAUDE_TOKEN" ] || return 0
+    local rc=0
+    hits=$(grep -rlF -f <(printf '%s\n%s\n' "$CLAUDE_TOKEN" "$(printf '%s' "$CLAUDE_TOKEN" | base64 | tr -d '\n')") "$root") || rc=$?
+    [ "$rc" -le 1 ] || die "could not scan $root for the Claude token (grep exit $rc); run is invalid"
+    [ -n "$hits" ] || return 0
+    while IFS= read -r f; do
+        SCRUB="$CLAUDE_TOKEN" SCRUB64="$(printf '%s' "$CLAUDE_TOKEN" | base64 | tr -d '\n')" \
+            perl -pi -e 's/\Q$ENV{SCRUB}\E/[REDACTED]/g; s/\Q$ENV{SCRUB64}\E/[REDACTED]/g' "$f"
+    done <<< "$hits"
+    die "the Claude token appeared in $(printf '%s\n' "$hits" | wc -l | tr -d ' ') file(s) under $root; redacted, run is invalid"
+}
+runtime_version() { if [ "$RUNTIME" = claude ]; then claude --version; else codex --version; fi; }
+# Claude Code stream-json, one object per line, in the Codex event shape: session start,
+# agent text, shell commands, other tool calls (named with their input, so path-based
+# metrics see them), file edits, and the final usage and cost.
+CLAUDE_TO_CODEX='fromjson? |
+    if .type == "system" and .subtype == "init" then {type:"thread.started", thread_id:.session_id, model:.model}
+    elif .type == "assistant" then (.message.content[]? | objects |
+        (.input? // {}) as $in | ((.name? // "") | tostring) as $name |
+        if .type == "text" then {type:"item.completed", item:{type:"agent_message", text:(.text // "")}}
+        elif .type == "tool_use" and ($name | test("^(Edit|Write|MultiEdit|NotebookEdit)$")) then
+            {type:"item.completed", item:{type:"file_change", changes:[{path:(($in.file_path? // $in.notebook_path? // "") | tostring)}]}}
+        elif .type == "tool_use" and $name == "Bash" then {type:"item.completed", item:{type:"command_execution", command:(($in.command? // "") | tostring)}}
+        elif .type == "tool_use" then {type:"item.completed", item:{type:"command_execution", command:($name + " " + ($in | tojson))}}
+        else empty end)
+    elif .type == "result" then {type:"turn.completed", is_error:((.is_error // false) or ((.subtype // "") != "success")), subtype:.subtype,
+        usage:{input_tokens:((.usage.input_tokens // 0) + (.usage.cache_creation_input_tokens // 0) + (.usage.cache_read_input_tokens // 0)),
+               cached_input_tokens:(.usage.cache_read_input_tokens // 0), output_tokens:(.usage.output_tokens // 0),
+               cost_usd:.total_cost_usd}}
+    else empty end'
+# One agent turn in $run/proj: agent_turn <run> <prompt file> <out prefix> [session to resume].
+# Writes <prefix>events.jsonl (Codex shape), <prefix>last-message.md and <prefix>stderr.log.
+agent_turn() {
+    local run=$1 pfile=$2 pre=$3 resume=$4 st=0; shift 4
+    agent_env "$run/home"
+    if [ "$RUNTIME" = claude ]; then
+        # Permission prompts are skipped; the sandbox in claude_exec is the boundary.
+        local args=(-p --output-format stream-json --verbose --model "$MODEL" --effort "$EFFORT"
+                    --dangerously-skip-permissions --setting-sources "user,project")
+        [ -z "$resume" ] || args+=(--resume "$resume")
+        claude_exec "$run" "$run/home" "$run/proj" "$TIMEOUT" "$pfile" "${pre}claude-events.jsonl" "${pre}stderr.log" "${args[@]}" || st=$?
+        scrub_token "$run"
+        if ! jq -cR "$CLAUDE_TO_CODEX" "${pre}claude-events.jsonl" > "${pre}events.jsonl"; then
+            log "could not convert ${pre}claude-events.jsonl"; [ "$st" != 0 ] || st=1
+        fi
+        jq -rR 'fromjson? | select(.type == "result") | .result // empty' "${pre}claude-events.jsonl" > "${pre}last-message.md" \
+            || { log "could not extract the result text from ${pre}claude-events.jsonl"; [ "$st" != 0 ] || st=1; }
+        # No result event, or one flagged as an error or not "success" (a usage limit, a
+        # turn cap), is a failed turn; the reason goes to the harness log.
+        if [ "$st" = 0 ] && ! jq -e -s 'any(.[]; .type == "turn.completed") and all(.[] | select(.type == "turn.completed"); .is_error | not)' "${pre}events.jsonl" >/dev/null; then
+            st=1
+        fi
+        [ "$st" = 0 ] || log "claude turn failed (exit $st): $(jq -r -s 'map(select(.type == "turn.completed")) | last | "\(.subtype // "no result") \(.)"' "${pre}events.jsonl" 2>/dev/null | head -c 300) $(head -c 200 "${pre}last-message.md")"
+    elif [ -z "$resume" ]; then
+        with_timeout "$TIMEOUT" "${CLEAN[@]}" \
+            codex exec -C "$run/proj" -s workspace-write --add-dir "$run/proj/.git" -m "$MODEL" \
+            -c model_reasoning_effort="\"$EFFORT\"" -c approval_policy='"never"' \
+            -c sandbox_workspace_write.network_access=true \
+            "$@" --json -o "${pre}last-message.md" - \
+            < "$pfile" > "${pre}events.jsonl" 2> "${pre}stderr.log" || st=$?
+    else
+        (cd "$run/proj" && with_timeout "$TIMEOUT" "${CLEAN[@]}" \
+            codex exec resume "$resume" -m "$MODEL" \
+            -c model_reasoning_effort="\"$EFFORT\"" -c approval_policy='"never"' -c sandbox_mode='"workspace-write"' \
+            -c sandbox_workspace_write.network_access=true -c "sandbox_workspace_write.writable_roots=[\"$run/proj/.git\"]" \
+            "$@" --json -o "${pre}last-message.md" - \
+            < "$pfile" > "${pre}events.jsonl" 2> "${pre}stderr.log") || st=$?
+    fi
+    return "$st"
+}
 
 # Git with no global or system config and hooks, pagers, fsmonitor and diff
 # drivers disabled, because the agent can write the repository's .git.
@@ -141,7 +304,8 @@ restore_git() {
 isolated_home() {
     local home=$1
     mkdir -p "$home/.codex"; chmod 700 "$home" "$home/.codex"
-    install -m 600 "$AUTH" "$home/.codex/auth.json"
+    if [ "$RUNTIME" = claude ]; then mkdir -p "$home/.claude"; chmod 700 "$home/.claude"; fi
+    login_on "$home"
     # Codex runs a login shell; without this the isolated HOME falls back to /etc/paths
     # and finds an older node first. Both arms get the harness PATH.
     printf 'export PATH=%q\n' "$PATH" > "$home/.zprofile"
@@ -175,11 +339,11 @@ prepare_arm() {
         # copies it shipped (docs/sop/, .claude/) removed and nothing installed.
         [ -s "$proj/CLAUDE.md" ] || die "context arm: CLAUDE.md missing or empty at $BASE_COMMIT"
         rm -rf "$proj/docs/sop" "$proj/.claude"
-        cp "$proj/CLAUDE.md" "$proj/AGENTS.md"
+        [ "$INSTR" = CLAUDE.md ] || cp "$proj/CLAUDE.md" "$proj/$INSTR"
     elif [ "$arm" = native ]; then
-        # Historical baseline stub, as AGENTS.md; SOP knowledge removed.
+        # Historical baseline stub, as the runtime's instruction file; SOP knowledge removed.
         rm -rf "$proj/CLAUDE.md" "$proj/docs/agent-memory.md" "$proj/docs/sop" "$proj/.claude"
-        cat > "$proj/AGENTS.md" <<'STUB'
+        cat > "$proj/$INSTR" <<'STUB'
 # LOADOUT
 
 - Frontend: React 19, Vite — client/
@@ -189,7 +353,7 @@ prepare_arm() {
 STUB
     elif [ "$arm" = sop ]; then
         clean_env "$run/home"
-        "${CLEAN[@]}" AGENT_SOP_USER_HOME="$run/home" bash "$SOP_ROOT/setup.sh" "$proj" --runtime codex --code --force \
+        "${CLEAN[@]}" AGENT_SOP_USER_HOME="$run/home" bash "$SOP_ROOT/setup.sh" "$proj" --runtime "$RUNTIME" --code --force \
             < /dev/null > "$run/setup.log" 2>&1 || die "setup.sh failed for $run (see setup.log)"
     else
         die "unknown arm '$arm'"
@@ -231,21 +395,23 @@ end_session() {
     tid=$(thread_id "$sdir/events.jsonl")
     [ -n "$tid" ] || die "no thread id in $sdir/events.jsonl; cannot resume that session"
     printf '%s\n' "$eprompt" > "$sdir/end-prompt.txt"
-    install -m 600 "$AUTH" "$run/home/.codex/auth.json"
-    clean_env "$run/home"; estart=$(date +%s)
-    (cd "$run/proj" && with_timeout "$TIMEOUT" "${CLEAN[@]}" \
-        codex exec resume "$tid" -m "$MODEL" \
-        -c model_reasoning_effort="\"$EFFORT\"" -c approval_policy='"never"' -c sandbox_mode='"workspace-write"' \
-        -c sandbox_workspace_write.network_access=true -c "sandbox_workspace_write.writable_roots=[\"$run/proj/.git\"]" \
-        "$@" --json -o "$sdir/end-last-message.md" - \
-        < "$sdir/end-prompt.txt" > "$sdir/end-events.jsonl" 2> "$sdir/end-stderr.log") || estatus=$?
-    rm -f "$run/home/.codex/auth.json"
+    login_on "$run/home"; estart=$(date +%s)
+    agent_turn "$run" "$sdir/end-prompt.txt" "$sdir/end-" "$tid" "$@" || estatus=$?
+    login_off "$run/home"
     restore_git "$run/proj" "$run"
     usage=$(usage_json "$sdir/end-events.jsonl") || { log "end-turn usage unreadable for $sdir"; usage=null; }
     etid=$(thread_id "$sdir/end-events.jsonl")
     [ "$estatus" != 0 ] || [ "$etid" = "$tid" ] || { log "end turn ran in thread '$etid', not $tid"; estatus=1; }
     jq -n --argjson exit "$estatus" --argjson wall "$(( $(date +%s) - estart ))" --argjson usage "$usage" --arg thread "$tid" \
         '{sent:true, exit_code:$exit, wall_seconds:$wall, usage:$usage, thread:$thread}' > "$sdir/end.json"
+}
+
+# Memory files the runtime itself keeps for the project (Claude Code auto-memory), as of
+# now: a count, or null for Codex. Native memory stays on in every arm; this records
+# whether it carried anything between sessions.
+native_memory_files() {
+    if [ "$RUNTIME" != claude ]; then echo null; return; fi
+    find "$1/.claude/projects" -path '*/memory/*' -type f 2>/dev/null | wc -l | tr -d ' '
 }
 
 # Files changed since the arm commit, as of now (a JSON array of paths; cumulative over
@@ -281,7 +447,7 @@ one_run() {
     isolated_home "$run/home"
     prepare_arm "$run" "$arm"
     cp "$BENCH_TEMPLATE/.bench-baseline.json" "$run/baseline.json" || die "template has no .bench-baseline.json"
-    [ "$arm" != sop ] || extra=(--dangerously-bypass-hook-trust)
+    [ "$arm" != sop ] || [ "$RUNTIME" != codex ] || extra=(--dangerously-bypass-hook-trust)
     # "5+9" runs task 5 then task 9 as separate sessions in the same project and home;
     # only the last session is tested and judged, against where the earlier ones left off.
     local seq i n sdir wall=0
@@ -293,19 +459,13 @@ one_run() {
         if [ "$i" != 1 ]; then
             snapshot_tree "$run" > "$run/diff-base"
             hgit -C "$run/proj" cat-file -e "$(cat "$run/diff-base")^{tree}" || die "no session-$((i - 1)) tree for $run"
-            install -m 600 "$AUTH" "$run/home/.codex/auth.json"
+            login_on "$run/home"
         fi
         log "start t$task $arm r$rep (session $i of $n, task ${seq[$((i - 1))]})"
         start=$(date +%s); status=0
-        clean_env "$run/home"
-        with_timeout "$TIMEOUT" "${CLEAN[@]}" \
-            codex exec -C "$run/proj" -s workspace-write --add-dir "$run/proj/.git" -m "$MODEL" \
-            -c model_reasoning_effort="\"$EFFORT\"" -c approval_policy='"never"' \
-            -c sandbox_workspace_write.network_access=true \
-            ${extra[@]+"${extra[@]}"} --json -o "$sdir/last-message.md" - \
-            < "$sdir/prompt.txt" > "$sdir/events.jsonl" 2> "$sdir/stderr.log" || status=$?
+        agent_turn "$run" "$sdir/prompt.txt" "$sdir/" "" ${extra[@]+"${extra[@]}"} || status=$?
         wall=$(( $(date +%s) - start ))
-        rm -f "$run/home/.codex/auth.json"
+        login_off "$run/home"
         # Undo anything the agent wrote into .git that would run code under the harness.
         restore_git "$run/proj" "$run"
         if [ "$i" != "$n" ]; then
@@ -315,9 +475,11 @@ one_run() {
             jq -n --argjson session "$i" --arg task "${seq[$((i - 1))]}" --argjson exit "$status" --argjson wall "$wall" --slurpfile u "$sdir/usage.json" \
                 --argjson locate "$(locate_steps "$sdir/events.jsonl" "$(task_target "${seq[$((i - 1))]}")")" \
                 --arg end_mode "$END_MODE" --slurpfile end "$sdir/end.json" --slurpfile changed "$sdir/files-changed.json" \
+                --argjson memfiles "$(native_memory_files "$run/home")" \
                 '{session:$session, task:$task, exit_code:$exit, wall_seconds:$wall, usage:$u[0], locate_steps:$locate,
                   end_mode:$end_mode, end:$end[0], files_changed:$changed[0],
-                  changed_server:($changed[0] | any(startswith("server/"))), changed_client:($changed[0] | any(startswith("client/")))}' > "$sdir/session.json"
+                  changed_server:($changed[0] | any(startswith("server/"))), changed_client:($changed[0] | any(startswith("client/"))),
+                  native_memory_files:$memfiles}' > "$sdir/session.json"
             # A later session is only meaningful if this one completed and did work.
             [ "$status" = 0 ] || die "session $i of $run did not complete (exit $status)"
             jq -e '.usage != null' "$sdir/session.json" >/dev/null || die "session $i of $run reported no usage"
@@ -348,11 +510,13 @@ finish_run() {
         --argjson exit "$status" --argjson wall "$wall" --argjson changed "$changed" --argjson timed_out_code "$TIMED_OUT" \
         --argjson s_exit "$(cat "$run/test-server.exit")" --argjson c_exit "$(cat "$run/test-client.exit")" \
         --argjson s_pass "$s_pass" --argjson s_fail "$s_fail" --argjson c_pass "$c_pass" --argjson c_fail "$c_fail" \
-        --argjson usage "$usage" --arg codex "$(codex --version)" --arg judged "$judged" --argjson sessions "$sessions" \
+        --argjson usage "$usage" --arg codex "$(runtime_version)" --arg runtime "$RUNTIME" \
+        --argjson memfiles "$(native_memory_files "$run/home")" \
+        --arg resolved "$(jq -rRn 'first(inputs | fromjson? | select(.type == "thread.started") | .model // empty) // ""' "$run/events.jsonl")" --arg judged "$judged" --argjson sessions "$sessions" \
         --arg end_mode "$([ "$sessions" = '[]' ] && echo none || echo "$END_MODE")" --arg first "$(first_message "$run/events.jsonl")" \
         --argjson read_records "$(read_session_records "$run/events.jsonl")" \
         --argjson locate "$(locate_steps "$run/events.jsonl" "$(task_target "$judged")")" '
-        {task:$task, judged_task:$judged, earlier_sessions:$sessions, end_mode:$end_mode, first_message:$first, read_session_records:$read_records, locate_steps:$locate, arm:$arm, rep:$rep, model:$model, effort:$effort, codex:$codex, exit_code:$exit,
+        {task:$task, judged_task:$judged, earlier_sessions:$sessions, runtime:$runtime, model_resolved:$resolved, native_memory_files:$memfiles, end_mode:$end_mode, first_message:$first, read_session_records:$read_records, locate_steps:$locate, arm:$arm, rep:$rep, model:$model, effort:$effort, codex:$codex, exit_code:$exit,
          timed_out:($exit == $timed_out_code), wall_seconds:$wall, files_changed:$changed,
          tests:{server:{exit:$s_exit, passed:$s_pass, failed:$s_fail}, client:{exit:$c_exit, passed:$c_pass, failed:$c_fail}},
          tests_ran:($s_pass != null and $c_pass != null), usage:$usage}
@@ -416,9 +580,22 @@ JSON
     trap 'exit 130' INT; trap 'exit 143' TERM
     isolated_home "$jh"
     clean_env "$jh"
-    with_timeout 900 "${CLEAN[@]}" codex exec -C "$jdir" --skip-git-repo-check -s read-only \
-        -m "$MODEL" -c model_reasoning_effort="\"$JUDGE_EFFORT\"" -c approval_policy='"never"' \
-        --output-schema "$run/judge-schema.json" -o "$run/judge-raw.json" - < "$run/judge-packet.md" > "$run/judge-events.log" 2>&1 || status=$?
+    if [ "$RUNTIME" = claude ]; then
+        # No tools, no settings beyond the empty isolated home, no MCP servers: the judge
+        # reads only the packet, inside the same sandbox as the agents.
+        mkdir -p "$jh/work"
+        claude_exec "$jh" "$jh" "$jh/work" 900 "$run/judge-packet.md" "$run/judge-out.json" "$run/judge-events.log" \
+            -p --output-format json --tools "" --setting-sources user --strict-mcp-config --model "$MODEL" --effort "$JUDGE_EFFORT" \
+            --json-schema "$(cat "$run/judge-schema.json")" || status=$?
+        scrub_token "$run"
+        [ "$status" != 0 ] || jq -e '(.is_error | not) and .structured_output != null' "$run/judge-out.json" >/dev/null \
+            || { log "judge returned an error or no structured output for $run"; status=1; }
+        [ "$status" != 0 ] || jq '.structured_output' "$run/judge-out.json" > "$run/judge-raw.json" || status=1
+    else
+        with_timeout 900 "${CLEAN[@]}" codex exec -C "$jdir" --skip-git-repo-check -s read-only \
+            -m "$MODEL" -c model_reasoning_effort="\"$JUDGE_EFFORT\"" -c approval_policy='"never"' \
+            --output-schema "$run/judge-schema.json" -o "$run/judge-raw.json" - < "$run/judge-packet.md" > "$run/judge-events.log" 2>&1 || status=$?
+    fi
     rm -rf "$jdir" "$jh"
     [ "$status" = 0 ] && [ -s "$run/judge-raw.json" ] || { rm -f "$run/judge-raw.json"; die "judge failed for $run (exit $status)"; }
     n=$(criteria_count "$task")
@@ -433,7 +610,7 @@ JSON
 
 report() {
     local out=$1 r d
-    { printf 'task\tarm\trep\tvalid\texit\ttimed_out\tjudge\tserver_exit\tserver_pass\tserver_fail\tclient_exit\tclient_pass\tclient_fail\twall_s\tinput_tokens\tcached_input\toutput_tokens\treasoning\tlocate_steps\tearlier_wall_s\tearlier_output_tokens\tend_mode\tread_session_records\ts1_changed_server\ts1_changed_client\n'
+    { printf 'task\tarm\trep\tvalid\texit\ttimed_out\tjudge\tserver_exit\tserver_pass\tserver_fail\tclient_exit\tclient_pass\tclient_fail\twall_s\tinput_tokens\tcached_input\toutput_tokens\treasoning\tlocate_steps\tearlier_wall_s\tearlier_output_tokens\tend_mode\tread_session_records\ts1_changed_server\ts1_changed_client\tcost_usd\n'
       for r in "$out"/runs/*/result.json; do
           [ -f "$r" ] || continue
           d=$(dirname "$r")
@@ -453,7 +630,10 @@ report() {
              ((.earlier_sessions // []) | map((.usage // []) + (.end.usage // []) | map(.output_tokens // 0) | add) | add), (.end_mode // "NA"),
              (.read_session_records | if . == null then "NA" else . end),
              (.earlier_sessions[0].changed_server | if . == null then "NA" else . end),
-             (.earlier_sessions[0].changed_client | if . == null then "NA" else . end)]
+             (.earlier_sessions[0].changed_client | if . == null then "NA" else . end),
+             (if .usage == null or any(.earlier_sessions[]?; .usage == null or (.end.sent and .end.usage == null)) then "NA"
+              else ([.usage, (.earlier_sessions // [] | map(.usage + (.end.usage // [])) | add // [])] | add
+                    | if length > 0 and all(.[]; .cost_usd != null) then (map(.cost_usd) | add) else "NA" end) end)]
             | map(if . == null then "NA" else . end) | @tsv' "$r"
       done; } > "$out/scores.tsv"
     column -t -s $'\t' "$out/scores.tsv"
@@ -479,7 +659,7 @@ case "$cmd" in
             IFS='+' read -r -a parts <<< "$t"
             for p in "${parts[@]}"; do [ -n "$(task_file "$p")" ] || die "no task file for $p"; done
         done
-        [ -f "$AUTH" ] || die "no Codex login at $AUTH"
+        login_check
         mkdir -p "$out/runs"; out=$(cd "$out" && pwd -P)
         # Runs from before end modes existed were all "closed".
         if [ ! -f "$out/end-mode" ] && [ -n "$(ls -A "$out/runs")" ]; then echo closed > "$out/end-mode"; fi

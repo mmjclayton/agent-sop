@@ -1374,3 +1374,16 @@ Matt, 11 Oct 2026: agent-sop exists because a new session often lacked the conte
 - Harness fixtures (`docs/benchmark/bench-fixtures/run-tests.sh`) pass and fail against the previous harness
 - Pilot: six valid pairs, judged, with per-pair time and tokens reported
 - After Matt sets k: per arm and end mode, the decision-score median and range, judge overall, and session-2 time and tokens, with flagged runs reported separately
+
+---
+
+### P122 - Run the session resume test on Claude Code
+
+`[IN PROGRESS] [Feature]`
+review: docs/reviews/20261011-092009-ship-auto.md
+
+Matt, 11 Oct 2026: "use claude code", after R9 stopped on the Codex usage limit (P121). It is also the runtime Matt's own evidence comes from. `codex-bench.sh` gains `BENCH_RUNTIME=claude`: each session is `claude -p` with an isolated `HOME` and `CLAUDE_CONFIG_DIR`, the subscription token from `claude setup-token` passed as `CLAUDE_CODE_OAUTH_TOKEN` (read from `~/.config/agent-sop-bench/claude-oauth-token`, mode 600, never in the repository), `--dangerously-skip-permissions` inside the macOS sandbox (`sandbox-exec`: writes and reads only in the session's home, project and temp folders; nothing in the operator's home folder, the token folder, other runs or earlier sessions' files; no inspecting or signalling processes outside the sandbox; no keychain, LaunchServices, Apple Events or pasteboard; `/tmp` and `/private/var/folders` stay readable because node needs them, so nothing sensitive may live there; network open because Claude needs its API), and `--setting-sources user,project` so the SOP arm's installed hooks load. The token reaches Claude only through the sandboxed child's environment, never a command line, and any run whose files contain it is redacted and invalidated. Claude Code's native auto-memory stays on in every arm (it is part of the runtime under test) and is recorded per session as `native_memory_files`. The end turn resumes by session id. Claude's stream-json is converted to the Codex event shape, so locate steps, the leak check, first message and the report are shared; cost comes from Claude's own `total_cost_usd`. The native stub becomes `CLAUDE.md`; the SOP arm installs with `setup.sh --runtime claude`; the judge runs `claude -p` with no tools and `--json-schema`. Runs draw on Matt's subscription limits.
+
+**Acceptance criteria:**
+- Fake-claude fixtures cover isolation, token, resume, event conversion, judge, cost and an errored turn
+- Six-pair pilot (native, context, sop; ask and closed) on Claude Code, judged, with per-pair time and cost reported to Matt before he sets k
