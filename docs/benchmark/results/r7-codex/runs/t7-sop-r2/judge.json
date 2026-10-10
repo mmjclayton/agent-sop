@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The workout exercise menu includes a “Skip Exercise” option."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Selecting it opens a confirmation modal before applying the skip."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The client submits every current-week set with status `skipped`, and the server persists that status."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "When all current-week sets are skipped, the exercise displays a “Skipped” label."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The menu offers “Resume Exercise” for a skipped exercise and clears its skipped state."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The existing `/sets` endpoint handles skipped status updates."
+    },
+    {
+      "number": 7,
+      "met": 0,
+      "reason": "No new server test for skip or unskip appears in the diff."
+    },
+    {
+      "number": 8,
+      "met": 0,
+      "reason": "No new client test for skip UI appears in the diff."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The reported server and client test suites both pass."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "The added UI copy is direct and contains no exclamation marks."
+    }
+  ],
+  "overall": 0.8,
+  "packet_sha256": "7f97769d82f9227999fb16b507c2b7b197b7c70d8fa5e22d6b57c2f1cd3e5c31",
+  "judge_version": 2
+}

@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The keyboard row contains Copy Last, Done, and Next buttons."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done uses flex sizing in the three-button row instead of full width."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "All action buttons have a 48px minimum height."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "Copy Last reads the preceding set’s value for the active field and puts it in the keypad state."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "Next changes the active field to reps and updates the value and label."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "The buttons use design tokens for borders, colors, and radius, but Done still uses a hard-coded white text color."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The compact flex row gives the three buttons room to fit the existing keypad layout on mobile."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "The button labels contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all 197 server and 291 client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 0,
+      "reason": "The new test checks that Copy Last invokes a supplied handler, but does not test copying the previous set’s value."
+    }
+  ],
+  "overall": 0.85,
+  "packet_sha256": "f13728352a957bbbbacec602eb3f210f3579e960d948ad83f421bc7a8109afd7",
+  "judge_version": 2
+}

@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The exercise menu shows “Skip Exercise” while logging a workout."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "A confirmation prompt appears before skip or resume is applied."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "Skipping sends every set with status \"skipped\", which the server persists."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "The card displays a “Skipped” label when the exercise is skipped."
+    },
+    {
+      "number": 5,
+      "met": 0.5,
+      "reason": "The menu offers resume during the workout, but unskip leaves blank sets marked skipped, so a reload can restore the skipped state."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The existing set logging endpoint accepts and returns explicit skipped statuses."
+    },
+    {
+      "number": 7,
+      "met": 0.5,
+      "reason": "A new server test covers skip persistence, but there is no test for unskip."
+    },
+    {
+      "number": 8,
+      "met": 0,
+      "reason": "No new client test for the skip UI appears in the diff."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all server and client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "The added UI copy is direct and contains no exclamation marks."
+    }
+  ],
+  "overall": 0.8,
+  "packet_sha256": "bcd028bd260ccd2f909163ffdfaa1f067cd75867434128e78700455964912029",
+  "judge_version": 2
+}

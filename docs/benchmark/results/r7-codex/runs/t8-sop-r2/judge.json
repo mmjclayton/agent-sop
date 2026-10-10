@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The keyboard row renders Copy Last, Done, and Next."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done uses a flex share of the row rather than full width."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "Each action button has a 48px height."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "Copy Last calls onChange with the prior set's value for the active field."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "Next changes the keypad field from weight to reps."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The button styles use design system color and radius tokens."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The action buttons share a flexible row layout that can fit on mobile."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "Button labels contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all existing server and client tests pass."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "A new test checks that Copy Last passes the previous value to onChange."
+    }
+  ],
+  "overall": 1,
+  "packet_sha256": "9e4619ec8306e07bf38355f3fd049e5db212fc1bc0c43f55c3cc666dc3a2ca7a",
+  "judge_version": 2
+}

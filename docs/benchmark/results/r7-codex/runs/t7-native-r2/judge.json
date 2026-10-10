@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 0.5,
+      "reason": "A skip button appears on the exercise card during log mode, but it is not in the exercise menu."
+    },
+    {
+      "number": 2,
+      "met": 0,
+      "reason": "No confirmation prompt is shown before the skip state changes."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The finish endpoint writes every submitted set for a skipped exercise with status \"skipped\"."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "Skipped exercises display a \"Skipped\" label."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The card button toggles the skip state back off during the session."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The existing finish endpoint handles skipped exercises."
+    },
+    {
+      "number": 7,
+      "met": 0,
+      "reason": "No new server test is included in the diff."
+    },
+    {
+      "number": 8,
+      "met": 0,
+      "reason": "No new client test is included in the diff."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all existing server and client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "The added UI copy is direct and contains no exclamation marks."
+    }
+  ],
+  "overall": 0.65,
+  "packet_sha256": "74884100ff9c53d176c321b8b4476e8882184b4640ac4f018b8783866f551307",
+  "judge_version": 2
+}

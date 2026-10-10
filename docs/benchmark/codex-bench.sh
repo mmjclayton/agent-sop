@@ -27,7 +27,7 @@
 #
 # Environment:
 #   HST_REPO (~/Projects/hst-tracker)  BENCH_BASE_COMMIT (814b3b5)  BENCH_TEMPLATE (required for run)
-#   BENCH_MODEL (gpt-6-luna)  BENCH_EFFORT (medium)  BENCH_JUDGE_EFFORT (high)  BENCH_TIMEOUT (1800 s)
+#   BENCH_ARMS ("native sop"; also "context")  BENCH_MODEL (gpt-6-luna)  BENCH_EFFORT (medium)  BENCH_JUDGE_EFFORT (high)  BENCH_TIMEOUT (1800 s)
 set -euo pipefail
 umask 077
 
@@ -44,7 +44,11 @@ EFFORT="${BENCH_EFFORT:-medium}"
 JUDGE_EFFORT="${BENCH_JUDGE_EFFORT:-high}"
 TIMEOUT="${BENCH_TIMEOUT:-1800}"
 AUTH="${CODEX_HOME:-$HOME/.codex}/auth.json"
-ARMS=(native sop)
+# native: stack-only stub. context: the project's own CLAUDE.md as AGENTS.md plus its
+# docs/agent-memory.md, no agent-sop (protocol condition 1). sop: current Agent SOP
+# installed; setup.sh keeps the project's CLAUDE.md, so sop vs context isolates agent-sop.
+read -r -a ARMS <<< "${BENCH_ARMS:-native sop}"
+for a in "${ARMS[@]}"; do case "$a" in native|context|sop) ;; *) echo "codex-bench: unknown arm $a" >&2; exit 2 ;; esac; done
 TIMED_OUT=142   # with_timeout's exit status
 JUDGE_VERSION=2 # bump when the packet or validation changes; older judge.json files are re-judged
 
@@ -119,7 +123,12 @@ prepare_arm() {
     hgit -C "$proj" init -q
     hgit -C "$proj" add -A
     hgit -C "$proj" commit -qm "base $BASE_COMMIT"
-    if [ "$arm" = native ]; then
+    if [ "$arm" = context ]; then
+        # The project's hand-written instructions and memory, verbatim; the April SOP
+        # copies it shipped (docs/sop/, .claude/) removed and nothing installed.
+        rm -rf "$proj/docs/sop" "$proj/.claude"
+        cp "$proj/CLAUDE.md" "$proj/AGENTS.md"
+    elif [ "$arm" = native ]; then
         # Historical baseline stub, as AGENTS.md; SOP knowledge removed.
         rm -rf "$proj/CLAUDE.md" "$proj/docs/agent-memory.md" "$proj/docs/sop" "$proj/.claude"
         cat > "$proj/AGENTS.md" <<'STUB'
@@ -185,7 +194,7 @@ one_run() {
     prompt=$(task_prompt "$task"); [ -n "$prompt" ] || die "no prompt for task $task"
     printf '%s\n' "$prompt" > "$run/prompt.txt"
     cp "$BENCH_TEMPLATE/.bench-baseline.json" "$run/baseline.json" || die "template has no .bench-baseline.json"
-    [ "$arm" = native ] || extra=(--dangerously-bypass-hook-trust)
+    [ "$arm" != sop ] || extra=(--dangerously-bypass-hook-trust)
     log "start t$task $arm r$rep"
     start=$(date +%s)
     clean_env "$run/home"

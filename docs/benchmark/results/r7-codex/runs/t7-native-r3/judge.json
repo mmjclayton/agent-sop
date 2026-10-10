@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The workout exercise menu includes a “Skip Exercise” option."
+    },
+    {
+      "number": 2,
+      "met": 0,
+      "reason": "Skipping applies immediately; no confirmation prompt is shown."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "On workout finish, the server creates or updates the exercise’s sets with status `skipped`."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "Skipped exercises display an “Exercise Skipped” label instead of “Partially Complete”."
+    },
+    {
+      "number": 5,
+      "met": 0.5,
+      "reason": "The menu toggles skip state, but unskipping does not reset already persisted skipped sets."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The existing finish endpoint handles skipped exercises."
+    },
+    {
+      "number": 7,
+      "met": 0,
+      "reason": "No new server test for skip or unskip is included."
+    },
+    {
+      "number": 8,
+      "met": 0,
+      "reason": "No new client test for the skip UI is included."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all existing server and client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "The added UI copy is direct and contains no exclamation marks."
+    }
+  ],
+  "overall": 0.65,
+  "packet_sha256": "d6806c7aace54427f6a11cc0b74ef79eb33d3addc540b496c385695da2feac2f",
+  "judge_version": 2
+}

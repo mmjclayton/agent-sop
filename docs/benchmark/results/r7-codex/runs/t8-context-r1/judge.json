@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "Copy Last, Done, and Next appear together in the keypad action row."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done uses flex sizing instead of the previous full-width layout."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "All three action buttons have a 48px minimum height."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "The keypad receives the prior set’s value for the matching field and copies it into the current value."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "Next changes the keypad state from weight to reps and updates its value and label."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The action styles use design tokens for backgrounds, borders, text, and radius; Done retains a white text literal."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The buttons share a flexible row with gaps, allowing them to fit the keypad layout on mobile."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "All button labels are plain text without exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all 197 server and 291 client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "A new test verifies Copy Last calls onChange with the previous value and displays it."
+    }
+  ],
+  "overall": 1,
+  "packet_sha256": "b5822007a3c7d9f4eb8f70700ff2097ce0b53e684a76f9e56341069e37e60f3a",
+  "judge_version": 2
+}

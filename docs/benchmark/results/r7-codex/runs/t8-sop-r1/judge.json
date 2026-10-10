@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The keypad row renders Copy Last, Done, and Next buttons."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done now uses a flex share instead of the previous full width."
+    },
+    {
+      "number": 3,
+      "met": 0.5,
+      "reason": "Copy Last and Next have a 48px minimum height, but Done has no 44px minimum and its padding may leave it below 44px."
+    },
+    {
+      "number": 4,
+      "met": 0,
+      "reason": "The handler changes the parent value, but NumericKeypad’s local display state is not updated, so the copied value will not appear in the field."
+    },
+    {
+      "number": 5,
+      "met": 0.5,
+      "reason": "Next updates the keypad field and label to reps, but its local display state is not synchronized with the reps value."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The button styles use design tokens for colors and border radius."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The flex action row and flexible button widths support a narrow mobile layout."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "The button labels contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all 197 server and 292 client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 0.5,
+      "reason": "A new test checks that Copy Last invokes its callback, but does not verify that the previous set’s value is copied."
+    }
+  ],
+  "overall": 0.75,
+  "packet_sha256": "2f221057d98d7f6b85a307b989cc54fdc399824ceabf852ccb90049a87ca1fd0",
+  "judge_version": 2
+}

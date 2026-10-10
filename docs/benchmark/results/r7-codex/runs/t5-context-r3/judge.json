@@ -1,0 +1,37 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The client formula applies a single ×2 multiplier when either or both flags are enabled."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "With only one flag enabled, the single multiplier doubles the resulting tonnage, equivalent to doubling that value."
+    },
+    {
+      "number": 3,
+      "met": 0.5,
+      "reason": "The client display calculation is fixed, but the attempt also changed server-side tonnage calculations despite tonnage being display-only."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "No database columns or migrations were added."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The harness reports all existing server and client tests pass."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "A test was added, but the client unit assertion checks standalone arithmetic rather than exercising the production calculation."
+    }
+  ],
+  "overall": 0.8333333333333334,
+  "packet_sha256": "646596a0acae396bfd21a1145bfc8ef9c93e8b56a97ba9582670fcf5ba02db8b",
+  "judge_version": 2
+}

@@ -1,0 +1,3 @@
+Added **Copy Last**, **Done**, and **Next** to the keypad. Copy Last fills the matching field from the previous set in the current workout; Next moves from weight to reps. The buttons use a 25/50/25 width split, and Copy Last is disabled when there’s no previous value.
+
+Full test suite passed: **197 server tests and 291 client tests**. `git diff --check` passed. P62 is marked in progress in [Backlog.md](/private/tmp/claude-501/-Users-matt-clayton/5828038a-da51-4c78-a159-25c2f245b01f/scratchpad/p116/r7/runs/t8-context-r3/proj/Backlog.md).

@@ -1,0 +1,37 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "Both flags now use a single ×2 multiplier, producing weight × reps × 2."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Either flag on its own also applies a ×2 multiplier."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The client derives displayed tonnage at render time using the corrected helper."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "No database columns or migrations were added."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The harness reports all server and client tests passing."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "A client test covers the corrected result when both flags are enabled."
+    }
+  ],
+  "overall": 1,
+  "packet_sha256": "ab5f4c4dc43099b071fa5064ef183b245f87ba40ebba6eaa04d205d8be57676b",
+  "judge_version": 2
+}

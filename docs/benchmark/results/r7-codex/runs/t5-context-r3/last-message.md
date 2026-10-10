@@ -1,0 +1,3 @@
+Fixed the tonnage calculation so either or both “count twice” settings apply a single 2× multiplier. The correction covers the exercise card, previous week comparison, finish summary, and workout history, which recalculates past tonnage from stored sets using the exercise’s current settings.
+
+Added regression coverage for the 12.5 kg × 9 example and historical workout totals. **All tests pass:** server 197/197 and client 289/289. `git diff --check` is clean. The B1 backlog item is marked in progress.

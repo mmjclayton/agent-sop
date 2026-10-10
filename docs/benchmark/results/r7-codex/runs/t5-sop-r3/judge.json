@@ -1,0 +1,37 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The client formula applies a single factor of 2 when either or both flags are true."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "With either flag alone, the formula doubles the resulting tonnage once."
+    },
+    {
+      "number": 3,
+      "met": 0.5,
+      "reason": "The render-time client calculation is fixed, but the attempt also changes server tonnage calculations."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "No database columns or migrations were added."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The harness reports all 197 server and 289 client tests passing."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "A client test was added for the corrected both-flags formula."
+    }
+  ],
+  "overall": 0.9166666666666666,
+  "packet_sha256": "2a49142b49faac80d26f55ffd5610ef130acbb28497e69e29581b60a767ff676",
+  "judge_version": 2
+}

@@ -1,0 +1,1 @@
+P62 remains in progress pending independent review. The in-flight entry and resume snapshot are refreshed. The reviewer sandbox still cannot inspect the snapshot, so I haven’t marked the backlog item shipped.

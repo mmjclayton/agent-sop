@@ -9,6 +9,7 @@ Moved out of `CLAUDE.md` on 2026-08-03 so it stops consuming context every sessi
 <!-- recent-work-rollup:start -->
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-10-10.*
 
+- 2026-10-10 `solo`: R7: project instructions with and without agent-sop (P119)
 - 2026-10-10 `solo`: Review leftovers closed: dry-run, action pin, gating line (P118)
 - 2026-10-10 `solo`: Stale ship-sop reviewer runner removed from agent-sop (P117)
 - 2026-10-10 `solo`: R6: native Codex vs current Agent SOP (P116)
