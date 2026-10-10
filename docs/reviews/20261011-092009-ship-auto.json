@@ -1,0 +1,109 @@
+{
+  "schema_version": 2,
+  "base": "0f4f6284910767414d32a3dbe515bb48db9a5d66",
+  "head": "dc560304e07e72205a21e09cb6d4b91eff385bb5",
+  "tree": "9b07205002eb59f5e3e78b1138a530e5f4e10c0c",
+  "policy_sha256": "2bf3e7532a015bebf17f7553468f92f27d5b777be7d19cb8aca33e5e8b07e494",
+  "tests": {
+    "status": "PASS",
+    "evidence": "At dc56030 on macOS: archive-fixtures PASS; bench-fixtures PASS; codex-fixtures PASS; drift-fixtures PASS; hook-fixtures PASS; priorities-fixtures PASS; reliability-fixtures PASS; resume-path-fixtures PASS; state-transition-fixtures PASS; sync-fixtures PASS; shellcheck clean; sandbox profile verified by hand with node and the real hst-tracker client and server suites (server 197/197). Not yet run against the real claude binary (needs the operator's token)."
+  },
+  "reviewers": [
+    {
+      "name": "security-reviewer",
+      "version": "0f8a59958459703fc4108ecf1977f4638b6a4565",
+      "model": "runtime-default-unresolved",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 5,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "MEDIUM",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 164,
+          "message": "accepted residual: token in the agent's environment and network open; /tmp and /private/var/folders readable; use a dedicated setup-token and revoke it after the pilot"
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 181,
+          "message": "home check runs at the first turn, not at preflight; case-insensitive path spellings not normalised"
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 138,
+          "message": "fixed: token off argv (env of the sandboxed child only); scrub with base64, fails closed"
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 176,
+          "message": "fixed: sandbox-exec; writes and reads limited to session folders; operator home, keychain, LaunchServices, Apple Events, pasteboard, outside signals and process info denied"
+        }
+      ]
+    },
+    {
+      "name": "code-reviewer",
+      "version": "01027637966b1e741c49018f071b91b0cad528f6",
+      "model": "runtime-default-unresolved",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 5,
+      "block_rounds": 2,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 182,
+          "message": "profile not yet run under the real claude binary; first pilot turn is a smoke test"
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 133,
+          "message": "declined: disabling Claude auto-memory; it is part of the native runtime, on in every arm, counted per session (native_memory_files); operator asked to confirm"
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 188,
+          "message": "fixed in dc56030: HIGH, runs under the operator home could not resolve cwd; now refused"
+        }
+      ]
+    },
+    {
+      "name": "silent-failure-hunter",
+      "version": "46bcbfc7adb8b13d1e0f0d9bcdf16d512b165d89",
+      "model": "runtime-default-unresolved",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 5,
+      "block_rounds": 1,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/bench-fixtures/run-tests.sh",
+          "line": 350,
+          "message": "home refusal fixture covers one, not run"
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/bench-fixtures/run-tests.sh",
+          "line": 192,
+          "message": "fixed: in-sandbox ps probe was vacuous; ps now sampled outside with a positive control"
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 177,
+          "message": "fixed: error, non-success or missing result fails the turn; cost NA unless complete"
+        }
+      ]
+    }
+  ]
+}
