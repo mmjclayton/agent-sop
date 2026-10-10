@@ -90,8 +90,9 @@ agent's own `git push` and `gh pr create` are refused when that file is invalid,
 when its automatic gate is on, the code diff is at or over the configured
 `min_diff_lines` and no validated review receipt covers HEAD. A change to agent
 instruction files (`AGENTS.md`, `CLAUDE.md`, `SKILL.md`, `.agents/`, `.claude/`,
-`.codex/`, `docs/sop/`, `docs/guides/sop-*`) needs a receipt whatever its size,
-and counts toward the code diff.
+`.codex/`, `docs/sop/`, `docs/guides/sop-*`) needs a receipt whatever its size
+when at least one enabled reviewer is in scope for it, and counts toward the
+code diff.
 Prefix the command with `SOP_SKIP_GATE=1` to bypass once; the bypass is logged to
 `.ship/bypass.log`. No other command is refused, and pushes from another terminal
 are unaffected. On code projects the Stop hook may also keep the agent working for
