@@ -10,6 +10,7 @@ Moved out of `CLAUDE.md` on 2026-08-03 so it stops consuming context every sessi
 *Auto-generated from `docs/recent-work/`. Last refreshed: 2026-10-11.*
 
 - 2026-10-11 `solo`: R8 stopped and P120 closed as superseded
+- 2026-10-11 `2d10c2`: Session resume test built; pilot stopped by the Codex limit (P121)
 - 2026-10-10 `solo`: Dependent-session pair harness; R8 blocked on Codex quota (P120)
 - 2026-10-10 `solo`: R7: project instructions with and without agent-sop (P119)
 - 2026-10-10 `solo`: Review leftovers closed: dry-run, action pin, gating line (P118)

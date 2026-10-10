@@ -33,4 +33,7 @@ Cleared 2026-08-03. The previous line tracked branch `fix/p66-p73-validator-and-
 
 - solo (2026-09-24): P110 merged (PR #29); P111 (PR #30) and P112 (PR #31) shipped with ship-sop P33/P34. Native-model pilot stays deferred (AUD 0). main is protected since this evening (required CI check, enforce_admins, auto-merge on): every commit goes via PR.
 - solo (2026-09-30): P113 and P114 merged via PR #33 (6d89a77). Hook installed and registered on this machine, installed commands and baseline SHAs refreshed the same day. ship-sop replication is ship-sop P36, on its own PR. Nothing else in flight.
+- solo (2026-10-07): research digests moved into docs/research/ (PR #36, 5af9db2); the scheduled scanner now writes there, so each run leaves an uncommitted digest for the next session to commit via PR. Nothing else in flight.
+- solo (2026-10-10): P115 merged via PR #38 (5191fe0); four stale remote branches deleted. P116 (fresh multi-run comparison) is open and waits on Matt's cost cap. Nothing else in flight.
+- solo (2026-10-11): R8 stopped (pre-run review, PR #51); P120 closed as superseded by P121 (resume test, ship-sop session owns it). Nothing else in flight here.
 <!-- in-flight:end -->
