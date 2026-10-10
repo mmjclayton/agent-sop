@@ -85,13 +85,14 @@ thread_id() { jq -rRn 'first(inputs | fromjson? | select(.type == "thread.starte
 # Commands a session ran that name a place holding an earlier session's prompt: the
 # harness's own session folders (../session-N) or Codex's home and transcripts
 # (~/.codex, $HOME/.codex, the run's home/.codex, CODEX_HOME) or Claude Code's stored
-# transcripts (.claude/projects/*.jsonl, a listing of ~/.claude/projects, CLAUDE_CONFIG_DIR).
-# A project's own .codex or .claude folder and Claude's native memory files do not count.
+# transcripts (.claude/projects/*.jsonl, a listing of ~/.claude/projects). A project's own
+# .codex or .claude folder and Claude's native memory files do not count: native memory
+# is part of the runtime under test and is recorded separately (native_memory_files).
 # Heuristic: true means such a command was seen; false means none was seen, not that
 # nothing was read (reads by hooks or through other tools are not visible here).
 read_session_records() {
     jq -sR '[split("\n")[] | fromjson? | select(.type == "item.completed") | .item | (.command // "") | tostring
-        | select(test("\\.\\./session-[0-9]+\\b|session-[0-9]+/(prompt|events|end|last-message|session\\.json|usage)|(~|\\$\\{?HOME\\}?|/home)/\\.codex|CODEX_HOME|\\.codex/sessions|\\.claude/projects/[^ ]*\\.jsonl|(~|\\$\\{?HOME\\}?|/home)/\\.claude/projects/?([ \"\u0027]|$)|CLAUDE_CONFIG_DIR"))] | length > 0' "$1"
+        | select(test("\\.\\./session-[0-9]+\\b|session-[0-9]+/(prompt|events|end|last-message|session\\.json|usage)|(~|\\$\\{?HOME\\}?|/home)/\\.codex|CODEX_HOME|\\.codex/sessions|\\.claude/projects/[^ ]*\\.jsonl|(~|\\$\\{?HOME\\}?|/home)/\\.claude/projects/?([ \"\u0027]|$)"))] | length > 0' "$1"
 }
 task_criteria() { awk '/^## Acceptance Criteria/{p=1;next} /^## /{p=0} p' "$(task_file "$1")"; }
 criteria_count() { task_criteria "$1" | grep -cE '^[0-9]+\.'; }
@@ -130,33 +131,77 @@ with_timeout() {
 
 # A scrubbed environment: nothing from the operator's shell except PATH and locale.
 # Prefix a command with "${CLEAN[@]}" after calling clean_env <home>.
-clean_env() { CLEAN=(env -i HOME="$1" CODEX_HOME="$1/.codex" CLAUDE_CONFIG_DIR="$1/.claude" PATH="$PATH" TERM=dumb LANG="${LANG:-en_AU.UTF-8}"); }
-# As clean_env, plus the login for the runtime: Codex reads auth.json from the home
-# (login_on/login_off), Claude Code takes the subscription token from the environment.
-agent_env() {
-    clean_env "$1"
-    if [ "$RUNTIME" = claude ]; then CLEAN+=(CLAUDE_CODE_OAUTH_TOKEN="$(cat "$CLAUDE_TOKEN_FILE")"); fi
-}
+clean_env() { CLEAN=(env -i HOME="$1" CODEX_HOME="$1/.codex" PATH="$PATH" TERM=dumb LANG="${LANG:-en_AU.UTF-8}"); }
+# Codex reads its login from auth.json in the isolated home (login_on/login_off).
+agent_env() { clean_env "$1"; }
 login_on() { if [ "$RUNTIME" = codex ]; then install -m 600 "$AUTH" "$1/.codex/auth.json"; fi; }
 login_off() { rm -f "$1/.codex/auth.json"; }
 login_check() {
-    if [ "$RUNTIME" = codex ]; then [ -f "$AUTH" ] || die "no Codex login at $AUTH"
-    else [ -s "$CLAUDE_TOKEN_FILE" ] || die "no Claude Code token at $CLAUDE_TOKEN_FILE (run claude setup-token and save it there)"; fi
+    if [ "$RUNTIME" = codex ]; then [ -f "$AUTH" ] || die "no Codex login at $AUTH"; else claude_token; fi
+}
+# The Claude Code subscription token (from `claude setup-token`), read once and kept in an
+# unexported variable. It reaches Claude only through the environment of the sandboxed
+# child (claude_exec), never a command line, so `ps` does not show it.
+CLAUDE_TOKEN=''
+claude_token() {
+    [ -z "$CLAUDE_TOKEN" ] || return 0
+    [ -r "$CLAUDE_TOKEN_FILE" ] || die "no Claude Code token at $CLAUDE_TOKEN_FILE (run claude setup-token and save it there)"
+    CLAUDE_TOKEN=$(tr -d '[:space:]' < "$CLAUDE_TOKEN_FILE")
+    [ -n "$CLAUDE_TOKEN" ] || die "Claude Code token file $CLAUDE_TOKEN_FILE is empty"
+}
+# Runs claude under the macOS sandbox (P122): writes only inside <root>; no reads of the
+# operator's Claude, Codex and SSH folders, the token's folder, ~/Projects or other runs.
+# The environment is rebuilt from nothing in a subshell, so only these variables pass.
+# claude_exec <root> <home> <cwd> <timeout> <stdin> <stdout> <stderr> <claude args...>
+claude_exec() {
+    local root=$1 home=$2 cwd=$3 t=$4 in=$5 out=$6 err=$7 oh runs tokdir prof; shift 7
+    claude_token
+    command -v sandbox-exec >/dev/null || die "sandbox-exec is required for the Claude runtime"
+    root=$(cd "$root" && pwd -P); oh=$(cd "$HOME" && pwd -P); runs=$(cd "$root/.." && pwd -P)
+    tokdir=$(cd "$(dirname "$CLAUDE_TOKEN_FILE")" && pwd -P)
+    mkdir -p "$root/tmp"; prof="$root.sb"
+    cat > "$prof" <<SB
+(version 1)
+(allow default)
+(deny file-write*)
+(allow file-write* (subpath "$root") (literal "/dev/null") (literal "/dev/tty") (regex #"^/dev/fd/") (regex #"^/dev/ttys"))
+(deny file-read* (subpath "$runs") (subpath "$oh/.claude") (subpath "$oh/.codex") (subpath "$oh/.ssh") (subpath "$oh/Projects") (subpath "$tokdir"))
+(allow file-read* (subpath "$root"))
+SB
+    (
+        cd "$cwd" || exit 1
+        local keep_path=$PATH keep_lang=${LANG:-en_AU.UTF-8} tok=$CLAUDE_TOKEN v
+        while read -r v; do unset "$v" 2>/dev/null || true; done < <(compgen -e)
+        export PATH="$keep_path" LANG="$keep_lang" TERM=dumb HOME="$home" CODEX_HOME="$home/.codex" \
+            CLAUDE_CONFIG_DIR="$home/.claude" TMPDIR="$root/tmp" CLAUDE_CODE_OAUTH_TOKEN="$tok"
+        with_timeout "$t" sandbox-exec -f "$prof" claude "$@" < "$in" > "$out" 2> "$err"
+    )
+}
+# Fails the run if the token appears anywhere in its files, after redacting it. The
+# pattern is passed on a file descriptor and the replacement through the environment.
+scrub_token() {
+    local root=$1 hits
+    [ "$RUNTIME" = claude ] && [ -n "$CLAUDE_TOKEN" ] || return 0
+    hits=$(grep -rlF -f <(printf '%s\n' "$CLAUDE_TOKEN") "$root" 2>/dev/null) || true
+    [ -n "$hits" ] || return 0
+    while IFS= read -r f; do SCRUB="$CLAUDE_TOKEN" perl -pi -e 's/\Q$ENV{SCRUB}\E/[REDACTED]/g' "$f"; done <<< "$hits"
+    die "the Claude token appeared in $(printf '%s\n' "$hits" | wc -l | tr -d ' ') file(s) under $root; redacted, run is invalid"
 }
 runtime_version() { if [ "$RUNTIME" = claude ]; then claude --version; else codex --version; fi; }
 # Claude Code stream-json, one object per line, in the Codex event shape: session start,
 # agent text, shell commands, other tool calls (named with their input, so path-based
 # metrics see them), file edits, and the final usage and cost.
 CLAUDE_TO_CODEX='fromjson? |
-    if .type == "system" and .subtype == "init" then {type:"thread.started", thread_id:.session_id}
-    elif .type == "assistant" then (.message.content[]? |
-        if .type == "text" then {type:"item.completed", item:{type:"agent_message", text:.text}}
-        elif .type == "tool_use" and (.name | test("^(Edit|Write|MultiEdit|NotebookEdit)$")) then
-            {type:"item.completed", item:{type:"file_change", changes:[{path:(.input.file_path // .input.notebook_path // "")}]}}
-        elif .type == "tool_use" and .name == "Bash" then {type:"item.completed", item:{type:"command_execution", command:(.input.command // "")}}
-        elif .type == "tool_use" then {type:"item.completed", item:{type:"command_execution", command:(.name + " " + (.input | tojson))}}
+    if .type == "system" and .subtype == "init" then {type:"thread.started", thread_id:.session_id, model:.model}
+    elif .type == "assistant" then (.message.content[]? | objects |
+        (.input? // {}) as $in | ((.name? // "") | tostring) as $name |
+        if .type == "text" then {type:"item.completed", item:{type:"agent_message", text:(.text // "")}}
+        elif .type == "tool_use" and ($name | test("^(Edit|Write|MultiEdit|NotebookEdit)$")) then
+            {type:"item.completed", item:{type:"file_change", changes:[{path:(($in.file_path? // $in.notebook_path? // "") | tostring)}]}}
+        elif .type == "tool_use" and $name == "Bash" then {type:"item.completed", item:{type:"command_execution", command:(($in.command? // "") | tostring)}}
+        elif .type == "tool_use" then {type:"item.completed", item:{type:"command_execution", command:($name + " " + ($in | tojson))}}
         else empty end)
-    elif .type == "result" then {type:"turn.completed", is_error:(.is_error // false),
+    elif .type == "result" then {type:"turn.completed", is_error:((.is_error // false) or ((.subtype // "") != "success")), subtype:.subtype,
         usage:{input_tokens:((.usage.input_tokens // 0) + (.usage.cache_creation_input_tokens // 0) + (.usage.cache_read_input_tokens // 0)),
                cached_input_tokens:(.usage.cache_read_input_tokens // 0), output_tokens:(.usage.output_tokens // 0),
                cost_usd:.total_cost_usd}}
@@ -167,14 +212,22 @@ agent_turn() {
     local run=$1 pfile=$2 pre=$3 resume=$4 st=0; shift 4
     agent_env "$run/home"
     if [ "$RUNTIME" = claude ]; then
+        # Permission prompts are skipped; the sandbox in claude_exec is the boundary.
         local args=(-p --output-format stream-json --verbose --model "$MODEL" --effort "$EFFORT"
                     --dangerously-skip-permissions --setting-sources "user,project")
         [ -z "$resume" ] || args+=(--resume "$resume")
-        (cd "$run/proj" && with_timeout "$TIMEOUT" "${CLEAN[@]}" claude "${args[@]}" < "$pfile" > "${pre}claude-events.jsonl" 2> "${pre}stderr.log") || st=$?
-        jq -cR "$CLAUDE_TO_CODEX" "${pre}claude-events.jsonl" > "${pre}events.jsonl" || st=${st/#0/1}
-        jq -rR 'fromjson? | select(.type == "result") | .result // empty' "${pre}claude-events.jsonl" > "${pre}last-message.md" || true
-        # A result flagged as an error (for example a usage limit) is a failed turn.
-        if [ "$st" = 0 ] && jq -e -s 'any(.[]; .type == "turn.completed" and .is_error)' "${pre}events.jsonl" >/dev/null; then st=1; fi
+        claude_exec "$run" "$run/home" "$run/proj" "$TIMEOUT" "$pfile" "${pre}claude-events.jsonl" "${pre}stderr.log" "${args[@]}" || st=$?
+        scrub_token "$run"
+        if ! jq -cR "$CLAUDE_TO_CODEX" "${pre}claude-events.jsonl" > "${pre}events.jsonl"; then
+            log "could not convert ${pre}claude-events.jsonl"; [ "$st" != 0 ] || st=1
+        fi
+        jq -rR 'fromjson? | select(.type == "result") | .result // empty' "${pre}claude-events.jsonl" > "${pre}last-message.md"
+        # No result event, or one flagged as an error or not "success" (a usage limit, a
+        # turn cap), is a failed turn; the reason goes to the harness log.
+        if [ "$st" = 0 ] && ! jq -e -s 'any(.[]; .type == "turn.completed") and all(.[] | select(.type == "turn.completed"); .is_error | not)' "${pre}events.jsonl" >/dev/null; then
+            st=1
+        fi
+        [ "$st" = 0 ] || log "claude turn failed (exit $st): $(jq -r -s 'map(select(.type == "turn.completed")) | last | "\(.subtype // "no result") \(.)"' "${pre}events.jsonl" 2>/dev/null | head -c 300) $(head -c 200 "${pre}last-message.md")"
     elif [ -z "$resume" ]; then
         with_timeout "$TIMEOUT" "${CLEAN[@]}" \
             codex exec -C "$run/proj" -s workspace-write --add-dir "$run/proj/.git" -m "$MODEL" \
@@ -211,7 +264,8 @@ restore_git() {
 
 isolated_home() {
     local home=$1
-    mkdir -p "$home/.codex" "$home/.claude"; chmod 700 "$home" "$home/.codex" "$home/.claude"
+    mkdir -p "$home/.codex"; chmod 700 "$home" "$home/.codex"
+    if [ "$RUNTIME" = claude ]; then mkdir -p "$home/.claude"; chmod 700 "$home/.claude"; fi
     login_on "$home"
     # Codex runs a login shell; without this the isolated HOME falls back to /etc/paths
     # and finds an older node first. Both arms get the harness PATH.
@@ -313,6 +367,14 @@ end_session() {
         '{sent:true, exit_code:$exit, wall_seconds:$wall, usage:$usage, thread:$thread}' > "$sdir/end.json"
 }
 
+# Memory files the runtime itself keeps for the project (Claude Code auto-memory), as of
+# now: a count, or null for Codex. Native memory stays on in every arm; this records
+# whether it carried anything between sessions.
+native_memory_files() {
+    if [ "$RUNTIME" != claude ]; then echo null; return; fi
+    find "$1/.claude/projects" -path '*/memory/*' -type f 2>/dev/null | wc -l | tr -d ' '
+}
+
 # Files changed since the arm commit, as of now (a JSON array of paths; cumulative over
 # earlier sessions). NUL-separated so unusual names come through unquoted.
 session_changes() {
@@ -374,9 +436,11 @@ one_run() {
             jq -n --argjson session "$i" --arg task "${seq[$((i - 1))]}" --argjson exit "$status" --argjson wall "$wall" --slurpfile u "$sdir/usage.json" \
                 --argjson locate "$(locate_steps "$sdir/events.jsonl" "$(task_target "${seq[$((i - 1))]}")")" \
                 --arg end_mode "$END_MODE" --slurpfile end "$sdir/end.json" --slurpfile changed "$sdir/files-changed.json" \
+                --argjson memfiles "$(native_memory_files "$run/home")" \
                 '{session:$session, task:$task, exit_code:$exit, wall_seconds:$wall, usage:$u[0], locate_steps:$locate,
                   end_mode:$end_mode, end:$end[0], files_changed:$changed[0],
-                  changed_server:($changed[0] | any(startswith("server/"))), changed_client:($changed[0] | any(startswith("client/")))}' > "$sdir/session.json"
+                  changed_server:($changed[0] | any(startswith("server/"))), changed_client:($changed[0] | any(startswith("client/"))),
+                  native_memory_files:$memfiles}' > "$sdir/session.json"
             # A later session is only meaningful if this one completed and did work.
             [ "$status" = 0 ] || die "session $i of $run did not complete (exit $status)"
             jq -e '.usage != null' "$sdir/session.json" >/dev/null || die "session $i of $run reported no usage"
@@ -407,11 +471,12 @@ finish_run() {
         --argjson exit "$status" --argjson wall "$wall" --argjson changed "$changed" --argjson timed_out_code "$TIMED_OUT" \
         --argjson s_exit "$(cat "$run/test-server.exit")" --argjson c_exit "$(cat "$run/test-client.exit")" \
         --argjson s_pass "$s_pass" --argjson s_fail "$s_fail" --argjson c_pass "$c_pass" --argjson c_fail "$c_fail" \
-        --argjson usage "$usage" --arg codex "$(runtime_version)" --arg runtime "$RUNTIME" --arg judged "$judged" --argjson sessions "$sessions" \
+        --argjson usage "$usage" --arg codex "$(runtime_version)" --arg runtime "$RUNTIME" \
+        --arg resolved "$(jq -rRn 'first(inputs | fromjson? | select(.type == "thread.started") | .model // empty) // ""' "$run/events.jsonl")" --arg judged "$judged" --argjson sessions "$sessions" \
         --arg end_mode "$([ "$sessions" = '[]' ] && echo none || echo "$END_MODE")" --arg first "$(first_message "$run/events.jsonl")" \
         --argjson read_records "$(read_session_records "$run/events.jsonl")" \
         --argjson locate "$(locate_steps "$run/events.jsonl" "$(task_target "$judged")")" '
-        {task:$task, judged_task:$judged, earlier_sessions:$sessions, runtime:$runtime, end_mode:$end_mode, first_message:$first, read_session_records:$read_records, locate_steps:$locate, arm:$arm, rep:$rep, model:$model, effort:$effort, codex:$codex, exit_code:$exit,
+        {task:$task, judged_task:$judged, earlier_sessions:$sessions, runtime:$runtime, model_resolved:$resolved, end_mode:$end_mode, first_message:$first, read_session_records:$read_records, locate_steps:$locate, arm:$arm, rep:$rep, model:$model, effort:$effort, codex:$codex, exit_code:$exit,
          timed_out:($exit == $timed_out_code), wall_seconds:$wall, files_changed:$changed,
          tests:{server:{exit:$s_exit, passed:$s_pass, failed:$s_fail}, client:{exit:$c_exit, passed:$c_pass, failed:$c_fail}},
          tests_ran:($s_pass != null and $c_pass != null), usage:$usage}
@@ -476,12 +541,16 @@ JSON
     isolated_home "$jh"
     clean_env "$jh"
     if [ "$RUNTIME" = claude ]; then
-        agent_env "$jh"
-        # No tools: the judge reads only the packet.
-        (cd "$jdir" && with_timeout 900 "${CLEAN[@]}" claude -p --output-format json --tools "" --model "$MODEL" --effort "$JUDGE_EFFORT" \
-            --json-schema "$(cat "$run/judge-schema.json")" < "$run/judge-packet.md" > "$run/judge-out.json" 2> "$run/judge-events.log") || status=$?
-        [ "$status" != 0 ] || jq -e '.is_error | not' "$run/judge-out.json" >/dev/null || status=1
-        [ "$status" != 0 ] || jq '.structured_output // (.result | fromjson)' "$run/judge-out.json" > "$run/judge-raw.json" || status=1
+        # No tools, no settings beyond the empty isolated home, no MCP servers: the judge
+        # reads only the packet, inside the same sandbox as the agents.
+        mkdir -p "$jh/work"
+        claude_exec "$jh" "$jh" "$jh/work" 900 "$run/judge-packet.md" "$run/judge-out.json" "$run/judge-events.log" \
+            -p --output-format json --tools "" --setting-sources user --strict-mcp-config --model "$MODEL" --effort "$JUDGE_EFFORT" \
+            --json-schema "$(cat "$run/judge-schema.json")" || status=$?
+        scrub_token "$run"
+        [ "$status" != 0 ] || jq -e '(.is_error | not) and .structured_output != null' "$run/judge-out.json" >/dev/null \
+            || { log "judge returned an error or no structured output for $run"; status=1; }
+        [ "$status" != 0 ] || jq '.structured_output' "$run/judge-out.json" > "$run/judge-raw.json" || status=1
     else
         with_timeout 900 "${CLEAN[@]}" codex exec -C "$jdir" --skip-git-repo-check -s read-only \
             -m "$MODEL" -c model_reasoning_effort="\"$JUDGE_EFFORT\"" -c approval_policy='"never"' \
@@ -522,8 +591,9 @@ report() {
              (.read_session_records | if . == null then "NA" else . end),
              (.earlier_sessions[0].changed_server | if . == null then "NA" else . end),
              (.earlier_sessions[0].changed_client | if . == null then "NA" else . end),
-             ([(.usage // []), (.earlier_sessions // [] | map((.usage // []) + (.end.usage // [])) | add // [])] | add
-              | if length > 0 and all(.[]; .cost_usd != null) then (map(.cost_usd) | add) else "NA" end)]
+             (if .usage == null or any(.earlier_sessions[]?; .usage == null or (.end.sent and .end.usage == null)) then "NA"
+              else ([.usage, (.earlier_sessions // [] | map(.usage + (.end.usage // [])) | add // [])] | add
+                    | if length > 0 and all(.[]; .cost_usd != null) then (map(.cost_usd) | add) else "NA" end) end)]
             | map(if . == null then "NA" else . end) | @tsv' "$r"
       done; } > "$out/scores.tsv"
     column -t -s $'\t' "$out/scores.tsv"
