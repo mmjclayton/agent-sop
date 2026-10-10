@@ -1316,7 +1316,9 @@ From an outside review of R6 that Matt passed on, 10 Oct 2026; the review recomm
 
 ### P120 - Dependent-session pair: does agent-sop pay off across sessions? (R8)
 
-`[IN PROGRESS] [Iteration]`
+`[WON'T] [Iteration]`
+
+Reason: superseded by P121 (session resume test, R9), which Matt approved on 11 Oct 2026 after the pre-run review below found that pair 5+9 cannot separate the arms. R8 was stopped; its partial `r8b` data is not a result. The pair-mode harness (PR #47) and task 09 stay in the repo for reuse.
 
 **Unblocked 11 Oct 2026:** Matt reported the Codex usage limit reset; a test call succeeded and R8 started.
 
