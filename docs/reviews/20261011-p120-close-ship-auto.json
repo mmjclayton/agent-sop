@@ -1,0 +1,79 @@
+{
+  "schema_version": 2,
+  "base": "ae530501e0911220e4e3cd631376a613b002d9df",
+  "head": "e18c0fd8dfb36b26a016abd4a36d8d4c9b044ddb",
+  "tree": "fe7ef7479b8e6933473dadc8dbcdb05294961733",
+  "policy_sha256": "2bf3e7532a015bebf17f7553468f92f27d5b777be7d19cb8aca33e5e8b07e494",
+  "tests": {
+    "status": "PASS",
+    "evidence": "Docs and records only; no script changed. validate-state-transitions fixture mode (base vs branch Backlog.md) OK, 0 warnings; priorities-fixtures 16/0; refresh-priorities.sh output byte-identical to the committed CLAUDE.md block (silent-failure reviewer). e18c0fd changes Backlog.md and a session record only."
+  },
+  "reviewers": [
+    {
+      "name": "security-reviewer",
+      "version": "7f43a9e27d8aed8f8a55b4fd970e5c33cf83902f896ade200da05efb15d9bda0",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 0,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "Backlog.md",
+          "line": 1325,
+          "message": "Stale 10 Oct blocked paragraph under the WON'T entry; marked as history in e18c0fd."
+        }
+      ]
+    },
+    {
+      "name": "code-reviewer",
+      "version": "f6420e5df2c684f2da46628e1c1c264dbb865ac3130701ff8025111b392bd677",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 0,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "MEDIUM",
+          "file": "Backlog.md",
+          "line": 1327,
+          "message": "Stale blocked paragraph contradicted the stop note; marked as history and the no-data claim dated (e18c0fd)."
+        },
+        {
+          "severity": "MEDIUM",
+          "file": "Backlog.md",
+          "line": 1321,
+          "message": "P121 not yet in this repo; Reason now names the branch where the ship-sop session is adding it (e18c0fd)."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/recent-work/2026-10-11_solo_p120-r8-stopped.md",
+          "line": 4,
+          "message": "Close-out hash added (e18c0fd)."
+        }
+      ]
+    },
+    {
+      "name": "silent-failure-hunter",
+      "version": "004ce0389356e0666d80c89cef39ad895ab326b3f7d19d34d23c70ab249a795d",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 0,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "Backlog.md",
+          "line": 1317,
+          "message": "Stale blocked narrative; marked as history (e18c0fd)."
+        }
+      ]
+    }
+  ]
+}
