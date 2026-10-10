@@ -1357,6 +1357,7 @@ Approved by Matt, 10 Oct 2026 ("proceed"), after R7 found that k=3 could not sep
 ### P121 - Session resume test: does agent-sop help a new session pick up unfinished work? (R9)
 
 `[IN PROGRESS] [Feature]`
+review: docs/reviews/20261011-083942-ship-auto.md
 
 Matt, 11 Oct 2026: agent-sop exists because a new session often lacked the context of the work in progress; the backlog plus the start and end routine are the fix. Approved on the same day as the R8 redesign ("go ahead with testing as per my instructions for what agent-sop is for"), on Codex with the fresh usage. Built by the ship-sop session on `feat/p121-resume-test` (worktree `~/Projects/agent-sop-p121`).
 

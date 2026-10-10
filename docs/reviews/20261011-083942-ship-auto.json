@@ -1,0 +1,103 @@
+{
+  "schema_version": 2,
+  "base": "e68828ed2dd7ffe47f833198820d8f37a92f6155",
+  "head": "0443a3e0fcffbc34ab4d22ffbef379e256d68d37",
+  "tree": "3ff274b8ce3598a6da57b38fb6e6018aae10c5f5",
+  "policy_sha256": "2bf3e7532a015bebf17f7553468f92f27d5b777be7d19cb8aca33e5e8b07e494",
+  "tests": {
+    "status": "PASS",
+    "evidence": "At 0443a3e on macOS: archive-fixtures PASS; bench-fixtures PASS; codex-fixtures PASS; drift-fixtures PASS; hook-fixtures PASS; priorities-fixtures PASS; reliability-fixtures PASS; resume-path-fixtures PASS; state-transition-fixtures PASS; sync-fixtures PASS; shellcheck clean on changed scripts. Pilot on real Codex in progress (separate)."
+  },
+  "reviewers": [
+    {
+      "name": "security-reviewer",
+      "version": "0f8a59958459703fc4108ecf1977f4638b6a4565",
+      "model": "runtime-default-unresolved",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 3,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 233,
+          "message": "thread id passed to codex exec resume without --; it comes from Codex's own thread.started event"
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 224,
+          "message": "fixed in 8d21e93: TOML writable_roots path guarded against quotes and backslashes"
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 222,
+          "message": "fixed in 8d21e93: resume by recorded thread id, checked against the turn's own id"
+        }
+      ]
+    },
+    {
+      "name": "code-reviewer",
+      "version": "01027637966b1e741c49018f071b91b0cad528f6",
+      "model": "runtime-default-unresolved",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 3,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 83,
+          "message": "leak flag is heuristic: relative reads after cd ~ or find are not seen; report false as not observed"
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 380,
+          "message": "fixed in 8d21e93: judge packet shows earlier sessions' work as context"
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 83,
+          "message": "fixed in 0443a3e: leak pattern no longer flags the SOP arm's project .codex"
+        }
+      ]
+    },
+    {
+      "name": "silent-failure-hunter",
+      "version": "46bcbfc7adb8b13d1e0f0d9bcdf16d512b165d89",
+      "model": "runtime-default-unresolved",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 3,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/bench-fixtures/run-tests.sh",
+          "line": 150,
+          "message": "no fixture for a non-ASCII or spaced path in files_changed, or a timed-out end turn"
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 450,
+          "message": "fixed in 492ecd2: report printed false flags as NA"
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 236,
+          "message": "fixed in 8d21e93: files_changed NUL-separated; snapshot failures checked"
+        }
+      ]
+    }
+  ]
+}
