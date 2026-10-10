@@ -59,7 +59,7 @@ None of the failure modes occurred in R6:
 - Usage is present for every run.
 - Every judge mark is 0, 0.5 or 1.
 
-The one arithmetic error is corrected above. `valid` (Codex exit 0 and usage present) and `tests_ran` were added to each `result.json`; all 18 are valid, and none would be flagged `tests_suspect` (no suite exited non-zero). The revised harness was validated with one run per arm of task 05, which is not part of R6.
+The one arithmetic error is corrected above. `valid` (Codex exit 0 and usage present, or a timeout) and `tests_ran` were added to each `result.json`; all 18 are valid, and none would be flagged `tests_suspect` (no suite exited non-zero). The revised harness was validated with one run per arm of task 05, which is not part of R6.
 
 ## Limits
 
