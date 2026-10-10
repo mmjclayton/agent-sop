@@ -1298,7 +1298,8 @@ Requested by Matt, 10 Oct 2026 ("please fix"), from the readiness check after P1
 
 ### P119 - Control arm: project instructions without agent-sop (R7)
 
-`[IN PROGRESS] [Iteration]`
+`[SHIPPED - 2026-10-10] [Iteration]`
+review: docs/reviews/20261010-p119-ship-auto.md
 
 **Result (R7, `docs/benchmark/results/r7-codex-summary.md`):** on single-session tasks, k=3 could not separate agent-sop from the project's own instructions. SOP minus context was +0.08, -0.05 and -0.05 by median, with ranges overlapping on every task. Both arms met the core criterion 9/9, but SOP took 1,767 s against 813 s and 130,497 output tokens against 60,785. Most of the R6 gain over the stub is reproduced by the project instructions alone (context minus native +0.20 on task 07, no overlap). Re-judging R6 changed 10 of 18 scores, mean 0.043, so differences of about 0.05 are judge noise. Multi-session tasks are untested.
 
