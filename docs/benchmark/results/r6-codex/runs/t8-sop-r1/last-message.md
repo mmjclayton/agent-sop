@@ -1,0 +1,1 @@
+P62 remains `[IN PROGRESS]` pending an independent review. I recorded the incomplete review attempt, added the in-flight entry, and refreshed the resume snapshot. The state-transition validator passes.

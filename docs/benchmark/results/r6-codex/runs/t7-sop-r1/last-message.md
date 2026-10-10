@@ -1,0 +1,3 @@
+P57 is implemented and marked shipped. Users can skip an exercise during an active workout, confirm the action, see a distinct Skipped status, and unskip while preserving their entered values. The status persists through finishing and appears in workout history.
+
+All tests pass: **197 server and 289 client**. The final isolated review found no issues. The work is committed as `c8a4110` (`feat: add skip exercise to workout logger`), and the worktree is clean.

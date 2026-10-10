@@ -148,7 +148,7 @@ finish_run() {
 }
 
 # Paths that would reveal the arm to a judge (SOP records and installed assets).
-JUDGE_EXCLUDES=(':!docs' ':!Backlog.md' ':!AGENTS.md' ':!CLAUDE.md' ':!scripts' ':!.claude' ':!.agents' ':!.codex')
+JUDGE_EXCLUDES=(':!.review-*' ':!docs' ':!Backlog.md' ':!AGENTS.md' ':!CLAUDE.md' ':!scripts' ':!.claude' ':!.agents' ':!.codex')
 
 judge_run() {
     local run=$1 label=$2 task proj=$1/proj base jh
