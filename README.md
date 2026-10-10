@@ -72,7 +72,7 @@ project's own instructions, backlog or memory.
 | The project | `CLAUDE.md` or `AGENTS.md`, `Backlog.md`, `docs/` (SOP, guides, memory, reviews) and `scripts/` | Deleting the files; they are plain Markdown and shell |
 | `~/.claude/commands/`, `~/.claude/agents/` | Five slash commands and five reference agents (Claude) | Deleting the files setup reported as `install`. Files it reported as `skip` already existed and are not setup's |
 | `~/.claude/scripts/hooks/agent-sop/` and `~/.claude/settings.json` | Hook scripts, and hook entries in settings. Settings are backed up to `settings.json.bak-<timestamp>` before any write | `bash scripts/install-hooks.sh --uninstall` |
-| `~/.codex/`, `~/.agents/skills/` | Codex skills, agents and hooks | `bash scripts/install-codex.sh --uninstall` and `bash scripts/install-hooks.sh --runtime codex --uninstall`, then delete `~/.codex/agent-sop.*.json` and any `.bak` copies. Files reported as `keep` were edited locally and are left for you |
+| `~/.codex/`, `~/.agents/skills/` | Codex skills, agents and hooks | `bash scripts/install-codex.sh --uninstall` and `bash scripts/install-hooks.sh --runtime codex --uninstall`, then delete `~/.codex/agent-sop.*.json`. Files reported as `keep` were edited locally and are left for you. A `.bak` file next to an asset holds the version setup replaced, which may be your own; check it before deleting |
 | `~/.claude/agent-sop.config.json`, `~/.codex/agent-sop.config.json` | Upstream path, update reminder and file baselines | Deleting the file |
 | `~/.claude/agent-sop/projects/` | Resume snapshots, shared by both runtimes | Deleting the folder |
 
@@ -85,13 +85,14 @@ from this checkout. It prints the settings file as it would be written and chang
 no existing file; if no settings file exists yet, it creates an empty one.
 `--no-hooks` skips hook registration during setup.
 
-What the hooks can refuse: on code projects with ship-sop's automatic gate on, the
-agent's own `git push` and `gh pr create` are refused when the code diff is at or
-over the configured `min_diff_lines` and no validated review receipt covers HEAD.
+What the hooks can refuse: on code projects with a `ship-sop.config.json`, the
+agent's own `git push` and `gh pr create` are refused when that file is invalid, or
+when its automatic gate is on, the code diff is at or over the configured
+`min_diff_lines` and no validated review receipt covers HEAD.
 Prefix the command with `SOP_SKIP_GATE=1` to bypass once; the bypass is logged to
 `.ship/bypass.log`. No other command is refused, and pushes from another terminal
 are unaffected. On code projects the Stop hook may also keep the agent working for
-one more turn, once per commit state, to ask for session records. See
+one more turn, once per commit and tracker state, to ask for session records. See
 [Automatic checks](#automatic-checks).
 
 ## Everyday use
