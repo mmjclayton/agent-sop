@@ -92,7 +92,7 @@ thread_id() { jq -rRn 'first(inputs | fromjson? | select(.type == "thread.starte
 # nothing was read (reads by hooks or through other tools are not visible here).
 read_session_records() {
     jq -sR '[split("\n")[] | fromjson? | select(.type == "item.completed") | .item | (.command // "") | tostring
-        | select(test("\\.\\./session-[0-9]+\\b|session-[0-9]+/(prompt|events|end|last-message|session\\.json|usage)|(~|\\$\\{?HOME\\}?|/home)/\\.codex|CODEX_HOME|\\.codex/sessions|\\.claude/projects/[^ ]*\\.jsonl|(~|\\$\\{?HOME\\}?|/home|\\$\\{?CLAUDE_CONFIG_DIR\\}?)/(\\.claude/)?projects/?([ \"\u0027]|$)|\\$\\{?CLAUDE_CONFIG_DIR\\}?/projects/[^ ]*\\.jsonl"))] | length > 0' "$1"
+        | select(test("\\.\\./session-[0-9]+\\b|session-[0-9]+/(prompt|events|end|last-message|session\\.json|usage)|(~|\\$\\{?HOME\\}?|/home)/\\.codex|CODEX_HOME|\\.codex/sessions|\\.claude/projects/[^ ]*\\.jsonl|((~|\\$\\{?HOME\\}?|/home)/\\.claude|\\$\\{?CLAUDE_CONFIG_DIR\\}?)/projects/?([ \"\u0027]|$)|\\$\\{?CLAUDE_CONFIG_DIR\\}?/projects/[^ ]*\\.jsonl"))] | length > 0' "$1"
 }
 task_criteria() { awk '/^## Acceptance Criteria/{p=1;next} /^## /{p=0} p' "$(task_file "$1")"; }
 criteria_count() { task_criteria "$1" | grep -cE '^[0-9]+\.'; }
@@ -155,7 +155,12 @@ claude_token() {
 # other projects, the token), no other runs, and in this run only the same three
 # folders, so earlier sessions' prompts and harness files are out of reach. The
 # toolchain lives outside home.
-# Keychain services are not reachable. Network stays open: Claude needs its API.
+# No keychain, no LaunchServices or Apple Events (so nothing can be started outside the
+# sandbox), no pasteboard, and no inspecting or signalling processes outside it.
+# Reads are also closed for /Volumes. File metadata (names, sizes) stays readable
+# everywhere and /private/var/folders stays readable, because node resolves parent paths
+# and its per-user cache at startup; keep nothing sensitive outside home. Network stays
+# open: Claude needs its API. Verified with the real client and server suites.
 # The environment is rebuilt from nothing in a subshell, so only these variables pass
 # (no proxy or CA settings: set them here if a network needs them).
 # claude_exec <root> <home> <cwd> <timeout> <stdin> <stdout> <stderr> <claude args...>
@@ -174,9 +179,16 @@ claude_exec() {
 (deny file-write*)
 (allow file-write* (subpath "$home") (subpath "$cwd") (subpath "$root/tmp")
     (literal "/dev/null") (literal "/dev/tty") (regex #"^/dev/fd/") (regex #"^/dev/ttys"))
-(deny file-read* (subpath "$oh") (subpath "$runs") (subpath "$tokdir"))
+(deny file-read* (subpath "$oh") (subpath "$runs") (subpath "$tokdir") (subpath "/Volumes"))
 (allow file-read* (subpath "$home") (subpath "$cwd") (subpath "$root/tmp"))
-(deny mach-lookup (global-name "com.apple.SecurityServer") (global-name "com.apple.securityd"))
+(allow file-read-metadata)
+(deny process-info* (target others))
+(allow process-info* (target same-sandbox))
+(deny signal (target others))
+(allow signal (target same-sandbox))
+(deny mach-lookup (global-name "com.apple.SecurityServer") (global-name "com.apple.securityd")
+    (global-name-prefix "com.apple.coreservices.launchservicesd") (global-name-prefix "com.apple.lsd.")
+    (global-name "com.apple.coreservices.appleevents") (global-name-prefix "com.apple.pasteboard"))
 SB
     (
         cd "$cwd" || exit 1
@@ -194,11 +206,11 @@ scrub_token() {
     local root=$1 hits
     [ "$RUNTIME" = claude ] && [ -n "$CLAUDE_TOKEN" ] || return 0
     local rc=0
-    hits=$(grep -rlF -f <(printf '%s\n%s\n' "$CLAUDE_TOKEN" "$(printf '%s' "$CLAUDE_TOKEN" | base64)") "$root") || rc=$?
+    hits=$(grep -rlF -f <(printf '%s\n%s\n' "$CLAUDE_TOKEN" "$(printf '%s' "$CLAUDE_TOKEN" | base64 | tr -d '\n')") "$root") || rc=$?
     [ "$rc" -le 1 ] || die "could not scan $root for the Claude token (grep exit $rc); run is invalid"
     [ -n "$hits" ] || return 0
     while IFS= read -r f; do
-        SCRUB="$CLAUDE_TOKEN" SCRUB64="$(printf '%s' "$CLAUDE_TOKEN" | base64)" \
+        SCRUB="$CLAUDE_TOKEN" SCRUB64="$(printf '%s' "$CLAUDE_TOKEN" | base64 | tr -d '\n')" \
             perl -pi -e 's/\Q$ENV{SCRUB}\E/[REDACTED]/g; s/\Q$ENV{SCRUB64}\E/[REDACTED]/g' "$f"
     done <<< "$hits"
     die "the Claude token appeared in $(printf '%s\n' "$hits" | wc -l | tr -d ' ') file(s) under $root; redacted, run is invalid"

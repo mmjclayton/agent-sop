@@ -147,7 +147,7 @@ for c in 'ls ~/.codex' 'cat $HOME/.codex/config.toml' 'cat ${HOME}/.codex/x' 'ca
          'cat ../session-1/prompt.txt' 'ls ../session-2' 'cat /tmp/out/runs/r/session-1/events.jsonl' 'echo $CODEX_HOME'; do check_leak true "$c"; done
 for c in 'cat ~/.claude/projects/-tmp-proj/abc.jsonl' 'ls ~/.claude/projects' 'cat /tmp/r/home/.claude/projects/x/s.jsonl' 'ls $CLAUDE_CONFIG_DIR/projects' 'cat ${CLAUDE_CONFIG_DIR}/projects/x/s.jsonl'; do check_leak true "$c"; done
 for c in 'cat .codex/hooks.json' 'ls -a .codex' 'cat docs/agent-memory/session-notes.md' 'ls docs/session-3' 'grep -r rpe server/src' \
-         'cat .claude/settings.json' 'cat ~/.claude/projects/-tmp-proj/memory/MEMORY.md' 'cat $CLAUDE_CONFIG_DIR/projects/x/memory/MEMORY.md'; do check_leak false "$c"; done
+         'cat .claude/settings.json' 'cat ~/.claude/projects/-tmp-proj/memory/MEMORY.md' 'cat $CLAUDE_CONFIG_DIR/projects/x/memory/MEMORY.md' 'ls ~/projects' 'ls $HOME/projects'; do check_leak false "$c"; done
 printf 'PASS: leak check sees earlier-session records and ignores the project .codex and repo paths\n'
 
 # Older output directories count as closed; quotes in the output path are refused.
@@ -200,6 +200,7 @@ c="$TMPDIR/call-$n"; printf '%s\0' "$@" > "$c.args"
   if (echo x > "$HOME/../baseline.json") 2>/dev/null; then echo harness_write=allowed; else echo harness_write=denied; fi
   if ls "/Users/$(id -un)" >/dev/null 2>&1; then echo operator_home_read=allowed; else echo operator_home_read=denied; fi
   if security list-keychains >/dev/null 2>&1; then echo keychain=reachable; else echo keychain=blocked; fi
+  if node -e 'require("fs").realpathSync(".")' >/dev/null 2>&1; then echo node=ok; else echo node=broken; fi
 } > "$c.env"
 resume=''; schema=''; prev=''
 for a in "$@"; do [ "$prev" = --resume ] && resume=$a; [ "$prev" = --json-schema ] && schema=$a; prev=$a; done
@@ -239,6 +240,11 @@ has_pair() { # args-file flag value: flag immediately followed by value
 }
 has_flag() { tr '\0' '\n' < "$1" | grep -qx -- "$2"; }
 
+# Positive controls: outside the sandbox each probe below succeeds, so "denied" inside it
+# means the sandbox refused it.
+ls "/Users/$(id -un)" >/dev/null 2>&1 || { echo 'FAIL: control: operator home not listable outside the sandbox'; exit 1; }
+security list-keychains >/dev/null 2>&1 || { echo 'FAIL: control: keychain unreachable outside the sandbox'; exit 1; }
+cat "$WORK/tok/claude-token" >/dev/null || { echo 'FAIL: control: token unreadable outside the sandbox'; exit 1; }
 mkdir -p "$WORK/out-claude"
 BENCH_END_MODE=ask cbench one "$WORK/out-claude" 10+11 native 1 2> "$WORK/claude.log" || { tail -20 "$WORK/claude.log"; exit 1; }
 run="$WORK/out-claude/runs/t10+11-native-r1"
@@ -251,7 +257,9 @@ for i in 0 1 2; do
     grep -qx token=set "$e"; grep -qx "home=$(cd "$run" && pwd -P)/home" "$e"; grep -qx "config=$(cd "$run" && pwd -P)/home/.claude" "$e"
     grep -qx outside_write=denied "$e"; grep -qx token_read=denied "$e"; grep -qx earlier_prompt_read=denied "$e"
     grep -qx harness_write=denied "$e"; grep -qx operator_home_read=denied "$e"; grep -qx keychain=blocked "$e"
+    grep -qx node=ok "$e"   # node starts and resolves its cwd under the profile
 done
+test -f "$run/session-1/prompt.txt"   # the earlier-prompt probe had a real file to refuse
 has_pair "$run/tmp/call-1.args" --resume sess-1
 if has_flag "$run/tmp/call-0.args" --resume || has_flag "$run/tmp/call-2.args" --resume; then echo 'FAIL: wrong session resumed'; exit 1; fi
 test ! -e "$WORK/out-claude/outside-probe"
