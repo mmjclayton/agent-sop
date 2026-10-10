@@ -25,7 +25,7 @@ asset_target() {
     case "$1" in
         .agents/skills/*) printf '%s/%s' "$USER_ROOT" "$1" ;;
         .codex/agents/*) printf '%s/agents/%s' "$CODEX_DIR" "${1#.codex/agents/}" ;;
-        scripts/codex-review.sh|scripts/ship-receipt.sh) printf '%s/scripts/ship-sop/%s' "$CODEX_DIR" "${1##*/}" ;;
+        scripts/codex-review.sh|scripts/ship-receipt.sh|scripts/codex-usage.sh) printf '%s/scripts/ship-sop/%s' "$CODEX_DIR" "${1##*/}" ;;
         *) echo "Invalid asset: $1" >&2; return 1 ;;
     esac
 }
@@ -35,7 +35,7 @@ asset_target() {
 (cd "$SOURCE" && find .agents/skills .codex/agents -type f | LC_ALL=C sort) > "$WORK/assets" || { echo 'Codex asset discovery failed' >&2; exit 1; }
 if [ "$PACKAGE" = ship-sop ]; then
     [ -f "$SOURCE/scripts/codex-review.sh" ] || { echo 'Missing reviewer runner' >&2; exit 1; }
-    printf 'scripts/codex-review.sh\nscripts/ship-receipt.sh\n' >> "$WORK/assets"
+    printf 'scripts/codex-review.sh\nscripts/ship-receipt.sh\nscripts/codex-usage.sh\n' >> "$WORK/assets"
 fi
 [ -s "$WORK/assets" ] || { echo 'No Codex assets found' >&2; exit 1; }
 while IFS= read -r src; do

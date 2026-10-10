@@ -1,0 +1,103 @@
+{
+  "schema_version": 2,
+  "base": "7fcea744591eb4fb746a7e897399b968ea551ed4",
+  "head": "4c5b204ec470fc376ec25d38575f5eaf56b1cb48",
+  "tree": "5716bd645304099503cdd6fd4e835fe3e6983705",
+  "policy_sha256": "2bf3e7532a015bebf17f7553468f92f27d5b777be7d19cb8aca33e5e8b07e494",
+  "tests": {
+    "status": "PASS",
+    "evidence": "At d6bd141: all nine docs/benchmark/*-fixtures/run-tests.sh suites exit 0 (archive, codex, drift, hook, priorities, reliability, resume-path, state-transition, sync); two reviewers re-ran codex-fixtures on an extracted d6bd141 tree, 18 PASS lines including the new assertion. git ls-files -z '*.sh' | xargs -0 shellcheck -S warning exits 0. scripts/validate-state-transitions.sh OK, 0 warnings. cmp scripts/install-codex.sh ../ship-sop/scripts/install-codex.sh clean. Close-out 4c5b204 changes no file under scripts/ or docs/benchmark/ (git diff --stat d6bd141 4c5b204 -- scripts docs/benchmark empty); validator OK on the branch."
+  },
+  "reviewers": [
+    {
+      "name": "security-reviewer",
+      "version": "7f43a9e27d8aed8f8a55b4fd970e5c33cf83902f896ade200da05efb15d9bda0",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 1,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-fixtures/run-tests.sh",
+          "line": 22,
+          "message": "No negative fixture for the package mis-detection path (restart-sop skill missing): installer should abort with 'Missing reviewer runner'. Accepted: optional."
+        },
+        {
+          "severity": "INFO",
+          "file": "scripts/install-codex.sh",
+          "line": 37,
+          "message": "Guard checks codex-review.sh only; matches ship-sop's copy, so the shared-verbatim rule holds. Not changed in agent-sop alone."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/agent-memory/in-flight/solo.md",
+          "line": 5,
+          "message": "In-flight line says PR and merge next. Updated in the receipt commit."
+        }
+      ]
+    },
+    {
+      "name": "code-reviewer",
+      "version": "f6420e5df2c684f2da46628e1c1c264dbb865ac3130701ff8025111b392bd677",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 1,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "Backlog.md",
+          "line": 1256,
+          "message": "P117 is IN PROGRESS in the reviewed range; moved to SHIPPED in the close-out commit (validator forbids absent to SHIPPED)."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-fixtures/run-tests.sh",
+          "line": 22,
+          "message": "Assertion does not guard against scripts/codex-review.sh being re-added to the source tree. Accepted: the file would still never be installed."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/recent-work/2026-10-10_solo_p117-stale-codex-runner.md",
+          "line": 5,
+          "message": "Commits line names the close-out without its SHA. Accepted: a commit cannot cite its own hash."
+        }
+      ]
+    },
+    {
+      "name": "silent-failure-hunter",
+      "version": "004ce0389356e0666d80c89cef39ad895ab326b3f7d19d34d23c70ab249a795d",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 1,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "scripts/install-codex.sh",
+          "line": 37,
+          "message": "Existence guard covers the runner only; a missing ship-receipt.sh or codex-usage.sh fails loudly via sha under set -e but without a named message. Same in ship-sop; change belongs there to keep the files identical."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-fixtures/run-tests.sh",
+          "line": 22,
+          "message": "Assertion checks the scripts/ship-sop directory, not ship-sop.* state files under .codex. Accepted: optional."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/reviews/20261010-141500-ship-auto.md",
+          "line": 5,
+          "message": "Report did not state the close-out is docs only. Covered by this receipt for 4c5b204."
+        }
+      ]
+    }
+  ]
+}

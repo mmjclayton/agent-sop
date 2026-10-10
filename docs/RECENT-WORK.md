@@ -7,8 +7,11 @@ the sentinels.
 Moved out of `CLAUDE.md` on 2026-08-03 so it stops consuming context every session.
 
 <!-- recent-work-rollup:start -->
-*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-09-30.*
+*Auto-generated from `docs/recent-work/`. Last refreshed: 2026-10-10.*
 
+- 2026-10-10 `solo`: Stale ship-sop reviewer runner removed from agent-sop (P117)
+- 2026-10-10 `solo`: Independent review verified and its fixes shipped (P115); benchmark reopened (P116)
+- 2026-10-07 `solo`: Research digests moved into the repo
 - 2026-09-30 `solo`: P113 and P114 merged and installed
 - 2026-09-30 `solo`: Memory index size check and harness memory rule
 - 2026-09-24 `solo`: Receipt schema version 2 with run counts
