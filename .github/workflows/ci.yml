@@ -16,5 +16,8 @@ jobs:
           for suite in docs/benchmark/*-fixtures/run-tests.sh; do
             bash "$suite" || exit 1
           done
-      - name: Runtime policy lint
-        run: shellcheck -S warning scripts/hooks/*.sh scripts/resolve-resume-path.sh scripts/refresh-in-flight.sh
+      - name: Shell lint
+        shell: bash
+        run: |
+          [ -n "$(git ls-files '*.sh')" ] || { echo 'no tracked .sh files to lint'; exit 1; }
+          git ls-files -z '*.sh' | xargs -0 shellcheck -S warning

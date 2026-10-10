@@ -7,12 +7,14 @@
 # files unless you pass --force.
 #
 # Usage:
-#   ./setup.sh /path/to/your/project [--code] [--force]
+#   ./setup.sh /path/to/your/project [--runtime claude|codex|both] [--code] [--force] [--no-hooks]
 #
 # Options:
-#   --code    Use the code project template (adds Auth, Database, Design System,
-#             Code Quality Rules). Without this flag the base template is used.
-#   --force   Overwrite existing files. Without this flag existing files are skipped.
+#   --runtime   Which agent runtime to install for: claude (default), codex or both.
+#   --code      Use the code project template (adds Auth, Database, Design System,
+#               Code Quality Rules). Without this flag the base template is used.
+#   --force     Overwrite existing files. Without this flag existing files are skipped.
+#   --no-hooks  Do not register the user-scope hooks (Claude or Codex); run the workflows manually.
 #
 # What it creates (per-project, customised — from templates):
 #   CLAUDE.md                          Project instructions
@@ -66,13 +68,13 @@ TARGET=""
 # ── Parse arguments ───────────────────────────────────────────────────────────
 
 usage() {
-    echo "Usage: $(basename "$0") /path/to/project [--code] [--force]"
+    echo "Usage: $(basename "$0") /path/to/project [--runtime claude|codex|both] [--code] [--force] [--no-hooks]"
     echo ""
     echo "Options:"
     echo "  --runtime claude|codex|both  (default: claude)"
     echo "  --code       Use the code project template (Auth, DB, Design System)"
     echo "  --force      Overwrite existing files"
-    echo "  --no-hooks   Do not register the user-scope hooks in ~/.claude/settings.json"
+    echo "  --no-hooks   Do not register the user-scope hooks (Claude settings.json or Codex hooks.json)"
     echo ""
     echo "Run this from the agent-sop repo directory."
     exit 1

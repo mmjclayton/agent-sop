@@ -23,9 +23,8 @@ Claude and Codex share the same project records. You can use either or install b
 
 Use one writer per worktree for parallel editing. See the
 [multi-agent workflow](docs/sop/multi-agent.md) for identities, shared records and
-merge discipline. Task/file ownership claims and expanded cross-worktree context
-refresh have also been implemented locally and are awaiting merge; they are not
-yet available from the default branch.
+merge discipline, and [Multiple agents and sessions](#multiple-agents-and-sessions)
+below for task/file ownership claims and cross-worktree context refresh.
 
 ## Quick start
 
@@ -61,6 +60,40 @@ codex -C /path/to/project
 
 Asking an agent to run shell commands in a project directory does not change the
 session's root. Hooks receiving your home directory will skip the project.
+
+## What setup changes, and how to remove it
+
+Setup writes to the project directory and to your user configuration. It skips
+files that already exist unless you pass `--force`, and never overwrites the
+project's own instructions, backlog or memory.
+
+| Where | What | Removed by |
+|---|---|---|
+| The project | `CLAUDE.md` or `AGENTS.md`, `Backlog.md`, `docs/` (SOP, guides, memory, reviews) and `scripts/` | Deleting the files; they are plain Markdown and shell |
+| `~/.claude/commands/`, `~/.claude/agents/` | Five slash commands and five reference agents (Claude) | Deleting the files setup reported as `install`. Files it reported as `skip` already existed and are not setup's |
+| `~/.claude/scripts/hooks/agent-sop/` and `~/.claude/settings.json` | Hook scripts, and hook entries in settings. Settings are backed up to `settings.json.bak-<timestamp>` before any write | `bash scripts/install-hooks.sh --uninstall` |
+| `~/.codex/`, `~/.agents/skills/` | Codex skills, agents and hooks | `bash scripts/install-codex.sh --uninstall` and `bash scripts/install-hooks.sh --runtime codex --uninstall`, then delete `~/.codex/agent-sop.*.json`. Files reported as `keep` were edited locally and are left for you. A `.bak` file next to an asset holds the version setup replaced, which may be your own; check it before deleting |
+| `~/.claude/agent-sop.config.json`, `~/.codex/agent-sop.config.json` | Upstream path, update reminder and file baselines | Deleting the file |
+| `~/.claude/agent-sop/projects/` | Resume snapshots, shared by both runtimes | Deleting the folder |
+
+If you installed with `--dest`, `--settings`, `AGENT_SOP_USER_HOME` or a custom
+`CODEX_HOME`, pass the same values when you uninstall; otherwise the hook entries
+stay registered.
+
+To preview the hook registration, run `bash scripts/install-hooks.sh --dry-run`
+from this checkout. It prints the settings file as it would be written and changes
+no existing file; if no settings file exists yet, it creates an empty one.
+`--no-hooks` skips hook registration during setup.
+
+What the hooks can refuse: on code projects with a `ship-sop.config.json`, the
+agent's own `git push` and `gh pr create` are refused when that file is invalid, or
+when its automatic gate is on, the code diff is at or over the configured
+`min_diff_lines` and no validated review receipt covers HEAD.
+Prefix the command with `SOP_SKIP_GATE=1` to bypass once; the bypass is logged to
+`.ship/bypass.log`. No other command is refused, and pushes from another terminal
+are unaffected. On code projects the Stop hook may also keep the agent working for
+one more turn, once per commit and tracker state, to ask for session records. See
+[Automatic checks](#automatic-checks).
 
 ## Everyday use
 

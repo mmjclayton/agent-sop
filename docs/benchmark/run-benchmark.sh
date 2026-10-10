@@ -14,7 +14,6 @@ set -euo pipefail
 HST_REPO="${HST_REPO:-$HOME/Projects/hst-tracker}"
 BENCH_DIR="$(cd "$(dirname "$0")" && pwd)"
 TASKS_DIR="$BENCH_DIR/tasks"
-RESULTS_DIR="$BENCH_DIR/results"
 TASK_COUNT="${BENCH_TASK_COUNT:-4}"
 TASK_OFFSET="${BENCH_TASK_OFFSET:-1}"  # First task number (1 for round 1, 5 for round 2)
 
