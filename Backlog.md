@@ -1311,3 +1311,18 @@ From an outside review of R6 that Matt passed on, 10 Oct 2026; the review recomm
 **Acceptance criteria:**
 - R7 reports median and range per task for native, context and SOP, with overlap stated for context vs SOP
 - R6 summary carries the confound note
+
+---
+
+### P120 - Dependent-session pair: does agent-sop pay off across sessions? (R8)
+
+`[IN PROGRESS] [Iteration]`
+
+Approved by Matt, 10 Oct 2026 ("proceed"), after R7 found that k=3 could not separate agent-sop from the project's own instructions on single-session tasks. The R7 recommendation was one small multi-session task pair in all three arms before any five-run expansion.
+
+- Pair (continuity methodology, pair 1): session 1 is task 05 (client tonnage bug); session 2 is new task 09, "Fix the related bug in the workout summary totals", whose fix is in the server endpoints that ignore count-twice. Session 2 is a new `codex exec` in the same project and isolated home, so whatever session 1 left (files, SOP records, resume snapshot, native Codex memory) carries over.
+- Harness: `codex-bench.sh` task spec `5+9` runs the sessions in order; only the last is tested and judged, against the tree where session 1 ended. `locate_steps` counts session-2 commands before it first touches `server/src/routes/logger.js`.
+- Run: native, context and SOP arms, k=3, 9 pairs, same template (814b3b5), model, judge and login as R7.
+
+**Acceptance criteria:**
+- R8 reports, per arm, the session-2 judge median and range, the core-criterion count, locate_steps, wall time and tokens, with overlap stated for context vs SOP
