@@ -860,6 +860,33 @@ else
     bad "installer-preserves-symlinked-settings" "link=$([ -L "$LINK" ] && echo yes || echo no) real=$(jq -c '.hooks // {} | keys' "$REAL" 2>/dev/null)"
 fi
 
+# --dry-run writes nothing: no settings file, no settings directory, no scripts (independent review, P118).
+DRYSET="$TMP/dry-home/settings.json"; DRYDEST="$TMP/dry-dest"
+bash "$INSTALLER" --settings "$DRYSET" --dest "$DRYDEST" --dry-run > "$TMP/dry-out" 2>&1; DRY=$?
+if [ "$DRY" = 0 ] && [ ! -e "$TMP/dry-home" ] && [ ! -e "$DRYDEST" ] \
+   && [ "$(jq '[.hooks.Stop[]?.hooks[]?.command | select(test("sop-stop-drift"))] | length' "$TMP/dry-out")" = 1 ]; then
+    ok "installer-dry-run-writes-nothing"
+else
+    bad "installer-dry-run-writes-nothing" "exit=$DRY home=$([ -e "$TMP/dry-home" ] && echo created || echo absent) dest=$([ -e "$DRYDEST" ] && echo created || echo absent) out='$(head -3 "$TMP/dry-out")'"
+fi
+
+# Dry-run leaves an existing settings file byte-identical (review finding, P118).
+DRYEX="$TMP/dry-existing.json"; printf '{ "model": "z" }\n' > "$DRYEX"; cp "$DRYEX" "$TMP/dry-existing.orig"
+bash "$INSTALLER" --settings "$DRYEX" --dest "$TMP/dry-dest2" --dry-run >/dev/null 2>&1
+if cmp -s "$DRYEX" "$TMP/dry-existing.orig" && ! ls "$DRYEX".bak-* >/dev/null 2>&1 && [ ! -e "$TMP/dry-dest2" ]; then ok "installer-dry-run-keeps-existing-settings"; else bad "installer-dry-run-keeps-existing-settings" "$(cat "$DRYEX")"; fi
+
+# A settings path that is a directory is refused, not reported as registered (review finding, P118).
+mkdir -p "$TMP/settings-dir.json"
+if bash "$INSTALLER" --settings "$TMP/settings-dir.json" --dest "$TMP/dest-dir" >/dev/null 2>"$TMP/dir-err"; then
+    bad "installer-refuses-directory-settings" "exit 0; contents: $(ls "$TMP/settings-dir.json")"
+elif grep -q 'not a regular file' "$TMP/dir-err" && [ -z "$(ls -A "$TMP/settings-dir.json")" ]; then ok "installer-refuses-directory-settings"
+else bad "installer-refuses-directory-settings" "$(cat "$TMP/dir-err")"; fi
+
+# An empty settings file is treated as {} and registers the hooks (review finding, P118).
+: > "$TMP/settings-empty.json"
+bash "$INSTALLER" --settings "$TMP/settings-empty.json" --dest "$TMP/dest-empty" >/dev/null 2>&1; EMPTY=$?
+if [ "$EMPTY" = 0 ] && [ "$(jq '[.hooks.Stop[]?.hooks[]?.command | select(test("sop-stop-drift"))] | length' "$TMP/settings-empty.json" 2>/dev/null)" = 1 ]; then ok "installer-empty-settings-registers"; else bad "installer-empty-settings-registers" "exit=$EMPTY size=$(wc -c < "$TMP/settings-empty.json")"; fi
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 echo ""

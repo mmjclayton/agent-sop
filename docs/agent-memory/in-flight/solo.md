@@ -2,4 +2,4 @@
 (2026-09-30): P113 and P114 merged via PR #33 (6d89a77). Hook installed and registered on this machine, installed commands and baseline SHAs refreshed the same day. ship-sop replication is ship-sop P36, on its own PR. Nothing else in flight.
 (2026-10-07): research digests moved into docs/research/ (PR #36, 5af9db2); the scheduled scanner now writes there, so each run leaves an uncommitted digest for the next session to commit via PR. Nothing else in flight.
 (2026-10-10): P115 merged via PR #38 (5191fe0); four stale remote branches deleted. P116 (fresh multi-run comparison) is open and waits on Matt's cost cap. Nothing else in flight.
-(2026-10-10): P117 shipped on fix/p117-stale-codex-runner; receipts 20261010-141500 (d6bd141) and 20261010-141504 (close-out 4c5b204); PR with auto-merge on green CI. Nothing else in flight.
+(2026-10-10): P117 merged via PR #41 (6578ac0). P118 (review leftovers) closing on fix/p118-review-leftovers. P116 harness being built for Codex (gpt-6-luna, ChatGPT login) in the session scratchpad.

@@ -1266,3 +1266,21 @@ Raised from ship-sop's 10 Oct review follow-up (its P37 record): agent-sop carri
 **Acceptance criteria:**
 - `cmp scripts/install-codex.sh ../ship-sop/scripts/install-codex.sh` is clean
 - All fixture suites pass
+
+---
+
+### P118 - Close the three review leftovers: dry-run, action pin, gating line
+
+`[SHIPPED - 2026-10-10] [Iteration]`
+review: docs/reviews/20261010-p118-ship-auto.md
+
+Requested by Matt, 10 Oct 2026 ("please fix"), from the readiness check after P117.
+
+- `install-hooks.sh --dry-run` created an empty settings file when none existed. A missing file is now read as `{}` and only a real install creates it. Fixture `installer-dry-run-writes-nothing` fails against the previous commit.
+- CI pins `actions/checkout` to the v4.4.0 commit SHA instead of the moving `v4` tag.
+- README states that a change to agent instruction files needs a receipt whatever its size when an enabled reviewer is in scope.
+- Review round one (a3ee6b8) found that a directory at the settings path reported success with nothing written, and an empty settings file reported up to date; fixed in bde0ff2 with three fixtures, two of which fail against a3ee6b8.
+
+**Acceptance criteria:**
+- `--dry-run` against a missing settings path leaves no file or directory behind
+- All fixture suites and shellcheck pass; CI passes with the pinned action

@@ -98,7 +98,7 @@ backup_settings() {
     local target
     target=$(resolve_settings_target)
     [ -f "$target" ] || return 0
-    cp "$target" "$target.bak-$(date +%Y%m%d-%H%M%S)"
+    cp "$target" "$target.bak-$(date +%Y%m%d-%H%M%S)" || { echo "install-hooks: could not back up $target" >&2; exit 1; }
 }
 
 write_settings() {
@@ -106,7 +106,7 @@ write_settings() {
     target=$(resolve_settings_target)
     tmp=$(mktemp)
     if printf '%s' "$1" > "$tmp" && jq empty "$tmp" 2>/dev/null; then
-        mv "$tmp" "$target"
+        mv "$tmp" "$target" || { rm -f "$tmp"; echo "install-hooks: could not write $target" >&2; exit 1; }
     else
         rm -f "$tmp"
         echo "install-hooks: refusing to write invalid JSON to $target" >&2
@@ -159,7 +159,14 @@ if [ "$DRY_RUN" = false ]; then
 fi
 
 # ── Register hooks ────────────────────────────────────────────────────────────
-[ -f "$SETTINGS" ] || { mkdir -p "$(dirname "$SETTINGS")"; echo '{}' > "$SETTINGS"; }
+# A missing settings file is read as {}; only a real install creates it, so --dry-run writes nothing.
+# An empty file is read as {} too; jq prints nothing on empty input.
+if [ -e "$SETTINGS" ] && [ ! -f "$SETTINGS" ]; then
+    echo "install-hooks: $SETTINGS exists and is not a regular file" >&2; exit 1
+fi
+CURRENT='{}'
+[ ! -f "$SETTINGS" ] || CURRENT=$(cat "$SETTINGS") || { echo "install-hooks: could not read $SETTINGS" >&2; exit 1; }
+case "$CURRENT" in *[![:space:]]*) ;; *) CURRENT='{}' ;; esac
 
 NEW=$(jq \
     --arg all "$([ "$RUNTIME" = codex ] && echo ".*" || echo "*")" \
@@ -183,14 +190,16 @@ NEW=$(jq \
     | ensure("Stop"; $all; $stop; 20)
     | ensure("PreToolUse"; "Bash"; $push; 10)
     | if $runtime == "claude" then ensure("PostToolUse"; "Write|Edit|MultiEdit"; $memory; 10) else . end
-' "$SETTINGS" 2>/dev/null) || { echo "install-hooks: could not parse $SETTINGS" >&2; exit 1; }
+' <<< "$CURRENT" 2>/dev/null) || { echo "install-hooks: could not parse $SETTINGS" >&2; exit 1; }
 
 if [ "$DRY_RUN" = true ]; then
     printf '%s\n' "$NEW"
     exit 0
 fi
 
-if [ "$NEW" != "$(cat "$SETTINGS")" ]; then
+[ -n "$NEW" ] || { echo "install-hooks: no settings produced from $SETTINGS" >&2; exit 1; }
+if [ "$NEW" != "$CURRENT" ] || [ ! -f "$SETTINGS" ] || [ ! -s "$SETTINGS" ]; then
+    mkdir -p "$(dirname "$(resolve_settings_target)")" || { echo "install-hooks: could not create the directory for $SETTINGS" >&2; exit 1; }
     backup_settings
     write_settings "$NEW"
     echo "install-hooks: registered hooks in $SETTINGS (backup written alongside)"
