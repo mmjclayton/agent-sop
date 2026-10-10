@@ -74,12 +74,14 @@ first_message() { jq -rRn 'first(inputs | fromjson? | select(.type == "item.comp
 # The session's thread id, from its first thread.started event.
 thread_id() { jq -rRn 'first(inputs | fromjson? | select(.type == "thread.started") | .thread_id) // ""' "$1"; }
 # Commands a session ran that name a place holding an earlier session's prompt: the
-# harness's own session folders or Codex's home and transcripts (P121 leak check).
+# harness's own session folders (../session-N) or Codex's home and transcripts
+# (~/.codex, $HOME/.codex, the run's home/.codex, CODEX_HOME). A project's own .codex
+# folder (installed in the SOP arm) does not count (P121 leak check).
 # Heuristic: true means such a command was seen; false means none was seen, not that
 # nothing was read (reads by hooks or through other tools are not visible here).
 read_session_records() {
     jq -sR '[split("\n")[] | fromjson? | select(.type == "item.completed") | .item | (.command // "") | tostring
-        | select(test("session-[0-9]+\\b|\\.codex\\b|CODEX_HOME|/sessions/20[0-9][0-9]/"))] | length > 0' "$1"
+        | select(test("\\.\\./session-[0-9]+\\b|session-[0-9]+/(prompt|events|end|last-message|session\\.json|usage)|(~|\\$\\{?HOME\\}?|/home)/\\.codex|CODEX_HOME|\\.codex/sessions"))] | length > 0' "$1"
 }
 task_criteria() { awk '/^## Acceptance Criteria/{p=1;next} /^## /{p=0} p' "$(task_file "$1")"; }
 criteria_count() { task_criteria "$1" | grep -cE '^[0-9]+\.'; }

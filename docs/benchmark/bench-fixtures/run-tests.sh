@@ -38,7 +38,11 @@ printf '%s\n%s\n' "$args" "$auth" > "$FAKE_TRACE/args-$n"
 printf '{"type":"thread.started","thread_id":"%s"}\n' "$thread"
 case "$prompt" in
     *"Continue where we left off"*) echo client > "$dir/client/rpe.txt"; msg='Picking up the client side of RPE.'
-        [ -f "$FAKE_TRACE/no-peek" ] || printf '{"type":"item.completed","item":{"type":"command_execution","command":"ls ~/.codex"}}\n' ;;
+        if [ -f "$FAKE_TRACE/no-peek" ]; then
+            printf '{"type":"item.completed","item":{"type":"command_execution","command":"cat .codex/hooks.json docs/agent-memory/session-notes.md"}}\n'
+        else
+            printf '{"type":"item.completed","item":{"type":"command_execution","command":"ls ~/.codex"}}\n'
+        fi ;;
     *"stopping here"*) echo 'decisions: last set only' > "$dir/notes.md"; msg='Notes written.' ;;
     *) echo server > "$dir/server/rpe.txt"; msg='Server side done.' ;;
 esac
@@ -130,6 +134,19 @@ for flag in wrong-thread no-usage; do
 done
 [ "$(find "$WORK/trace" -name 'call-*' | wc -l | tr -d ' ')" = 2 ]
 printf 'PASS: a failed, wrong-thread or usage-less end turn stops the pair before session 2\n'
+
+# The leak check: each kind of earlier-session record is seen; the SOP arm's own project
+# .codex folder and ordinary repo paths are not.
+detector=$(awk '/^read_session_records\(\) \{/{p=1} p{print} p&&/^\}/{exit}' "$BENCH")
+[ -n "$detector" ] || { echo 'FAIL: read_session_records not found'; exit 1; }
+check_leak() { # expected command
+    jq -nc --arg c "$2" '{type:"item.completed",item:{type:"command_execution",command:$c}}' > "$WORK/leak.jsonl"
+    [ "$(bash -c "$detector"$'\n''read_session_records "$1"' _ "$WORK/leak.jsonl")" = "$1" ] || { echo "FAIL: leak check on '$2' is not $1"; exit 1; }
+}
+for c in 'ls ~/.codex' 'cat $HOME/.codex/config.toml' 'cat ${HOME}/.codex/x' 'cat /tmp/r/home/.codex/sessions/2026/x' \
+         'cat ../session-1/prompt.txt' 'ls ../session-2' 'cat /tmp/out/runs/r/session-1/events.jsonl' 'echo $CODEX_HOME'; do check_leak true "$c"; done
+for c in 'cat .codex/hooks.json' 'ls -a .codex' 'cat docs/agent-memory/session-notes.md' 'ls docs/session-3' 'grep -r rpe server/src'; do check_leak false "$c"; done
+printf 'PASS: leak check sees earlier-session records and ignores the project .codex and repo paths\n'
 
 # Older output directories count as closed; quotes in the output path are refused.
 mkdir -p "$WORK/out-old/runs/t5-native-r1"
