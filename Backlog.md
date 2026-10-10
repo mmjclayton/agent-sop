@@ -1326,5 +1326,22 @@ Approved by Matt, 10 Oct 2026 ("proceed"), after R7 found that k=3 could not sep
 - Harness: `codex-bench.sh` task spec `5+9` runs the sessions in order; only the last is tested and judged, against the tree where session 1 ended. `locate_steps` counts session-2 commands before it first touches `server/src/routes/logger.js`.
 - Run: native, context and SOP arms, k=3, 9 pairs, same template (814b3b5), model, judge and login as R7.
 
+**Pre-run design review (11 Oct 2026, outside reviewer's six points checked against the harness and template 814b3b5):**
+
+| Point | Status | Evidence |
+|---|---|---|
+| 1. Files carried between sessions in every arm | Met | `one_run` runs both sessions with `codex exec -C "$run/proj"` and the same isolated home; nothing is reset between them |
+| 2. Same cut point for session 1 in every arm | Not met; decision needed | Session 1 is the whole of task 05 and ends when the agent stops. R7 shows the SOP arm uses about twice the time and tokens, so it may do more in session 1 (for example fix `logger.js` early, which makes session 2 trivial) |
+| 3. Fresh context, identical session-2 prompt | Met | New `codex exec` per session; `task_prompt` is per task, not per arm |
+| 4. Continuity criteria fixed before runs | Partly met | `locate_steps`, judge and core criterion exist. Not yet scored: whether session 2 undid or redid session-1 work (the full suite run catches a client regression only) and whether it kept session-1 decisions |
+| 5. Session 2 depends on something only session 1 produced | Not met | The `context` and `sop` arms ship CLAUDE.md and `docs/agent-memory.md`, whose file maps list `server/src/routes/logger.js` as the logger routes (finish, history). The native smoke pair, with neither file, still reached `logger.js` in 1 command. `locate_steps` cannot separate the arms on this pair |
+| 6. Result threshold agreed before runs | Not met | No threshold recorded. R7 judge noise is mean 0.043 |
+
+**Recommended before the run (not yet applied):**
+- Point 5: redesign the pair so session 2 needs a session-1 output that no project document contains, for example a design choice session 1 must make and record (a naming or data-format decision the session-2 task has to honour), scored as kept or broken. This is the change the result depends on.
+- Point 2: keep session 1 as a complete bounded task (a fixed budget would invalidate most pairs under the existing timeout rule), report session-1 time and tokens per arm, and mark a pair invalid when session 1 already changed the session-2 target.
+- Point 4: add session-2 scores for "undid or redid session-1 work" and "kept the session-1 decision", defined before any run.
+- Point 6: a difference counts only when the medians differ by 0.10 or more and the ranges do not overlap; anything smaller is reported as no separation.
+
 **Acceptance criteria:**
 - R8 reports, per arm, the session-2 judge median and range, the core-criterion count, locate_steps, wall time and tokens, with overlap stated for context vs SOP
