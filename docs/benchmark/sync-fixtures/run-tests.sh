@@ -21,7 +21,6 @@ UP="$TMP/upstream"; mkdir -p "$UP/docs/sop" "$UP/scripts" "$UP/.claude/commands"
  $GIT add -A >/dev/null && $GIT commit -q -m v1
  printf '# SOP v2\n' > docs/sop/claude-agent-sop.md; printf '#!/bin/sh\necho v2\n' > scripts/tool.sh; printf 'cmd v2\n' > .claude/commands/thing.md; printf 'x v2\n' > docs/sop/extra.md
  $GIT add -A >/dev/null && $GIT commit -q -m v2)
-V1_SOP=$(printf '# SOP v1\n' | shasum -a 256 | awk '{print $1}')
 C="$TMP/consumer"; mkdir -p "$C/docs/sop" "$C/scripts"; (cd "$C" && git init -q)
 printf '# SOP v1\n' > "$C/docs/sop/claude-agent-sop.md"          # older pristine (v1), baseline says v2
 printf '#!/bin/sh\necho mine\n' > "$C/scripts/tool.sh"; chmod +x "$C/scripts/tool.sh"   # locally modified, executable

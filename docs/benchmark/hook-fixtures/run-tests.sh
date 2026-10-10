@@ -717,10 +717,10 @@ if [ "$HOOK_EXIT" = 2 ] && grep -q '170 of 200 lines' "$HOOK_ERR" && ! grep -q '
 make_index "$MEM/MEMORY.md" 100 180
 make_index "$MEM/feedback_big.md" 100 180
 make_index "$TMP/docs/MEMORY.md" 100 180
-SESSION_ID=m4 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/feedback_big.md")" "$MEMSTATE"; E1=$HOOK_EXIT
-SESSION_ID=m4 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$TMP/docs/MEMORY.md")" "$MEMSTATE"; E2=$HOOK_EXIT
-SESSION_ID=m4 run_hook "$MEMIDX" "$TMP" "$(push_json "cat $MEM/MEMORY.md")" "$MEMSTATE"; E3=$HOOK_EXIT
-SESSION_ID=m4 run_hook "$MEMIDX" "$TMP" "$(write_json Write "$TMP/none/memory/MEMORY.md")" "$MEMSTATE"; E4=$HOOK_EXIT
+SESSION_ID='m4' run_hook "$MEMIDX" "$TMP" "$(write_json Write "$MEM/feedback_big.md")" "$MEMSTATE"; E1=$HOOK_EXIT
+SESSION_ID='m4' run_hook "$MEMIDX" "$TMP" "$(write_json Write "$TMP/docs/MEMORY.md")" "$MEMSTATE"; E2=$HOOK_EXIT
+SESSION_ID='m4' run_hook "$MEMIDX" "$TMP" "$(push_json "cat $MEM/MEMORY.md")" "$MEMSTATE"; E3=$HOOK_EXIT
+SESSION_ID='m4' run_hook "$MEMIDX" "$TMP" "$(write_json Write "$TMP/none/memory/MEMORY.md")" "$MEMSTATE"; E4=$HOOK_EXIT
 if [ "$E1$E2$E3$E4" = 0000 ]; then ok "memory-index-ignores-everything-but-the-index"; else bad "memory-index-ignores-everything-but-the-index" "exits $E1 $E2 $E3 $E4"; fi
 
 # The thresholds are inclusive: 160 lines and 20,000 bytes report, one less does not.
