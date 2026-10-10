@@ -19,6 +19,9 @@
 #
 # Keep <out> outside the repository; only result.json, judge.json and
 # last-message.md are meant to be copied into docs/benchmark/results/.
+# A run is valid when Codex exited 0 and reported usage, or when it hit the time
+# limit (an outcome of the attempt, scored on what it left; usage may be NA). Test
+# outcomes, including a suite that printed no counts, are results, not validity.
 # Never run `judge` on a committed results folder: its judge files are the
 # record (R6's predate packet hashes) and would be re-judged and overwritten.
 #
@@ -163,8 +166,15 @@ one_run() {
     if [ -f "$run/result.json" ] && jq -e '.valid == true' "$run/result.json" >/dev/null 2>&1; then
         log "done already: $run"; return 0
     fi
-    # An invalid attempt is kept as evidence, never deleted.
-    if [ -e "$run" ]; then local n=1; while [ -e "$run.invalid-$n" ]; do n=$((n + 1)); done; mv "$run" "$run.invalid-$n"; fi
+    # An invalid attempt is kept as evidence under <out>/invalid/, outside runs/, never deleted.
+    if [ -e "$run" ]; then
+        local n=1 dest
+        dest="$out/invalid/$(basename "$run")"
+        rm -f "$run/home/.codex/auth.json" "$run/judge-home/.codex/auth.json"
+        mkdir -p "$out/invalid"
+        while [ -e "$dest.$n" ]; do n=$((n + 1)); done
+        mv "$run" "$dest.$n"
+    fi
     mkdir -p "$run"
     # Expanded now: the locals are gone by the time the trap fires.
     # shellcheck disable=SC2064
@@ -217,7 +227,7 @@ finish_run() {
          tests:{server:{exit:$s_exit, passed:$s_pass, failed:$s_fail}, client:{exit:$c_exit, passed:$c_pass, failed:$c_fail}},
          tests_ran:($s_pass != null and $c_pass != null), usage:$usage}
         | .tests_suspect = ((.tests.server.exit != 0 and .tests.server.failed == 0) or (.tests.client.exit != 0 and .tests.client.failed == 0))
-        | .valid = (.exit_code == 0 and .usage != null)' > "$run/result.json.tmp"
+        | .valid = ((.exit_code == 0 and .usage != null) or .timed_out)' > "$run/result.json.tmp"
     mv "$run/result.json.tmp" "$run/result.json"
 }
 
@@ -290,8 +300,9 @@ report() {
           jq -e . "$r" >/dev/null || die "unparseable $r"
           j=null
           if [ -f "$d/judge.json" ]; then
-              j=$(jq --argjson v "$JUDGE_VERSION" 'if .judge_version == $v then .overall else null end' "$d/judge.json") || die "unparseable $d/judge.json"
-              [ "$j" != null ] || log "stale judge.json (version) in $d; rerun judge"
+              j=$(jq '.overall' "$d/judge.json") || die "unparseable $d/judge.json"
+              jq -e --argjson v "$JUDGE_VERSION" '.judge_version == $v' "$d/judge.json" >/dev/null \
+                  || log "judge.json in $d is from an earlier judge version (expected for frozen results)"
           fi
           jq -r --argjson j "$j" '
             def tok(f): if .usage == null or any(.usage[]; f == null) then "NA" else (.usage | map(f) | add) end;
@@ -301,8 +312,11 @@ report() {
             | map(if . == null then "NA" else . end) | @tsv' "$r"
       done; } > "$out/scores.tsv"
     column -t -s $'\t' "$out/scores.tsv"
-    awk -F'\t' 'NR > 1 { n[$2]++; if ($4 == "true") v[$2]++; if ($7 != "NA") j[$2]++ }
-        END { for (a in n) printf "%s: %d runs, %d valid, %d judged\n", a, n[a], v[a], j[a] }' "$out/scores.tsv" >&2
+    awk -F'\t' 'NR > 1 { n[$2]++; if ($4 == "true") v[$2]++; if ($7 != "NA") j[$2]++
+            if ($9 == "NA" || $12 == "NA") nt[$2]++
+            if (($8 != 0 && $10 == 0) || ($11 != 0 && $13 == 0)) su[$2]++ }
+        END { for (a in n) printf "%s: %d runs, %d valid, %d judged, %d without test counts, %d suspect test exits\n", a, n[a], v[a], j[a], nt[a], su[a] }' "$out/scores.tsv" >&2
+    [ ! -d "$out/invalid" ] || log "$(find "$out/invalid" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') archived invalid attempt(s) in $out/invalid"
 }
 
 cmd="${1:-}"; shift || true
@@ -320,10 +334,11 @@ case "$cmd" in
         plan=$(for t in $tasks; do for r in $(seq 1 "$k"); do for a in "${ARMS[@]}"; do echo "$t $a $r"; done; done; done | perl -MList::Util=shuffle -e 'print shuffle <STDIN>')
         printf '%s\n' "$plan" > "$out/plan.txt"
         while read -r -u 3 t a r; do
-            bash "$SELF" one "$out" "$t" "$a" "$r" < /dev/null || { failed=$((failed + 1)); log "run failed: t$t $a r$r"; }
+            rc=0; bash "$SELF" one "$out" "$t" "$a" "$r" < /dev/null || rc=$?
+            case "$rc" in 0) ;; 130|143) die "interrupted" ;; *) failed=$((failed + 1)); log "run failed: t$t $a r$r" ;; esac
         done 3<<< "$plan"
         invalid=$(for r in "$out"/runs/*/result.json; do [ -f "$r" ] || continue; jq -r 'select(.valid != true) | "\(.task) \(.arm) \(.rep)"' "$r"; done)
-        [ -z "$invalid" ] || { log "invalid runs (codex failed or reported no usage):"; printf '%s\n' "$invalid" >&2; failed=$((failed + $(printf '%s\n' "$invalid" | wc -l))); }
+        [ -z "$invalid" ] || { log "invalid runs (codex failed without timing out, or reported no usage):"; printf '%s\n' "$invalid" >&2; failed=$((failed + $(printf '%s\n' "$invalid" | wc -l))); }
         [ "$failed" = 0 ] || die "$failed run(s) failed or invalid; rerun to retry them"
         ;;
     judge)
