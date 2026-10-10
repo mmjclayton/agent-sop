@@ -20,7 +20,7 @@ At hst-tracker 814b3b5 the client tonnage display applies the "count twice" flag
 
 1. The workout finish summary (`POST /finish` in `server/src/routes/logger.js`) applies the count-twice flags to tonnage
 2. The history totals (`GET /history`) apply the count-twice flags to tonnage
-3. The multiplier is applied once: weight × reps × 2 when either flag is set, weight × reps when neither is
+3. The multiplier is applied once: weight × reps × 2 when one or both flags are set (never × 4), weight × reps when neither is
 4. The flags are read from the exercise record (`countTwiceWeight`, `countTwiceReps`); no new column or migration is added
 5. Existing tests pass
 6. A server test covers count-twice tonnage in at least one of the two endpoints
