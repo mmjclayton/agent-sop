@@ -92,7 +92,7 @@ thread_id() { jq -rRn 'first(inputs | fromjson? | select(.type == "thread.starte
 # nothing was read (reads by hooks or through other tools are not visible here).
 read_session_records() {
     jq -sR '[split("\n")[] | fromjson? | select(.type == "item.completed") | .item | (.command // "") | tostring
-        | select(test("\\.\\./session-[0-9]+\\b|session-[0-9]+/(prompt|events|end|last-message|session\\.json|usage)|(~|\\$\\{?HOME\\}?|/home)/\\.codex|CODEX_HOME|\\.codex/sessions|\\.claude/projects/[^ ]*\\.jsonl|(~|\\$\\{?HOME\\}?|/home)/\\.claude/projects/?([ \"\u0027]|$)"))] | length > 0' "$1"
+        | select(test("\\.\\./session-[0-9]+\\b|session-[0-9]+/(prompt|events|end|last-message|session\\.json|usage)|(~|\\$\\{?HOME\\}?|/home)/\\.codex|CODEX_HOME|\\.codex/sessions|\\.claude/projects/[^ ]*\\.jsonl|(~|\\$\\{?HOME\\}?|/home|\\$\\{?CLAUDE_CONFIG_DIR\\}?)/(\\.claude/)?projects/?([ \"\u0027]|$)|\\$\\{?CLAUDE_CONFIG_DIR\\}?/projects/[^ ]*\\.jsonl"))] | length > 0' "$1"
 }
 task_criteria() { awk '/^## Acceptance Criteria/{p=1;next} /^## /{p=0} p' "$(task_file "$1")"; }
 criteria_count() { task_criteria "$1" | grep -cE '^[0-9]+\.'; }
@@ -149,24 +149,34 @@ claude_token() {
     CLAUDE_TOKEN=$(tr -d '[:space:]' < "$CLAUDE_TOKEN_FILE")
     [ -n "$CLAUDE_TOKEN" ] || die "Claude Code token file $CLAUDE_TOKEN_FILE is empty"
 }
-# Runs claude under the macOS sandbox (P122): writes only inside <root>; no reads of the
-# operator's Claude, Codex and SSH folders, the token's folder, ~/Projects or other runs.
-# The environment is rebuilt from nothing in a subshell, so only these variables pass.
+# Runs claude under the macOS sandbox (P122). Writes: only the session's home, working
+# folder and temp folder, so harness files elsewhere in the run cannot be altered.
+# Reads: nothing in the operator's home folder (credentials, Library, cloud drives,
+# other projects, the token), no other runs, and in this run only the same three
+# folders, so earlier sessions' prompts and harness files are out of reach. The
+# toolchain lives outside home.
+# Keychain services are not reachable. Network stays open: Claude needs its API.
+# The environment is rebuilt from nothing in a subshell, so only these variables pass
+# (no proxy or CA settings: set them here if a network needs them).
 # claude_exec <root> <home> <cwd> <timeout> <stdin> <stdout> <stderr> <claude args...>
 claude_exec() {
     local root=$1 home=$2 cwd=$3 t=$4 in=$5 out=$6 err=$7 oh runs tokdir prof; shift 7
     claude_token
     command -v sandbox-exec >/dev/null || die "sandbox-exec is required for the Claude runtime"
-    root=$(cd "$root" && pwd -P); oh=$(cd "$HOME" && pwd -P); runs=$(cd "$root/.." && pwd -P)
+    mkdir -p "$root/tmp"
+    root=$(cd "$root" && pwd -P); home=$(cd "$home" && pwd -P); cwd=$(cd "$cwd" && pwd -P)
+    oh=$(cd "$HOME" && pwd -P); runs=$(cd "$root/.." && pwd -P)
     tokdir=$(cd "$(dirname "$CLAUDE_TOKEN_FILE")" && pwd -P)
-    mkdir -p "$root/tmp"; prof="$root.sb"
+    prof="$root.sb"
     cat > "$prof" <<SB
 (version 1)
 (allow default)
 (deny file-write*)
-(allow file-write* (subpath "$root") (literal "/dev/null") (literal "/dev/tty") (regex #"^/dev/fd/") (regex #"^/dev/ttys"))
-(deny file-read* (subpath "$runs") (subpath "$oh/.claude") (subpath "$oh/.codex") (subpath "$oh/.ssh") (subpath "$oh/Projects") (subpath "$tokdir"))
-(allow file-read* (subpath "$root"))
+(allow file-write* (subpath "$home") (subpath "$cwd") (subpath "$root/tmp")
+    (literal "/dev/null") (literal "/dev/tty") (regex #"^/dev/fd/") (regex #"^/dev/ttys"))
+(deny file-read* (subpath "$oh") (subpath "$runs") (subpath "$tokdir"))
+(allow file-read* (subpath "$home") (subpath "$cwd") (subpath "$root/tmp"))
+(deny mach-lookup (global-name "com.apple.SecurityServer") (global-name "com.apple.securityd"))
 SB
     (
         cd "$cwd" || exit 1
@@ -176,15 +186,21 @@ SB
             CLAUDE_CONFIG_DIR="$home/.claude" TMPDIR="$root/tmp" CLAUDE_CODE_OAUTH_TOKEN="$tok"
         with_timeout "$t" sandbox-exec -f "$prof" claude "$@" < "$in" > "$out" 2> "$err"
     )
+    local st=$?; rm -f "$prof"; return "$st"
 }
 # Fails the run if the token appears anywhere in its files, after redacting it. The
 # pattern is passed on a file descriptor and the replacement through the environment.
 scrub_token() {
     local root=$1 hits
     [ "$RUNTIME" = claude ] && [ -n "$CLAUDE_TOKEN" ] || return 0
-    hits=$(grep -rlF -f <(printf '%s\n' "$CLAUDE_TOKEN") "$root" 2>/dev/null) || true
+    local rc=0
+    hits=$(grep -rlF -f <(printf '%s\n%s\n' "$CLAUDE_TOKEN" "$(printf '%s' "$CLAUDE_TOKEN" | base64)") "$root") || rc=$?
+    [ "$rc" -le 1 ] || die "could not scan $root for the Claude token (grep exit $rc); run is invalid"
     [ -n "$hits" ] || return 0
-    while IFS= read -r f; do SCRUB="$CLAUDE_TOKEN" perl -pi -e 's/\Q$ENV{SCRUB}\E/[REDACTED]/g' "$f"; done <<< "$hits"
+    while IFS= read -r f; do
+        SCRUB="$CLAUDE_TOKEN" SCRUB64="$(printf '%s' "$CLAUDE_TOKEN" | base64)" \
+            perl -pi -e 's/\Q$ENV{SCRUB}\E/[REDACTED]/g; s/\Q$ENV{SCRUB64}\E/[REDACTED]/g' "$f"
+    done <<< "$hits"
     die "the Claude token appeared in $(printf '%s\n' "$hits" | wc -l | tr -d ' ') file(s) under $root; redacted, run is invalid"
 }
 runtime_version() { if [ "$RUNTIME" = claude ]; then claude --version; else codex --version; fi; }
@@ -221,7 +237,8 @@ agent_turn() {
         if ! jq -cR "$CLAUDE_TO_CODEX" "${pre}claude-events.jsonl" > "${pre}events.jsonl"; then
             log "could not convert ${pre}claude-events.jsonl"; [ "$st" != 0 ] || st=1
         fi
-        jq -rR 'fromjson? | select(.type == "result") | .result // empty' "${pre}claude-events.jsonl" > "${pre}last-message.md"
+        jq -rR 'fromjson? | select(.type == "result") | .result // empty' "${pre}claude-events.jsonl" > "${pre}last-message.md" \
+            || { log "could not extract the result text from ${pre}claude-events.jsonl"; [ "$st" != 0 ] || st=1; }
         # No result event, or one flagged as an error or not "success" (a usage limit, a
         # turn cap), is a failed turn; the reason goes to the harness log.
         if [ "$st" = 0 ] && ! jq -e -s 'any(.[]; .type == "turn.completed") and all(.[] | select(.type == "turn.completed"); .is_error | not)' "${pre}events.jsonl" >/dev/null; then
@@ -472,11 +489,12 @@ finish_run() {
         --argjson s_exit "$(cat "$run/test-server.exit")" --argjson c_exit "$(cat "$run/test-client.exit")" \
         --argjson s_pass "$s_pass" --argjson s_fail "$s_fail" --argjson c_pass "$c_pass" --argjson c_fail "$c_fail" \
         --argjson usage "$usage" --arg codex "$(runtime_version)" --arg runtime "$RUNTIME" \
+        --argjson memfiles "$(native_memory_files "$run/home")" \
         --arg resolved "$(jq -rRn 'first(inputs | fromjson? | select(.type == "thread.started") | .model // empty) // ""' "$run/events.jsonl")" --arg judged "$judged" --argjson sessions "$sessions" \
         --arg end_mode "$([ "$sessions" = '[]' ] && echo none || echo "$END_MODE")" --arg first "$(first_message "$run/events.jsonl")" \
         --argjson read_records "$(read_session_records "$run/events.jsonl")" \
         --argjson locate "$(locate_steps "$run/events.jsonl" "$(task_target "$judged")")" '
-        {task:$task, judged_task:$judged, earlier_sessions:$sessions, runtime:$runtime, model_resolved:$resolved, end_mode:$end_mode, first_message:$first, read_session_records:$read_records, locate_steps:$locate, arm:$arm, rep:$rep, model:$model, effort:$effort, codex:$codex, exit_code:$exit,
+        {task:$task, judged_task:$judged, earlier_sessions:$sessions, runtime:$runtime, model_resolved:$resolved, native_memory_files:$memfiles, end_mode:$end_mode, first_message:$first, read_session_records:$read_records, locate_steps:$locate, arm:$arm, rep:$rep, model:$model, effort:$effort, codex:$codex, exit_code:$exit,
          timed_out:($exit == $timed_out_code), wall_seconds:$wall, files_changed:$changed,
          tests:{server:{exit:$s_exit, passed:$s_pass, failed:$s_fail}, client:{exit:$c_exit, passed:$c_pass, failed:$c_fail}},
          tests_ran:($s_pass != null and $c_pass != null), usage:$usage}

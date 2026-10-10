@@ -145,9 +145,9 @@ check_leak() { # expected command
 }
 for c in 'ls ~/.codex' 'cat $HOME/.codex/config.toml' 'cat ${HOME}/.codex/x' 'cat /tmp/r/home/.codex/sessions/2026/x' \
          'cat ../session-1/prompt.txt' 'ls ../session-2' 'cat /tmp/out/runs/r/session-1/events.jsonl' 'echo $CODEX_HOME'; do check_leak true "$c"; done
-for c in 'cat ~/.claude/projects/-tmp-proj/abc.jsonl' 'ls ~/.claude/projects' 'cat /tmp/r/home/.claude/projects/x/s.jsonl'; do check_leak true "$c"; done
+for c in 'cat ~/.claude/projects/-tmp-proj/abc.jsonl' 'ls ~/.claude/projects' 'cat /tmp/r/home/.claude/projects/x/s.jsonl' 'ls $CLAUDE_CONFIG_DIR/projects' 'cat ${CLAUDE_CONFIG_DIR}/projects/x/s.jsonl'; do check_leak true "$c"; done
 for c in 'cat .codex/hooks.json' 'ls -a .codex' 'cat docs/agent-memory/session-notes.md' 'ls docs/session-3' 'grep -r rpe server/src' \
-         'cat .claude/settings.json' 'cat ~/.claude/projects/-tmp-proj/memory/MEMORY.md'; do check_leak false "$c"; done
+         'cat .claude/settings.json' 'cat ~/.claude/projects/-tmp-proj/memory/MEMORY.md' 'cat $CLAUDE_CONFIG_DIR/projects/x/memory/MEMORY.md'; do check_leak false "$c"; done
 printf 'PASS: leak check sees earlier-session records and ignores the project .codex and repo paths\n'
 
 # Older output directories count as closed; quotes in the output path are refused.
@@ -196,7 +196,10 @@ c="$TMPDIR/call-$n"; printf '%s\0' "$@" > "$c.args"
   # Sandbox probes, relative to the run home: <work>/<out>/runs/<run>/home.
   if (echo x > "$HOME/../../../outside-probe") 2>/dev/null; then echo outside_write=allowed; else echo outside_write=denied; fi
   if cat "$HOME/../../../../tok/claude-token" >/dev/null 2>&1; then echo token_read=allowed; else echo token_read=denied; fi
-  echo "token_in_ps=$(ps -ax -ww -o args= 2>/dev/null | grep -cF -- "${CLAUDE_CODE_OAUTH_TOKEN:-none}")"
+  if cat "$HOME/../session-1/prompt.txt" >/dev/null 2>&1; then echo earlier_prompt_read=allowed; else echo earlier_prompt_read=denied; fi
+  if (echo x > "$HOME/../baseline.json") 2>/dev/null; then echo harness_write=allowed; else echo harness_write=denied; fi
+  if ls "/Users/$(id -un)" >/dev/null 2>&1; then echo operator_home_read=allowed; else echo operator_home_read=denied; fi
+  if security list-keychains >/dev/null 2>&1; then echo keychain=reachable; else echo keychain=blocked; fi
 } > "$c.env"
 resume=''; schema=''; prev=''
 for a in "$@"; do [ "$prev" = --resume ] && resume=$a; [ "$prev" = --json-schema ] && schema=$a; prev=$a; done
@@ -212,15 +215,16 @@ case "$n" in 0) file=server/rpe.txt ;; *) file=client/rpe.txt ;; esac
 [ -n "$resume" ] && file=notes.md
 echo x > "$file"
 printf '{"type":"system","subtype":"init","session_id":"%s","model":"claude-fake-1"}\n' "$sid"
-text='Working.'; mode leak && text="token is ${CLAUDE_CODE_OAUTH_TOKEN}"
+text='Working.'; mode leak && text="token is $(printf '%s' "${CLAUDE_CODE_OAUTH_TOKEN}" | base64)"
 printf '{"type":"assistant","message":{"content":[{"type":"text","text":"%s"},{"type":"tool_use","name":"Bash","input":{"command":"ls server"}},{"type":"tool_use","name":"Write","input":{"file_path":"%s/%s"}},"odd",{"type":"tool_use"}]}}\n' "$text" "$PWD" "$file"
 mode noresult && exit 0
+mode slow && sleep 2
 mode limit && { printf '{"type":"result","subtype":"error_during_execution","is_error":true,"result":"usage limit","total_cost_usd":0}\n'; exit 0; }
 printf '{"type":"result","subtype":"success","is_error":false,"result":"Done.","total_cost_usd":0.01,"usage":{"input_tokens":3,"cache_creation_input_tokens":2,"cache_read_input_tokens":5,"output_tokens":7}}\n'
 FAKE
 chmod +x "$WORK/cbin/claude"
 # A copy of the fake per failure mode, with the mode baked in (the harness scrubs the env).
-for m in limit noresult newid leak; do
+for m in limit noresult newid leak slow; do
     mkdir -p "$WORK/cbin-$m"
     sed "2i\\
 FAKE_MODE=$m" "$WORK/cbin/claude" > "$WORK/cbin-$m/claude"; chmod +x "$WORK/cbin-$m/claude"
@@ -245,7 +249,8 @@ for i in 0 1 2; do
     has_flag "$a" -p; has_flag "$a" --verbose; has_flag "$a" --dangerously-skip-permissions
     has_pair "$a" --output-format stream-json; has_pair "$a" --setting-sources user,project; has_pair "$a" --effort medium
     grep -qx token=set "$e"; grep -qx "home=$(cd "$run" && pwd -P)/home" "$e"; grep -qx "config=$(cd "$run" && pwd -P)/home/.claude" "$e"
-    grep -qx outside_write=denied "$e"; grep -qx token_read=denied "$e"; grep -qx token_in_ps=0 "$e"
+    grep -qx outside_write=denied "$e"; grep -qx token_read=denied "$e"; grep -qx earlier_prompt_read=denied "$e"
+    grep -qx harness_write=denied "$e"; grep -qx operator_home_read=denied "$e"; grep -qx keychain=blocked "$e"
 done
 has_pair "$run/tmp/call-1.args" --resume sess-1
 if has_flag "$run/tmp/call-0.args" --resume || has_flag "$run/tmp/call-2.args" --resume; then echo 'FAIL: wrong session resumed'; exit 1; fi
@@ -255,7 +260,7 @@ jq -e '.runtime == "claude" and .model_resolved == "claude-fake-1" and .valid ==
        and .earlier_sessions[0].native_memory_files == 0 and .first_message == "Working." and (.locate_steps | type) == "number"' "$run/result.json" >/dev/null
 jq -e 'select(.type == "turn.completed") | .usage == {input_tokens:10, cached_input_tokens:5, output_tokens:7, cost_usd:0.01}' "$run/events.jsonl" >/dev/null
 if grep -rqF -- "$TOKEN" "$WORK/out-claude"; then echo 'FAIL: token written under the run'; exit 1; fi
-printf 'PASS: Claude turns run sandboxed (no writes outside the run, no token-folder reads, token not in ps), with exact flags, resume by session id and converted events\n'
+printf 'PASS: Claude turns run sandboxed (writes only to their own folders, no reads of the operator home, token or earlier prompts, no keychain), with exact flags, resume by session id and converted events\n'
 
 cbench judge "$WORK/out-claude" 2> "$WORK/claude-judge.log" || { cat "$WORK/claude-judge.log"; exit 1; }
 jq -e '.overall == 1' "$run/judge.json" >/dev/null
@@ -287,3 +292,28 @@ if PATH="$WORK/cbin:$PATH" BENCH_RUNTIME=claude BENCH_CLAUDE_TOKEN_FILE="$WORK/t
     bash "$BENCH" run "$WORK/out-notoken" --tasks 10+11 2> "$WORK/notoken.log"; then echo 'FAIL: run without a token'; exit 1; fi
 grep -q 'no Claude Code token' "$WORK/notoken.log"
 printf 'PASS: a blank or missing token file is refused\n'
+
+# The token never appears in any process's arguments: sample ps from outside the sandbox
+# while slow fake turns run. Positive control: the sampler must see sandbox-exec.
+mkdir -p "$WORK/out-cps"; CBIN="$WORK/cbin-slow"
+( for _ in $(seq 1 60); do ps -ax -ww -o args= >> "$WORK/ps-samples" 2>/dev/null; sleep 0.1; done ) &
+sampler=$!
+BENCH_END_MODE=closed cbench one "$WORK/out-cps" 10+11 native 1 2> "$WORK/cps.log" || { tail -5 "$WORK/cps.log"; exit 1; }
+wait "$sampler"; CBIN="$WORK/cbin"
+grep -q 'sandbox-exec -f' "$WORK/ps-samples"
+if grep -qF -- "$TOKEN" "$WORK/ps-samples"; then echo 'FAIL: token seen in process arguments'; exit 1; fi
+printf 'PASS: the token is never in process arguments (sampled outside the sandbox, with sandbox-exec seen)\n'
+
+# Cost is NA unless every turn's cost is known.
+na_case() { # name jq-edit
+    mkdir -p "$WORK/out-na-$1/runs"; cp -R "$WORK/out-claude/runs/t10+11-native-r1" "$WORK/out-na-$1/runs/"
+    jq "$2" "$WORK/out-claude/runs/t10+11-native-r1/result.json" > "$WORK/out-na-$1/runs/t10+11-native-r1/result.json"
+    cbench report "$WORK/out-na-$1" > /dev/null 2>&1
+    awk -F'\t' 'NR == 1 { for (i = 1; i <= NF; i++) col[$i] = i } NR == 2 { ok = ($col["cost_usd"] == "NA") } END { exit !ok }' "$WORK/out-na-$1/scores.tsv" \
+        || { echo "FAIL: cost not NA for $1"; exit 1; }
+}
+na_case final-null '.usage = null'
+na_case earlier-null '.earlier_sessions[0].usage = null'
+na_case end-null '.earlier_sessions[0].end.usage = null'
+na_case cost-missing '.usage[0].cost_usd = null'
+printf 'PASS: cost is NA when any turn lacks usage or cost\n'
