@@ -4,7 +4,7 @@
 
 ## Result
 
-> **Read with R7.** The two arms differ in more than agent-sop. `setup.sh` keeps the project's own instructions, so the SOP arm had hst-tracker's 300-line `CLAUDE.md` and 142-line `docs/agent-memory.md`. At 814b3b5 that `CLAUDE.md` lists all three tasks by ID with one-line descriptions (B1, P57, P62). The native arm had a 5-line stub. R6 therefore measures "project instructions plus agent-sop" against "a stub". It cannot attribute any gain to agent-sop. That stub is also not the protocol's condition 1 ("normal project instructions and native memory"). R7 adds that arm; see `r7-codex-summary.md`. Found by an outside review on 2026-10-10.
+> **Read with R7.** The two arms differ in more than agent-sop. `setup.sh` keeps the project's own instructions, so the SOP arm had hst-tracker's 300-line `CLAUDE.md` and 142-line `docs/agent-memory.md`. At 814b3b5 that `CLAUDE.md` lists all three tasks by ID with one-line descriptions (B1, P57, P62). The native arm had a 5-line stub. R6 therefore measures "project instructions plus agent-sop" against "a stub". It cannot attribute any gain to agent-sop. That stub is also not the protocol's condition 1 ("normal project instructions and native memory"). R7 adds that arm and re-judges these runs with the current judge, under which native's core criterion count is 5/9; see `r7-codex-summary.md`. Found by an outside review on 2026-10-10.
 
 Agent SOP scored the same as native Codex or higher on all three tasks, by median. Only task 07 separates the arms: its ranges do not overlap. On tasks 05 and 08 the ranges overlap, so k=3 cannot separate the arms there. The SOP arm used about 3.3 times the wall time, 4.8 times the output tokens and 6.3 times the input tokens (96% of it cached).
 

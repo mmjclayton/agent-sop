@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Codex A/B harness for P116: native Codex vs current Agent SOP, per
+# Codex comparison harness (P116, P119): native stub, project instructions (context) and
+# current Agent SOP, per
 # docs/benchmark/evaluation-protocol.md. Each run is a fresh `codex exec`
 # process with its own HOME and CODEX_HOME and a scrubbed environment, so
 # neither arm sees the operator's instructions, memories, skills, hooks or
@@ -48,7 +49,9 @@ AUTH="${CODEX_HOME:-$HOME/.codex}/auth.json"
 # docs/agent-memory.md, no agent-sop (protocol condition 1). sop: current Agent SOP
 # installed; setup.sh keeps the project's CLAUDE.md, so sop vs context isolates agent-sop.
 read -r -a ARMS <<< "${BENCH_ARMS:-native sop}"
+[ "${#ARMS[@]}" -gt 0 ] || { echo "codex-bench: BENCH_ARMS is empty" >&2; exit 2; }
 for a in "${ARMS[@]}"; do case "$a" in native|context|sop) ;; *) echo "codex-bench: unknown arm $a" >&2; exit 2 ;; esac; done
+[ "$(printf '%s\n' "${ARMS[@]}" | sort -u | wc -l)" -eq "${#ARMS[@]}" ] || { echo "codex-bench: duplicate arm in BENCH_ARMS" >&2; exit 2; }
 TIMED_OUT=142   # with_timeout's exit status
 JUDGE_VERSION=2 # bump when the packet or validation changes; older judge.json files are re-judged
 
@@ -126,6 +129,7 @@ prepare_arm() {
     if [ "$arm" = context ]; then
         # The project's hand-written instructions and memory, verbatim; the April SOP
         # copies it shipped (docs/sop/, .claude/) removed and nothing installed.
+        [ -s "$proj/CLAUDE.md" ] || die "context arm: CLAUDE.md missing or empty at $BASE_COMMIT"
         rm -rf "$proj/docs/sop" "$proj/.claude"
         cp "$proj/CLAUDE.md" "$proj/AGENTS.md"
     elif [ "$arm" = native ]; then
@@ -139,10 +143,12 @@ prepare_arm() {
 - Tests: npm test (Jest server, Vitest client)
 - Schema: server/prisma/schema.prisma
 STUB
-    else
+    elif [ "$arm" = sop ]; then
         clean_env "$run/home"
         "${CLEAN[@]}" AGENT_SOP_USER_HOME="$run/home" bash "$SOP_ROOT/setup.sh" "$proj" --runtime codex --code --force \
             < /dev/null > "$run/setup.log" 2>&1 || die "setup.sh failed for $run (see setup.log)"
+    else
+        die "unknown arm '$arm'"
     fi
     hgit -C "$proj" add -A
     hgit -C "$proj" commit -qm "arm $arm" --allow-empty
@@ -341,6 +347,7 @@ case "$cmd" in
         [ -f "$AUTH" ] || die "no Codex login at $AUTH"
         mkdir -p "$out/runs"
         plan=$(for t in $tasks; do for r in $(seq 1 "$k"); do for a in "${ARMS[@]}"; do echo "$t $a $r"; done; done; done | perl -MList::Util=shuffle -e 'print shuffle <STDIN>')
+        [ -n "$plan" ] || die "empty plan (check -k and --tasks)"
         printf '%s\n' "$plan" > "$out/plan.txt"
         while read -r -u 3 t a r; do
             rc=0; bash "$SELF" one "$out" "$t" "$a" "$r" < /dev/null || rc=$?

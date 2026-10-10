@@ -4,10 +4,10 @@
 
 ## Result
 
-On these three single-session tasks, agent-sop added no measurable quality over the project's own instructions, and it took about twice the time.
+On these three single-session tasks, k=3 could not separate agent-sop from the project's own instructions, and the SOP arm took about twice the time.
 
 - **Context vs SOP.** The context arm is Codex with hst-tracker's `CLAUDE.md` and `docs/agent-memory.md` and no agent-sop. Its ranges overlap the SOP arm's on every task, and the SOP arm's median is lower on two of the three. Both arms met the core criterion in 9 of 9 runs. The context arm used 813 s against 1,767 s and 60,785 output tokens against 130,497.
-- **Context vs stub.** The gain R6 attributed to agent-sop comes from the project instructions. Context beat the stub-only native arm by +0.20 on task 07, where the ranges do not overlap. It met the core criterion in 9 of 9 runs against native's 5 of 9.
+- **Context vs stub.** Most of the gain R6 attributed to agent-sop is reproduced by the project instructions alone. Context beat the stub-only native arm by +0.20 on task 07, where the ranges do not overlap. It met the core criterion in 9 of 9 runs against native's 5 of 9.
 - **Multi-session value untested.** Dependent sessions, interrupted work and concurrent handoffs are what agent-sop is built for, and none of them were run.
 
 | Task | Arm | Judge median | Range (k=3) | Core criterion met | Wall median (s) | Uncached input median | Output median |
@@ -28,6 +28,8 @@ On these three single-session tasks, agent-sop added no measurable quality over 
 | Context minus native | +0.00 (overlap) | +0.20 (no overlap) | +0.15 (overlap) |
 | SOP minus native | +0.08 (overlap) | +0.15 (no overlap) | +0.10 (overlap) |
 
+Core criterion is acceptance criterion 1 of each task, counted as met only when marked 1; a 0.5 counts as not met. Native's 1/3 on task 08 reflects two runs marked 0.5 (button order, and Next missing on the reps keypad).
+
 | Totals over 9 runs | Native (stub) | Context | SOP |
 |---|---|---|---|
 | Core criterion met | 5/9 | 9/9 | 9/9 |
@@ -40,18 +42,20 @@ On these three single-session tasks, agent-sop added no measurable quality over 
 R7 uses the same template (hst-tracker 814b3b5), model (`gpt-6-luna`, medium) and login as R6. The SOP arm installs agent-sop main at d11e724.
 
 - **Context arm (new, protocol condition 1).** The project's `CLAUDE.md` is copied verbatim to `AGENTS.md` and `docs/agent-memory.md` is kept. The April SOP copies the project shipped (`docs/sop/`, `.claude/`) are removed, and nothing is installed. Only agent-sop differs between this arm and the SOP arm, whose `setup.sh` keeps the same `CLAUDE.md` and memory.
-- **Runs.** The 9 context runs ran on the revised harness (433a9ed plus the arm). The native and SOP runs are R6's 18 attempts, not repeated.
+- **Runs.** The 9 context runs ran on the revised harness (433a9ed plus the arm). The native and SOP runs are R6's 18 attempts, not repeated (`plan-r6-native-sop.txt`, `plan-context.txt`). The R6 result files predate the `tests_suspect` field; none of their suites exited non-zero, so none would be flagged.
+- **What the context arm reads.** The project's `CLAUDE.md` points at `docs/sop/` (removed in this arm, current version present in the SOP arm) and at `.claude/brand-voice.md` (absent at 814b3b5 in every arm). `.claude/` held only the April SOP's Claude agents, commands and skills, which Codex does not read.
 - **Judging.** All 27 attempts were judged in one pass by the current judge, so every arm is scored the same way. Scores are the mean of the per-criterion marks. The judge sees only product files, never process or SOP files.
 
 ## Judge noise
 
-Re-judging the 18 R6 attempts with the current judge changed 10 of 18 scores. The mean absolute change was 0.043 and the largest was 0.15 (t8-native-r1). The packet changed only slightly between versions: an untrusted-data line and a marker for an empty diff. Most of this movement is the judge's own run-to-run variation. Differences of about 0.05 between arms are within it. R6's published figures used the earlier judge. R7's figures for the native and SOP arms differ from them for this reason; the attempts are the same.
+Re-judging the 18 R6 attempts with the current judge changed 10 of 18 scores. The mean absolute change was 0.043 and the largest was 0.15 (t8-native-r1). The packet changed only slightly between versions: an untrusted-data line and a marker for an empty diff. Most of this movement is the judge's own run-to-run variation. Differences of about 0.05 between arms are within it. Under the current judge, native's core criterion count is 5/9; R6 reported 6/9. R6's published figures used the earlier judge. R7's figures for the native and SOP arms differ from them for this reason; the attempts are the same.
 
 ## Limits
 
+- **Separate batches.** The context arm ran about 80 minutes after the native and SOP arms finished, as its own shuffled batch. The arms were not interleaved, so drift in the model service or machine load between batches would show up as an arm difference, most visibly in wall time.
 - **Small sample.** k=3, three tasks, one target repo, one model. The judge is the same model family as the agents.
 - **Task IDs in the instructions.** The project's `CLAUDE.md` names the three tasks by ID with one-line descriptions, so both the context and SOP arms are told what is planned. That is realistic for this project but makes the tasks easier than a cold request.
 - **Single sessions only.** Every task is one session. The protocol's dependent sessions, interrupted work, stale memory and concurrent handoffs, where agent-sop's records and claims are meant to pay off, were not run.
-- **SOP overhead.** The SOP arm's extra time and tokens are process work its instructions require: reading the SOP, writing session records and, in some runs, review steps. That overhead applies to every task, so it belongs beside any quality claim.
+- **SOP overhead.** The SOP arm's extra time and tokens are process work its instructions require: reading the SOP, writing session records and, in at least one run, a review step (t7-sop-r2 cloned the project into `.review-p57.*` folders). That overhead applies to every task, so it belongs beside any quality claim.
 - **No ship-sop arm.** Condition 4 (Agent SOP plus ship-sop) was not run.
 - **R1-R5 unchecked.** The April rounds may share R6's wrong pin. Do not cite them until that is checked.
