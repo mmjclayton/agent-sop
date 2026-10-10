@@ -16,7 +16,11 @@ The prompt names no item, file or decision. Session 1 built the server side of P
 
 ## Primary Result (fixed before any run)
 
-The decision score: the mean of criteria 1, 2 and 3 below. It measures whether session 2 carried the session-1 decisions forward.
+The decision score: the mean of criteria 1, 2 and 3 below. It measures whether session 2 carried the session-1 decisions forward. Criterion 2 (blank by default) is what many implementations do anyway, so the score has a floor above zero in every arm; criteria 1 and 3 carry most of the spread.
+
+## Known Exposure
+
+Session 1's prompt also exists on disk in every arm: in Codex's own transcripts under the isolated home (`~/.codex/sessions/`) and in the harness's `session-1/` folder beside the project. An agent that searches outside the project can find the decisions without any resume record. The harness flags such runs (`read_session_records` in result.json); report them separately.
 
 ## Acceptance Criteria (for scoring, not given to agents)
 

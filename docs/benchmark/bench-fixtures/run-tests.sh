@@ -19,26 +19,31 @@ FAKE_TRACE="$(cd "$(dirname "$0")/.." && pwd -P)/trace"
 FAKE_FAIL_RESUME=0; [ -f "$FAKE_TRACE/fail-resume" ] && FAKE_FAIL_RESUME=1
 [ "${1:-}" = exec ] || exit 64
 shift
-mode=new; dir=$PWD; out=''
-[ "${1:-}" = resume ] && { mode=resume; shift; }
+mode=new; dir=$PWD; out=''; thread=thread-1; args="$*"
+if [ "${1:-}" = resume ]; then mode=resume; thread=$2; shift 2; fi
 while [ $# -gt 0 ]; do
     case "$1" in
         -C) dir=$2; shift ;;
         -o|--output-last-message) out=$2; shift ;;
-        --last) [ "$mode" = resume ] || exit 65 ;;
         -c|-m|-s|--add-dir) shift ;;
     esac
     shift
 done
 prompt=$(cat)
 n=$(find "$FAKE_TRACE" -name 'call-*' | wc -l | tr -d ' ')
+auth=no; [ -f "$CODEX_HOME/auth.json" ] && auth=yes
 printf '%s\t%s\t%s\n' "$mode" "$dir" "$prompt" > "$FAKE_TRACE/call-$n"
+printf '%s\n%s\n' "$args" "$auth" > "$FAKE_TRACE/args-$n"
+[ -f "$FAKE_TRACE/wrong-thread" ] && [ "$mode" = resume ] && thread=thread-other
+printf '{"type":"thread.started","thread_id":"%s"}\n' "$thread"
 case "$prompt" in
-    *"Continue where we left off"*) echo client > "$dir/client/rpe.txt"; msg='Picking up the client side of RPE.' ;;
+    *"Continue where we left off"*) echo client > "$dir/client/rpe.txt"; msg='Picking up the client side of RPE.'
+        printf '{"type":"item.completed","item":{"type":"command_execution","command":"cat ../session-1/prompt.txt"}}\n' ;;
     *"stopping here"*) echo 'decisions: last set only' > "$dir/notes.md"; msg='Notes written.' ;;
     *) echo server > "$dir/server/rpe.txt"; msg='Server side done.' ;;
 esac
 [ "$FAKE_FAIL_RESUME" = 1 ] && [ "$mode" = resume ] && exit 3
+[ -f "$FAKE_TRACE/no-usage" ] && [ "$mode" = resume ] && { printf '{"type":"item.completed","item":{"type":"agent_message","text":"x"}}\n'; exit 0; }
 printf '{"type":"item.completed","item":{"type":"agent_message","text":"%s"}}\n' "$msg"
 printf '{"type":"turn.completed","usage":{"input_tokens":10,"cached_input_tokens":0,"output_tokens":5}}\n'
 [ -z "$out" ] || echo "$msg" > "$out"
@@ -76,6 +81,16 @@ jq -e '.end_mode == "ask" and .earlier_sessions[0].end.sent == true and .earlier
        and .earlier_sessions[0].end.usage != null and .valid == true' "$run/result.json" >/dev/null
 jq -e '.earlier_sessions[0].files_changed | index("server/rpe.txt") != null and index("notes.md") != null and index("client/rpe.txt") == null' "$run/result.json" >/dev/null
 jq -e '.first_message == "Picking up the client side of RPE."' "$run/result.json" >/dev/null
+# The end turn resumes session 1 by its thread id, with session 1's sandbox, model and a login present.
+head -n1 "$WORK/trace/args-1" | grep -q '^resume thread-1 '
+head -n1 "$WORK/trace/args-1" | grep -q 'sandbox_mode="workspace-write"'
+head -n1 "$WORK/trace/args-1" | grep -q "writable_roots=\[\"$run/proj/.git\"\]\|writable_roots=\[\"$(cd "$run/proj" && pwd -P)/.git\"\]"
+head -n1 "$WORK/trace/args-1" | grep -q -- '-m gpt-6-luna'
+for i in 0 1 2; do sed -n 2p "$WORK/trace/args-$i" | grep -qx yes; done
+jq -e '.earlier_sessions[0].end.thread == "thread-1"' "$run/result.json" >/dev/null
+# Session-1 scope and the leak check are recorded.
+jq -e '.earlier_sessions[0].changed_server == true and .earlier_sessions[0].changed_client == false' "$run/result.json" >/dev/null
+jq -e '.read_session_records == true' "$run/result.json" >/dev/null
 test ! -e "$run/home/.codex/auth.json"
 printf 'PASS: ask mode resumes session 1 with the end prompt before session 2, and records it\n'
 
@@ -97,9 +112,27 @@ if BENCH_END_MODE=ask bench "$WORK/out-fail" 10+11 native 1 2> "$WORK/fail.log";
 fi
 grep -q 'end-of-session turn for session 1' "$WORK/fail.log"
 rm "$WORK/trace/fail-resume"
+# An end turn that answers in another thread, or reports no usage, also stops the pair.
+for flag in wrong-thread no-usage; do
+    mkdir -p "$WORK/out-$flag"; reset_trace; touch "$WORK/trace/$flag"
+    if BENCH_END_MODE=ask bench "$WORK/out-$flag" 10+11 native 1 2> "$WORK/$flag.log"; then
+        echo "FAIL: end turn with $flag accepted"; exit 1
+    fi
+    grep -q 'end-of-session turn for session 1' "$WORK/$flag.log"
+    [ "$(find "$WORK/trace" -name 'call-*' | wc -l | tr -d ' ')" = 2 ]
+    rm "$WORK/trace/$flag"
+done
 [ "$(find "$WORK/trace" -name 'call-*' | wc -l | tr -d ' ')" = 2 ]
-printf 'PASS: a failed end turn stops the pair before session 2\n'
+printf 'PASS: a failed, wrong-thread or usage-less end turn stops the pair before session 2\n'
 
+# Older output directories count as closed; quotes in the output path are refused.
+mkdir -p "$WORK/out-old/runs/t5-native-r1"
+if PATH="$WORK/bin:$PATH" CODEX_HOME="$WORK/codex-home" BENCH_TEMPLATE="$WORK/template" BENCH_END_MODE=ask \
+    bash "$BENCH" run "$WORK/out-old" --tasks 10+11 2> "$WORK/old.log"; then echo 'FAIL: ask run into an older closed directory'; exit 1; fi
+grep -q 'was run with end mode closed' "$WORK/old.log"
+mkdir -p "$WORK/out\"quote"
+if BENCH_END_MODE=ask bench "$WORK/out\"quote" 10+11 native 1 2> "$WORK/quote.log"; then echo 'FAIL: quoted output path accepted'; exit 1; fi
+grep -q 'must not contain quotes' "$WORK/quote.log"
 # Bad end mode and mixed end modes in one output directory are refused.
 if BENCH_END_MODE=sometimes bash "$BENCH" report "$WORK/out-ask" 2> "$WORK/bad.log"; then echo 'FAIL: bad end mode accepted'; exit 1; fi
 grep -q 'BENCH_END_MODE must be closed or ask' "$WORK/bad.log"
@@ -110,6 +143,8 @@ grep -q 'was run with end mode ask' "$WORK/mixed.log"
 printf 'PASS: invalid and mixed end modes are refused\n'
 
 # The report carries the end mode and counts the end turn in session-1 time and tokens.
-bash "$BENCH" report "$WORK/out-ask" > /dev/null 2>&1
-awk -F'\t' 'NR == 2 { exit !($NF == "ask" && $(NF - 1) == 10) }' "$WORK/out-ask/scores.tsv"
+bash "$BENCH" report "$WORK/out-ask" > /dev/null 2> "$WORK/report.log" || { cat "$WORK/report.log"; exit 1; }
+awk -F'\t' 'NR == 1 { for (i = 1; i <= NF; i++) col[$i] = i }
+    NR == 2 { ok = ($col["end_mode"] == "ask" && $col["earlier_output_tokens"] == 10 && $col["read_session_records"] == "true") }
+    END { exit !ok }' "$WORK/out-ask/scores.tsv"
 printf 'PASS: report includes the end mode and the end turn in session-1 tokens\n'

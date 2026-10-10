@@ -59,7 +59,7 @@ for a in "${ARMS[@]}"; do case "$a" in native|context|sop) ;; *) echo "codex-ben
 END_MODE="${BENCH_END_MODE:-closed}"
 case "$END_MODE" in closed|ask) ;; *) echo "codex-bench: BENCH_END_MODE must be closed or ask" >&2; exit 2 ;; esac
 TIMED_OUT=142   # with_timeout's exit status
-JUDGE_VERSION=2 # bump when the packet or validation changes; older judge.json files are re-judged
+JUDGE_VERSION=3 # bump when the packet or validation changes; older judge.json files are re-judged
 
 die() { echo "codex-bench: $*" >&2; exit 1; }
 log() { echo "[codex-bench $(date +%H:%M:%S)] $*" >&2; }
@@ -69,7 +69,16 @@ task_prompt() { awk '/^## Prompt/{p=1;next} /^## /{p=0} p && /^>/{sub(/^> ?/,"")
 # Optional quoted block under "## End Prompt": sent in the same session when END_MODE=ask.
 task_end_prompt() { awk '/^## End Prompt/{p=1;next} /^## /{p=0} p && /^>/{sub(/^> ?/,""); print}' "$(task_file "$1")"; }
 # The first message the agent wrote in a session, for reading how it picked up the work.
-first_message() { jq -rs '[.[] | select(.type == "item.completed" and .item.type == "agent_message") | .item.text] | first // ""' "$1" 2>/dev/null | head -c 2000; }
+# Lines are parsed one at a time, so a line cut off by a timeout does not hide the rest.
+first_message() { jq -rR 'fromjson? | select(.type == "item.completed" and .item.type == "agent_message") | .item.text' "$1" | head -n 1 | head -c 2000; }
+# The session's thread id, from its first thread.started event.
+thread_id() { jq -rR 'fromjson? | select(.type == "thread.started") | .thread_id // empty' "$1" | head -n 1; }
+# Paths a session read or ran commands on that hold an earlier session's prompt: the
+# harness's own session folders or Codex's stored transcripts (P121 leak check).
+read_session_records() {
+    jq -sR '[split("\n")[] | fromjson? | select(.type == "item.completed") | .item | (.command // "") | tostring
+        | select(test("session-[0-9]+/|\\.codex/sessions|/sessions/20[0-9][0-9]/"))] | length > 0' "$1"
+}
 task_criteria() { awk '/^## Acceptance Criteria/{p=1;next} /^## /{p=0} p' "$(task_file "$1")"; }
 criteria_count() { task_criteria "$1" | grep -cE '^[0-9]+\.'; }
 # Optional "## Target" section: the file a dependent session should reach (continuity metric).
@@ -79,8 +88,8 @@ last_task() { local seq; IFS='+' read -r -a seq <<< "$1"; printf '%s' "${seq[$((
 # Seeded from the arm commit so files the agent later gitignores stay in the base.
 snapshot_tree() {
     local run=$1; rm -f "$run/snap.idx"
-    GIT_INDEX_FILE="$run/snap.idx" hgit -C "$run/proj" read-tree "$(cat "$run/arm-commit")"
-    GIT_INDEX_FILE="$run/snap.idx" hgit -C "$run/proj" add -A
+    GIT_INDEX_FILE="$run/snap.idx" hgit -C "$run/proj" read-tree "$(cat "$run/arm-commit")" || return 1
+    GIT_INDEX_FILE="$run/snap.idx" hgit -C "$run/proj" add -A || return 1
     GIT_INDEX_FILE="$run/snap.idx" hgit -C "$run/proj" write-tree
 }
 diff_base() { if [ -f "$1/diff-base" ]; then cat "$1/diff-base"; else cat "$1/arm-commit"; fi; }
@@ -206,41 +215,48 @@ run_tests() {
 }
 
 # After a session that is not the last: with END_MODE=ask, sends the task's End Prompt
-# in the same session (codex exec resume --last; the isolated CODEX_HOME holds only this
-# run's sessions) and records the turn in end.json; with "closed" records that none was sent.
+# in the same session (codex exec resume <thread id of that session>, checked against the
+# turn's own thread id) and records the turn in end.json; with "closed" records that none was sent.
 end_session() {
-    local run=$1 sdir=$2 task=$3 prior=$4 eprompt estatus=0 estart; shift 4
+    local run=$1 sdir=$2 task=$3 prior=$4 eprompt estatus=0 estart tid etid usage; shift 4
     if [ "$END_MODE" != ask ] || [ "$prior" != 0 ]; then
         jq -n '{sent:false, exit_code:0, wall_seconds:0, usage:null}' > "$sdir/end.json"; return 0
     fi
     eprompt=$(task_end_prompt "$task")
     [ -n "$eprompt" ] || die "END_MODE=ask but task $task has no End Prompt"
+    tid=$(thread_id "$sdir/events.jsonl")
+    [ -n "$tid" ] || die "no thread id in $sdir/events.jsonl; cannot resume that session"
     printf '%s\n' "$eprompt" > "$sdir/end-prompt.txt"
     install -m 600 "$AUTH" "$run/home/.codex/auth.json"
     clean_env "$run/home"; estart=$(date +%s)
     (cd "$run/proj" && with_timeout "$TIMEOUT" "${CLEAN[@]}" \
-        codex exec resume --last -m "$MODEL" \
+        codex exec resume "$tid" -m "$MODEL" \
         -c model_reasoning_effort="\"$EFFORT\"" -c approval_policy='"never"' -c sandbox_mode='"workspace-write"' \
         -c sandbox_workspace_write.network_access=true -c "sandbox_workspace_write.writable_roots=[\"$run/proj/.git\"]" \
         "$@" --json -o "$sdir/end-last-message.md" - \
         < "$sdir/end-prompt.txt" > "$sdir/end-events.jsonl" 2> "$sdir/end-stderr.log") || estatus=$?
     rm -f "$run/home/.codex/auth.json"
     restore_git "$run/proj" "$run"
-    jq -n --argjson exit "$estatus" --argjson wall "$(( $(date +%s) - estart ))" \
-        --argjson usage "$(usage_json "$sdir/end-events.jsonl" || echo null)" \
-        '{sent:true, exit_code:$exit, wall_seconds:$wall, usage:$usage}' > "$sdir/end.json"
+    usage=$(usage_json "$sdir/end-events.jsonl") || { log "end-turn usage unreadable for $sdir"; usage=null; }
+    etid=$(thread_id "$sdir/end-events.jsonl")
+    [ "$estatus" != 0 ] || [ "$etid" = "$tid" ] || { log "end turn ran in thread '$etid', not $tid"; estatus=1; }
+    jq -n --argjson exit "$estatus" --argjson wall "$(( $(date +%s) - estart ))" --argjson usage "$usage" --arg thread "$tid" \
+        '{sent:true, exit_code:$exit, wall_seconds:$wall, usage:$usage, thread:$thread}' > "$sdir/end.json"
 }
 
-# Files changed since the arm commit, as of now (a JSON array of paths).
+# Files changed since the arm commit, as of now (a JSON array of paths; cumulative over
+# earlier sessions). NUL-separated so unusual names come through unquoted.
 session_changes() {
-    local tree; tree=$(snapshot_tree "$1")
-    hgit -C "$1/proj" diff-tree -r --name-only "$(cat "$1/arm-commit")" "$tree" | jq -R . | jq -s .
+    local tree; tree=$(snapshot_tree "$1") || die "snapshot failed for $1"
+    hgit -C "$1/proj" diff-tree -r -z --name-only "$(cat "$1/arm-commit")" "$tree" | jq -Rs 'split("\u0000") | map(select(length > 0))'
 }
 
 # One run, in its own process so `set -e` applies throughout.
 one_run() {
     local out=$1 task=$2 arm=$3 rep=$4 run prompt start status=0 extra=()
     run="$out/runs/t$task-$arm-r$rep"
+    # The path goes into a TOML string for the resume turn's sandbox setting.
+    case "$run" in *'"'*|*\\*) die "output path must not contain quotes or backslashes: $run" ;; esac
     if [ -f "$run/result.json" ] && jq -e '.valid == true' "$run/result.json" >/dev/null 2>&1; then
         log "done already: $run"; return 0
     fi
@@ -296,11 +312,12 @@ one_run() {
                 --argjson locate "$(locate_steps "$sdir/events.jsonl" "$(task_target "${seq[$((i - 1))]}")")" \
                 --arg end_mode "$END_MODE" --slurpfile end "$sdir/end.json" --slurpfile changed "$sdir/files-changed.json" \
                 '{session:$session, task:$task, exit_code:$exit, wall_seconds:$wall, usage:$u[0], locate_steps:$locate,
-                  end_mode:$end_mode, end:$end[0], files_changed:$changed[0]}' > "$sdir/session.json"
+                  end_mode:$end_mode, end:$end[0], files_changed:$changed[0],
+                  changed_server:($changed[0] | any(startswith("server/"))), changed_client:($changed[0] | any(startswith("client/")))}' > "$sdir/session.json"
             # A later session is only meaningful if this one completed and did work.
             [ "$status" = 0 ] || die "session $i of $run did not complete (exit $status)"
             jq -e '.usage != null' "$sdir/session.json" >/dev/null || die "session $i of $run reported no usage"
-            jq -e '.end.exit_code == 0 and ((.end.sent | not) or .end.usage != null)' "$sdir/session.json" >/dev/null \
+            jq -e --arg m "$END_MODE" '.end.exit_code == 0 and (if $m == "ask" then .end.sent and .end.usage != null else (.end.sent | not) end)' "$sdir/session.json" >/dev/null \
                 || die "the end-of-session turn for session $i of $run did not complete"
         fi
     done
@@ -328,15 +345,17 @@ finish_run() {
         --argjson s_exit "$(cat "$run/test-server.exit")" --argjson c_exit "$(cat "$run/test-client.exit")" \
         --argjson s_pass "$s_pass" --argjson s_fail "$s_fail" --argjson c_pass "$c_pass" --argjson c_fail "$c_fail" \
         --argjson usage "$usage" --arg codex "$(codex --version)" --arg judged "$judged" --argjson sessions "$sessions" \
-        --arg end_mode "$END_MODE" --arg first "$(first_message "$run/events.jsonl")" \
+        --arg end_mode "$([ "$sessions" = '[]' ] && echo none || echo "$END_MODE")" --arg first "$(first_message "$run/events.jsonl")" \
+        --argjson read_records "$(read_session_records "$run/events.jsonl")" \
         --argjson locate "$(locate_steps "$run/events.jsonl" "$(task_target "$judged")")" '
-        {task:$task, judged_task:$judged, earlier_sessions:$sessions, end_mode:$end_mode, first_message:$first, locate_steps:$locate, arm:$arm, rep:$rep, model:$model, effort:$effort, codex:$codex, exit_code:$exit,
+        {task:$task, judged_task:$judged, earlier_sessions:$sessions, end_mode:$end_mode, first_message:$first, read_session_records:$read_records, locate_steps:$locate, arm:$arm, rep:$rep, model:$model, effort:$effort, codex:$codex, exit_code:$exit,
          timed_out:($exit == $timed_out_code), wall_seconds:$wall, files_changed:$changed,
          tests:{server:{exit:$s_exit, passed:$s_pass, failed:$s_fail}, client:{exit:$c_exit, passed:$c_pass, failed:$c_fail}},
          tests_ran:($s_pass != null and $c_pass != null), usage:$usage}
         | .tests_suspect = ((.tests.server.exit != 0 and .tests.server.failed == 0) or (.tests.client.exit != 0 and .tests.client.failed == 0))
         | .valid = ((.exit_code == 0 and .usage != null) or .timed_out)
-        | .valid = (.valid and all(.earlier_sessions[]; .exit_code == 0 and .usage != null))' > "$run/result.json.tmp"
+        | .valid = (.valid and all(.earlier_sessions[]; .exit_code == 0 and .usage != null
+                     and ((.end.sent | not) or (.end.exit_code == 0 and .end.usage != null))))' > "$run/result.json.tmp"
     mv "$run/result.json.tmp" "$run/result.json"
 }
 
@@ -355,6 +374,14 @@ judge_packet() {
     echo; echo "## Acceptance criteria"; task_criteria "$task"
     echo; echo "## Test results (run by the harness after the attempt; before it, $(jq -r '"\(.server) server / \(.client) client"' "$run/baseline.json") tests passed)"
     jq -r '.tests | "server: exit \(.server.exit), \(.server.passed) passed, \(.server.failed) failed\nclient: exit \(.client.exit), \(.client.passed) passed, \(.client.failed) failed"' "$run/result.json"
+    if [ -f "$run/diff-base" ]; then
+        local earlier
+        earlier=$(hgit -C "$run/proj" diff --no-ext-diff --no-textconv "$(cat "$run/arm-commit")" "$(cat "$run/diff-base")" -- . "${JUDGE_EXCLUDES[@]}") || die "earlier diff failed for $run"
+        echo; echo "## Work from earlier sessions (context only; not the attempt being scored)"
+        echo "Already in the project when this attempt started. Use it to judge whether the attempt kept, used or redid it."
+        echo '```diff'; printf '%s\n' "${earlier:0:$DIFF_LIMIT}"; echo '```'
+        [ "${#earlier}" -le "$DIFF_LIMIT" ] || echo "(earlier diff truncated at $DIFF_LIMIT of ${#earlier} characters)"
+    fi
     echo; echo "## Diff of the attempt (process and documentation files omitted)"
     [ -n "$diff" ] || echo "(the attempt changed no product files)"
     echo '```diff'; printf '%s\n' "${diff:0:$DIFF_LIMIT}"; echo '```'
@@ -402,7 +429,7 @@ JSON
 
 report() {
     local out=$1 r d
-    { printf 'task\tarm\trep\tvalid\texit\ttimed_out\tjudge\tserver_exit\tserver_pass\tserver_fail\tclient_exit\tclient_pass\tclient_fail\twall_s\tinput_tokens\tcached_input\toutput_tokens\treasoning\tlocate_steps\tearlier_wall_s\tearlier_output_tokens\tend_mode\n'
+    { printf 'task\tarm\trep\tvalid\texit\ttimed_out\tjudge\tserver_exit\tserver_pass\tserver_fail\tclient_exit\tclient_pass\tclient_fail\twall_s\tinput_tokens\tcached_input\toutput_tokens\treasoning\tlocate_steps\tearlier_wall_s\tearlier_output_tokens\tend_mode\tread_session_records\ts1_changed_server\ts1_changed_client\n'
       for r in "$out"/runs/*/result.json; do
           [ -f "$r" ] || continue
           d=$(dirname "$r")
@@ -419,7 +446,8 @@ report() {
              .tests.server.exit, .tests.server.passed, .tests.server.failed, .tests.client.exit, .tests.client.passed, .tests.client.failed,
              .wall_seconds, tok(.input_tokens), tok(.cached_input_tokens), tok(.output_tokens), tok(.reasoning_output_tokens),
              .locate_steps, ((.earlier_sessions // []) | map(.wall_seconds + (.end.wall_seconds // 0)) | add),
-             ((.earlier_sessions // []) | map((.usage // []) + (.end.usage // []) | map(.output_tokens // 0) | add) | add), (.end_mode // "closed")]
+             ((.earlier_sessions // []) | map((.usage // []) + (.end.usage // []) | map(.output_tokens // 0) | add) | add), (.end_mode // "NA"),
+             (.read_session_records // "NA"), (.earlier_sessions[0].changed_server // "NA"), (.earlier_sessions[0].changed_client // "NA")]
             | map(if . == null then "NA" else . end) | @tsv' "$r"
       done; } > "$out/scores.tsv"
     column -t -s $'\t' "$out/scores.tsv"
@@ -447,6 +475,8 @@ case "$cmd" in
         done
         [ -f "$AUTH" ] || die "no Codex login at $AUTH"
         mkdir -p "$out/runs"; out=$(cd "$out" && pwd -P)
+        # Runs from before end modes existed were all "closed".
+        if [ ! -f "$out/end-mode" ] && [ -n "$(ls -A "$out/runs")" ]; then echo closed > "$out/end-mode"; fi
         if [ -f "$out/end-mode" ]; then [ "$(cat "$out/end-mode")" = "$END_MODE" ] || die "$out was run with end mode $(cat "$out/end-mode"); use another directory"
         else echo "$END_MODE" > "$out/end-mode"; fi
         plan=$(for t in $tasks; do for r in $(seq 1 "$k"); do for a in "${ARMS[@]}"; do echo "$t $a $r"; done; done; done | perl -MList::Util=shuffle -e 'print shuffle <STDIN>')
