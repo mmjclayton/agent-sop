@@ -1,1 +1,56 @@
-{"criteria":[{"number":1,"met":1,"reason":"The keyboard row renders Copy Last, Done, and Next buttons."},{"number":2,"met":1,"reason":"Done uses a smaller flex share than the adjacent buttons instead of full width."},{"number":3,"met":0,"reason":"Copy Last and Next set a 48px minimum height, but Done has no 44px minimum and its padding does not guarantee one."},{"number":4,"met":0,"reason":"The callback updates the parent value, but NumericKeypad keeps its displayed value in local state, so Copy Last does not update the visible field."},{"number":5,"met":0.5,"reason":"Next changes the keypad state to reps, but the keypad's local display state does not update to the reps value."},{"number":6,"met":0.5,"reason":"The styles use color and radius tokens in places, but Done still uses a hardcoded white color."},{"number":7,"met":1,"reason":"The action row uses a flexible layout with gaps and shrinkable button widths, which can fit on mobile."},{"number":8,"met":1,"reason":"All three button labels are plain and contain no exclamation marks or hype."},{"number":9,"met":1,"reason":"The harness reports all server and client tests passing."},{"number":10,"met":0.5,"reason":"A new test clicks Copy Last and checks the callback, but does not verify that the previous set's value is displayed or applied."}],"overall":0.65}
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The keyboard row renders Copy Last, Done, and Next buttons."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done uses a smaller flex share than the adjacent buttons instead of full width."
+    },
+    {
+      "number": 3,
+      "met": 0,
+      "reason": "Copy Last and Next set a 48px minimum height, but Done has no 44px minimum and its padding does not guarantee one."
+    },
+    {
+      "number": 4,
+      "met": 0,
+      "reason": "The callback updates the parent value, but NumericKeypad keeps its displayed value in local state, so Copy Last does not update the visible field."
+    },
+    {
+      "number": 5,
+      "met": 0.5,
+      "reason": "Next changes the keypad state to reps, but the keypad's local display state does not update to the reps value."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "The styles use color and radius tokens in places, but Done still uses a hardcoded white color."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The action row uses a flexible layout with gaps and shrinkable button widths, which can fit on mobile."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "All three button labels are plain and contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all server and client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 0.5,
+      "reason": "A new test clicks Copy Last and checks the callback, but does not verify that the previous set's value is displayed or applied."
+    }
+  ],
+  "overall": 0.65,
+  "model_overall": 0.65
+}

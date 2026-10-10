@@ -1,1 +1,56 @@
-{"criteria":[{"number":1,"met":1,"reason":"The exercise overflow menu shows “Skip Exercise” during a started workout."},{"number":2,"met":0,"reason":"Skipping is applied immediately without a confirmation prompt."},{"number":3,"met":1,"reason":"The finish handler writes every submitted set for a skipped exercise with status `skipped`."},{"number":4,"met":1,"reason":"A distinct “Exercise skipped” status badge is shown."},{"number":5,"met":0.5,"reason":"The menu toggles skip state back off during the session, but this is only tracked in client state until finishing."},{"number":6,"met":1,"reason":"The existing finish endpoint handles skipped exercises."},{"number":7,"met":0,"reason":"No new server test is included in the diff."},{"number":8,"met":0,"reason":"No new client test is included in the diff."},{"number":9,"met":1,"reason":"The harness reports all server and client tests passed."},{"number":10,"met":1,"reason":"The added UI copy is direct and contains no exclamation marks."}],"overall":0.65}
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The exercise overflow menu shows “Skip Exercise” during a started workout."
+    },
+    {
+      "number": 2,
+      "met": 0,
+      "reason": "Skipping is applied immediately without a confirmation prompt."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The finish handler writes every submitted set for a skipped exercise with status `skipped`."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "A distinct “Exercise skipped” status badge is shown."
+    },
+    {
+      "number": 5,
+      "met": 0.5,
+      "reason": "The menu toggles skip state back off during the session, but this is only tracked in client state until finishing."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The existing finish endpoint handles skipped exercises."
+    },
+    {
+      "number": 7,
+      "met": 0,
+      "reason": "No new server test is included in the diff."
+    },
+    {
+      "number": 8,
+      "met": 0,
+      "reason": "No new client test is included in the diff."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all server and client tests passed."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "The added UI copy is direct and contains no exclamation marks."
+    }
+  ],
+  "overall": 0.65,
+  "model_overall": 0.65
+}

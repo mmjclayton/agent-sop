@@ -33,5 +33,7 @@
       "output_tokens": 3453,
       "reasoning_output_tokens": 596
     }
-  ]
+  ],
+  "tests_ran": true,
+  "valid": true
 }

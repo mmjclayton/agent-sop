@@ -1,1 +1,56 @@
-{"criteria":[{"number":1,"met":1,"reason":"The keyboard row adds Copy Last, Done, and Next buttons."},{"number":2,"met":1,"reason":"Done uses a 2:1:1 flex ratio, so it is narrower than the former full-width button."},{"number":3,"met":1,"reason":"Each action button is 48px high, exceeding the 44px minimum."},{"number":4,"met":1,"reason":"Copy Last receives the preceding set’s value for the active field and sends it through onChange."},{"number":5,"met":1,"reason":"Next changes the active field from weight to reps and loads the current set’s reps value."},{"number":6,"met":0.5,"reason":"The styling uses color and radius tokens, though Done’s text color is hardcoded as #fff."},{"number":7,"met":1,"reason":"The action row uses a flexible layout that can fit the keypad on mobile screens."},{"number":8,"met":1,"reason":"The button labels contain no exclamation marks or hype."},{"number":9,"met":1,"reason":"The harness reports all existing tests pass."},{"number":10,"met":1,"reason":"A new test checks that Copy Last sends the previous value to onChange."}],"overall":0.95}
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The keyboard row adds Copy Last, Done, and Next buttons."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done uses a 2:1:1 flex ratio, so it is narrower than the former full-width button."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "Each action button is 48px high, exceeding the 44px minimum."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "Copy Last receives the preceding set’s value for the active field and sends it through onChange."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "Next changes the active field from weight to reps and loads the current set’s reps value."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "The styling uses color and radius tokens, though Done’s text color is hardcoded as #fff."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The action row uses a flexible layout that can fit the keypad on mobile screens."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "The button labels contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all existing tests pass."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "A new test checks that Copy Last sends the previous value to onChange."
+    }
+  ],
+  "overall": 0.95,
+  "model_overall": 0.95
+}

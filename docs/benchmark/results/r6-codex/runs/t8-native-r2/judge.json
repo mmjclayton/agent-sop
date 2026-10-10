@@ -1,1 +1,56 @@
-{"criteria":[{"number":1,"met":1,"reason":"The keyboard row renders Copy Last, Next, and Done."},{"number":2,"met":1,"reason":"Done now shares the row instead of taking the full width."},{"number":3,"met":1,"reason":"The buttons’ 14px vertical padding plus text height provides at least a 44px target."},{"number":4,"met":0,"reason":"Copy Last updates the set data, but does not update the keypad’s displayed field value."},{"number":5,"met":1,"reason":"Next opens the reps keypad when invoked from the weight keypad."},{"number":6,"met":0.5,"reason":"The styles use design tokens for some colors and the radius, but also hardcode white."},{"number":7,"met":1,"reason":"The actions use a flexible row layout that can fit on mobile."},{"number":8,"met":1,"reason":"Button labels contain no exclamation marks or hype."},{"number":9,"met":1,"reason":"The harness reports all existing tests passing."},{"number":10,"met":0,"reason":"The new test checks that the Copy Last handler is called, but does not test copying the previous set’s value."}],"overall":0.75}
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The keyboard row renders Copy Last, Next, and Done."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done now shares the row instead of taking the full width."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The buttons’ 14px vertical padding plus text height provides at least a 44px target."
+    },
+    {
+      "number": 4,
+      "met": 0,
+      "reason": "Copy Last updates the set data, but does not update the keypad’s displayed field value."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "Next opens the reps keypad when invoked from the weight keypad."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "The styles use design tokens for some colors and the radius, but also hardcode white."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The actions use a flexible row layout that can fit on mobile."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "Button labels contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all existing tests passing."
+    },
+    {
+      "number": 10,
+      "met": 0,
+      "reason": "The new test checks that the Copy Last handler is called, but does not test copying the previous set’s value."
+    }
+  ],
+  "overall": 0.75,
+  "model_overall": 0.75
+}

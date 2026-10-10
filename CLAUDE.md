@@ -42,7 +42,6 @@ Test: `bash docs/benchmark/hook-fixtures/run-tests.sh` (also `resume-path-fixtur
 - P79 — `sandboxing.md` treats the sandbox as protecting the host, never the reverse — [OPEN] [Iteration]
 - P80 — Benchmark rubric: pairwise scoring, and read judge reasoning not scores — [OPEN] [Iteration]
 - P108 — Codex compatibility follow-ups from native-runtime review — [OPEN] [Iteration]
-- P116 - Fresh multi-run comparison on the current SOP — [IN PROGRESS] [Iteration]
 <!-- priority-items:end -->
 
 ---
