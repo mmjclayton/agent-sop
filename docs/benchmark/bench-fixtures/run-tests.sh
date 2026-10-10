@@ -145,7 +145,9 @@ check_leak() { # expected command
 }
 for c in 'ls ~/.codex' 'cat $HOME/.codex/config.toml' 'cat ${HOME}/.codex/x' 'cat /tmp/r/home/.codex/sessions/2026/x' \
          'cat ../session-1/prompt.txt' 'ls ../session-2' 'cat /tmp/out/runs/r/session-1/events.jsonl' 'echo $CODEX_HOME'; do check_leak true "$c"; done
-for c in 'cat .codex/hooks.json' 'ls -a .codex' 'cat docs/agent-memory/session-notes.md' 'ls docs/session-3' 'grep -r rpe server/src'; do check_leak false "$c"; done
+for c in 'cat ~/.claude/projects/-tmp-proj/abc.jsonl' 'ls ~/.claude/projects' 'echo $CLAUDE_CONFIG_DIR'; do check_leak true "$c"; done
+for c in 'cat .codex/hooks.json' 'ls -a .codex' 'cat docs/agent-memory/session-notes.md' 'ls docs/session-3' 'grep -r rpe server/src' \
+         'cat .claude/settings.json' 'cat ~/.claude/projects/-tmp-proj/memory/MEMORY.md'; do check_leak false "$c"; done
 printf 'PASS: leak check sees earlier-session records and ignores the project .codex and repo paths\n'
 
 # Older output directories count as closed; quotes in the output path are refused.
@@ -171,3 +173,82 @@ awk -F'\t' 'NR == 1 { for (i = 1; i <= NF; i++) col[$i] = i }
     NR == 2 { ok = ($col["end_mode"] == "ask" && $col["earlier_output_tokens"] == 10 && $col["read_session_records"] == "true") }
     END { exit !ok }' "$WORK/out-ask/scores.tsv"
 printf 'PASS: report includes the end mode and the end turn in session-1 tokens\n'
+
+# --- Claude Code runtime (P122) -------------------------------------------------------
+mkdir -p "$WORK/cbin" "$WORK/ctrace"
+printf 'fake-token\n' > "$WORK/claude-token"; chmod 600 "$WORK/claude-token"
+cat > "$WORK/cbin/claude" <<'FAKE'
+#!/usr/bin/env bash
+# Fake Claude Code: logs each call, edits the project, prints stream-json or judge JSON.
+set -euo pipefail
+[ "${1:-}" = --version ] && { echo '2.0.0 (Claude Code fake)'; exit 0; }
+T="$(cd "$(dirname "$0")/.." && pwd -P)/ctrace"
+resume=''; schema=''; args="$*"
+while [ $# -gt 0 ]; do
+    case "$1" in --resume) resume=$2; shift ;; --json-schema) schema=$2; shift ;;
+        --model|--effort|--output-format|--setting-sources|--tools) shift ;; esac
+    shift
+done
+prompt=$(cat)
+n=$(find "$T" -name 'call-*' | wc -l | tr -d ' ')
+printf '%s\n%s\n%s\n%s\n' "$args" "${CLAUDE_CODE_OAUTH_TOKEN:-none}" "${CLAUDE_CONFIG_DIR:-none}" "$PWD" > "$T/call-$n"
+if [ -n "$schema" ]; then
+    printf '{"type":"result","is_error":false,"result":"done","total_cost_usd":0.02,"structured_output":{"criteria":[%s]}}\n' \
+        "$(for i in 1 2 3 4 5 6 7 8; do printf '{"number":%d,"met":1,"reason":"ok"}' "$i"; [ "$i" = 8 ] || printf ,; done)"
+    exit 0
+fi
+sid=${resume:-sess-1}
+case "$prompt" in
+    *"Continue where we left off"*) file=client/rpe.txt; msg='Continuing the client side.' ;;
+    *"stopping here"*) file=notes.md; msg='Notes written.' ;;
+    *) file=server/rpe.txt; msg='Server side done.' ;;
+esac
+echo x > "$file"
+printf '{"type":"system","subtype":"init","session_id":"%s"}\n' "$sid"
+printf '{"type":"assistant","message":{"content":[{"type":"text","text":"%s"},{"type":"tool_use","name":"Bash","input":{"command":"ls server"}},{"type":"tool_use","name":"Write","input":{"file_path":"%s/%s"}}]}}\n' "$msg" "$PWD" "$file"
+[ -f "$T/limit" ] && { printf '{"type":"result","is_error":true,"result":"usage limit","total_cost_usd":0,"usage":{"input_tokens":0,"output_tokens":0}}\n'; exit 1; }
+printf '{"type":"result","is_error":false,"result":"%s","total_cost_usd":0.01,"usage":{"input_tokens":3,"cache_creation_input_tokens":2,"cache_read_input_tokens":5,"output_tokens":7}}\n' "$msg"
+FAKE
+chmod +x "$WORK/cbin/claude"
+cbench() { # out task arm rep
+    PATH="$WORK/cbin:$PATH" BENCH_RUNTIME=claude BENCH_CLAUDE_TOKEN_FILE="$WORK/claude-token" CODEX_HOME="$WORK/codex-home" \
+        BENCH_TEMPLATE="$WORK/template" BENCH_ARMS="native context" bash "$BENCH" "$@"
+}
+mkdir -p "$WORK/out-claude"
+BENCH_END_MODE=ask cbench one "$WORK/out-claude" 10+11 native 1 2> "$WORK/claude.log" || { tail -20 "$WORK/claude.log"; exit 1; }
+run="$WORK/out-claude/runs/t10+11-native-r1"
+test -f "$run/proj/CLAUDE.md"; test ! -e "$run/proj/AGENTS.md"
+grep -q 'Tests: npm test' "$run/proj/CLAUDE.md"
+[ "$(find "$WORK/ctrace" -name 'call-*' | wc -l | tr -d ' ')" = 3 ]
+for i in 0 1 2; do
+    sed -n 2p "$WORK/ctrace/call-$i" | grep -qx fake-token
+    sed -n 3p "$WORK/ctrace/call-$i" | grep -q '/runs/t10+11-native-r1/home/.claude$'
+    sed -n 1p "$WORK/ctrace/call-$i" | grep -q -- '--dangerously-skip-permissions'
+done
+sed -n 1p "$WORK/ctrace/call-1" | grep -q -- '--resume sess-1'
+if sed -n 1p "$WORK/ctrace/call-0" | grep -q -- '--resume'; then echo 'FAIL: session 1 resumed something'; exit 1; fi
+jq -e '.runtime == "claude" and .valid == true and .earlier_sessions[0].end.thread == "sess-1"
+       and .earlier_sessions[0].changed_server == true and .earlier_sessions[0].changed_client == false
+       and .first_message == "Continuing the client side." and (.locate_steps | type) == "number"' "$run/result.json" >/dev/null
+jq -e 'select(.type == "turn.completed") | .usage == {input_tokens:10, cached_input_tokens:5, output_tokens:7, cost_usd:0.01}' "$run/events.jsonl" >/dev/null
+test ! -s "$run/home/.codex/auth.json"
+printf 'PASS: Claude runtime runs the pair with an isolated config and token, resumes by session id, and converts events\n'
+
+cbench judge "$WORK/out-claude" 2> "$WORK/claude-judge.log" || { cat "$WORK/claude-judge.log"; exit 1; }
+jq -e '.overall == 1' "$run/judge.json" >/dev/null
+sed -n 1p "$WORK/ctrace/call-3" | grep -q -- '--tools  \|--tools $\|--tools --'
+cbench report "$WORK/out-claude" > /dev/null 2> "$WORK/claude-report.log" || { cat "$WORK/claude-report.log"; exit 1; }
+awk -F'\t' 'NR == 1 { for (i = 1; i <= NF; i++) col[$i] = i }
+    NR == 2 { ok = ($col["cost_usd"] == 0.03 && $col["end_mode"] == "ask") }
+    END { exit !ok }' "$WORK/out-claude/scores.tsv"
+printf 'PASS: Claude judge runs without tools and the report sums cost over both sessions and the end turn\n'
+
+# A Claude turn that reports an error (for example a usage limit) fails the pair.
+mkdir -p "$WORK/out-climit"; touch "$WORK/ctrace/limit"
+if BENCH_END_MODE=closed cbench one "$WORK/out-climit" 10+11 native 1 2> "$WORK/climit.log"; then echo 'FAIL: errored Claude turn accepted'; exit 1; fi
+grep -q 'session 1 of .* did not complete' "$WORK/climit.log"
+rm "$WORK/ctrace/limit"
+if PATH="$WORK/cbin:$PATH" BENCH_RUNTIME=claude BENCH_CLAUDE_TOKEN_FILE="$WORK/missing-token" BENCH_TEMPLATE="$WORK/template" \
+    bash "$BENCH" run "$WORK/out-notoken" --tasks 10+11 2> "$WORK/notoken.log"; then echo 'FAIL: run without a token'; exit 1; fi
+grep -q 'no Claude Code token' "$WORK/notoken.log"
+printf 'PASS: an errored Claude turn fails the pair and a missing token is refused\n'
