@@ -1,0 +1,109 @@
+{
+  "schema_version": 2,
+  "base": "122b49dbcbeab4b5d8d2692ffc8197c664400d08",
+  "head": "ffb7d5eb6ee2d839a46ca74c1aef29653a1151a5",
+  "tree": "e42712f4aaab8375d9db959e505c0e5ec0160ac8",
+  "policy_sha256": "2bf3e7532a015bebf17f7553468f92f27d5b777be7d19cb8aca33e5e8b07e494",
+  "tests": {
+    "status": "PASS",
+    "evidence": "At 5be0173 (ffb7d5e is docs only): all nine docs/benchmark/*-fixtures/run-tests.sh suites exit 0; git ls-files -z '*.sh' | xargs -0 shellcheck -S warning exits 0; validate-state-transitions OK. Context arm exercised by 9 real Codex runs (all valid, judged). New BENCH_ARMS guards checked: duplicate, unknown and whitespace-only values each exit 2 with a message. Code reviewer recomputed every R7 figure from the 27 per-run files; security reviewer found no secrets in committed results."
+  },
+  "reviewers": [
+    {
+      "name": "security-reviewer",
+      "version": "7f43a9e27d8aed8f8a55b4fd970e5c33cf83902f896ade200da05efb15d9bda0",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 2,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 132,
+          "message": "Context arm fails loudly if CLAUDE.md is absent; fail-safe. No change."
+        }
+      ]
+    },
+    {
+      "name": "code-reviewer",
+      "version": "f6420e5df2c684f2da46628e1c1c264dbb865ac3130701ff8025111b392bd677",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 2,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "MEDIUM",
+          "file": "docs/benchmark/results/r7-codex-summary.md",
+          "line": 5,
+          "message": "Conclusion overstated k=3 data ('no measurable quality'). Fixed: 'k=3 could not separate agent-sop from the project's own instructions'."
+        },
+        {
+          "severity": "MEDIUM",
+          "file": "docs/benchmark/results/r7-codex-summary.md",
+          "line": 35,
+          "message": "Native core count moved 6/9 to 5/9 under the current judge, undisclosed. Fixed in Judge noise and the R6 confound note."
+        },
+        {
+          "severity": "MEDIUM",
+          "file": "docs/benchmark/results/r7-codex-summary.md",
+          "line": 55,
+          "message": "Context arm ran as a separate batch; added to Limits."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/results/r7-codex-summary.md",
+          "line": 29,
+          "message": "Core criterion undefined; definition and 0.5 rule added."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/results/r7-codex-summary.md",
+          "line": 58,
+          "message": "Review-step claim unsupported; now cites t7-sop-r2."
+        }
+      ]
+    },
+    {
+      "name": "silent-failure-hunter",
+      "version": "004ce0389356e0666d80c89cef39ad895ab326b3f7d19d34d23c70ab249a795d",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 2,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "MEDIUM",
+          "file": "docs/benchmark/results/r7-codex/plan-context.txt",
+          "line": 1,
+          "message": "Only the context plan was committed; R6 plan now committed as plan-r6-native-sop.txt and separate batches disclosed."
+        },
+        {
+          "severity": "MEDIUM",
+          "file": "docs/benchmark/results/r7-codex-summary.md",
+          "line": 45,
+          "message": "R6 result files lack tests_suspect; disclosed with source."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 53,
+          "message": "Arm validation runs for every subcommand. Accepted."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 132,
+          "message": "No check that docs/agent-memory.md exists for the context arm. Accepted; present in all R7 context runs."
+        }
+      ]
+    }
+  ]
+}

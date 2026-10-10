@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 0.5,
+      "reason": "Copy Last and Done always appear, but Next is omitted when the keypad is opened for reps."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done is one button in a shared three-button flex row rather than full width."
+    },
+    {
+      "number": 3,
+      "met": 0.5,
+      "reason": "Buttons have 14px vertical padding, but no explicit minimum height guarantees the 44px target."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "Copy Last uses the supplied previousValue for the same field and updates the display and value."
+    },
+    {
+      "number": 5,
+      "met": 0.5,
+      "reason": "Next changes the keypad state from weight to reps, but NumericKeypad does not sync its display when the value prop changes."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "The button styles use color and radius tokens, but Done still uses a hardcoded white text color."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The flex row can shrink to fit narrow mobile widths and no breakpoint is required for the layout."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "Button labels contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "Harness results show all server and client tests passed."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "New tests cover Copy Last behavior, its disabled state, and Next."
+    }
+  ],
+  "overall": 0.8,
+  "packet_sha256": "3a6249d89b1586650e32cbe06bed2a61f425a027f47ef5a8e76f07ef9c3c5294",
+  "judge_version": 2
+}

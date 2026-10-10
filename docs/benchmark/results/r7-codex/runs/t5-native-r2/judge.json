@@ -1,0 +1,37 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The shared helper applies a single ×2 multiplier when both flags are true."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Either flag alone also applies ×2 to the set’s weight × reps."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The calculation is implemented in client code and used when rendering tonnage."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "The diff adds no database columns or migrations."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "Harness results show all 197 server and 289 client tests passed."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "A test was added for both flags, asserting the corrected result."
+    }
+  ],
+  "overall": 1,
+  "packet_sha256": "0cdce3c0a282b66498f8c90a231773a03b9c39e53b99088d92d990d8b439124a",
+  "judge_version": 2
+}

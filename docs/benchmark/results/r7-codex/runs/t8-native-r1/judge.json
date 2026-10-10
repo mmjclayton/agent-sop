@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 0.5,
+      "reason": "All three buttons are present on the action row, but their order is Copy Last, Next, Done."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done now shares the row instead of taking the full width."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The buttons’ vertical padding and text size give them at least 44px height."
+    },
+    {
+      "number": 4,
+      "met": 0.5,
+      "reason": "Copy Last uses the previous set’s matching field when opened directly, but after Next it retains the weight value for reps."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "Next changes the keypad field and label from weight to reps."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "The new action styles use design tokens, though Done still uses hardcoded white for its text color."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The actions use a flexible row that fits the existing mobile keypad layout."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "Button labels contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all 197 server tests and 289 client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 0,
+      "reason": "The diff adds no test for Copy Last logic."
+    }
+  ],
+  "overall": 0.75,
+  "packet_sha256": "11b74c356e0b948970a3737ec0bd2430e32ecb25bf9d07150c3c64676258490a",
+  "judge_version": 2
+}

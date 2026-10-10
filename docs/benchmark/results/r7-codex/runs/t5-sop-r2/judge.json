@@ -1,0 +1,37 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The client formula uses one multiplier of 2 when both flags are true."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Either flag on its own also applies a single doubling multiplier."
+    },
+    {
+      "number": 3,
+      "met": 0.5,
+      "reason": "The render-time client calculation is fixed, but server tonnage calculations were also changed."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "No database columns or migrations were added."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "Harness results show all existing server and client tests passed."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "A test was added to verify the corrected formula when both flags are on."
+    }
+  ],
+  "overall": 0.9166666666666666,
+  "packet_sha256": "8c6d3b091ab50e6267a936ed3bb4a73959f67bf6fb81baee797add4a1930e7de",
+  "judge_version": 2
+}

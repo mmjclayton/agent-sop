@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "Copy Last, Next, and Done are rendered together in the keypad action row."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done uses one-third of the flex row instead of spanning the keypad width."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "Buttons have 14px vertical padding and text, yielding at least a 44px touch target."
+    },
+    {
+      "number": 4,
+      "met": 0.5,
+      "reason": "The callback updates the previous set's same-field value, but the keypad's displayed value is not updated to show it."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The weight keypad's Next callback opens the reps keypad for the same set."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "The buttons use design tokens for backgrounds and radius, but Done's text color is hard-coded as #fff."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The actions use a flexible row layout that fits within the keypad on mobile."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "Button labels contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all 197 server and 290 client tests passed."
+    },
+    {
+      "number": 10,
+      "met": 0.5,
+      "reason": "A new test checks that Copy Last's handler is called, but does not verify copying the previous set's field value."
+    }
+  ],
+  "overall": 0.85,
+  "packet_sha256": "cde8f1a40d3416f86a59a79e1492d5e957f96392e3bca0705523f971bcb81293",
+  "judge_version": 2
+}

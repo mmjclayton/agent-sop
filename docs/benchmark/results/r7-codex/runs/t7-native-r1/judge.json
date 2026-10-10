@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The exercise overflow menu includes a “Skip Exercise” option during a workout."
+    },
+    {
+      "number": 2,
+      "met": 0,
+      "reason": "Skipping applies immediately; no confirmation prompt is shown."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The finish endpoint writes each set for a skipped exercise with status \"skipped\"."
+    },
+    {
+      "number": 4,
+      "met": 0.5,
+      "reason": "A skipped badge is added, but the change does not suppress the existing partially complete state."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The menu offers “Undo Skip Exercise” and toggles the skipped state during the session."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The existing finish endpoint handles skipped exercises."
+    },
+    {
+      "number": 7,
+      "met": 0,
+      "reason": "No new server test for skip or unskip is included."
+    },
+    {
+      "number": 8,
+      "met": 0,
+      "reason": "No new client test for the skip UI is included."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all existing server and client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "The added UI copy has no exclamation marks and uses direct wording."
+    }
+  ],
+  "overall": 0.65,
+  "packet_sha256": "54ee25b63cf03c0168fcf429f3c5c252886f166c8898d5fd39b3c9ab404b41b1",
+  "judge_version": 2
+}

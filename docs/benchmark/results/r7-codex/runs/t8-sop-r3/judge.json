@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The keyboard row contains Copy Last, Done, and Next buttons."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done uses flex: 2 while the other buttons use flex: 1, so it is narrower than before."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "Each action button has a 48px height, exceeding the 44px minimum."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "The previous set’s value for the active field is passed to the keypad and copied into its display and value."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "Next switches the keypad state from weight to reps and loads the reps value."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "The styles use color and radius tokens, but Done’s white text color is hard-coded."
+    },
+    {
+      "number": 7,
+      "met": 0.5,
+      "reason": "The action row uses a flexible layout that can shrink, but no mobile-specific sizing or behavior is shown."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "The button labels contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all 197 server and 291 client tests passed."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "A new test verifies Copy Last calls onChange with the previous value and displays it."
+    }
+  ],
+  "overall": 0.9,
+  "packet_sha256": "1c974d5d26be7b97b72ee12a33add93107b65abb11a9240f56e246bb64698c33",
+  "judge_version": 2
+}

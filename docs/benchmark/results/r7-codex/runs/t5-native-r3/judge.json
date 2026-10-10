@@ -1,0 +1,37 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 0,
+      "reason": "With both flags true, the server formula multiplies both values by 2, producing a fourfold result."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Either flag alone doubles its corresponding value."
+    },
+    {
+      "number": 3,
+      "met": 0,
+      "reason": "The changes are in server code, not client-side display calculation."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "No database columns or migrations were added."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The harness reports all existing server and client tests passing."
+    },
+    {
+      "number": 6,
+      "met": 0,
+      "reason": "No test for the corrected formula was added."
+    }
+  ],
+  "overall": 0.5,
+  "packet_sha256": "99e9893af935028c2d2bfbbc3628de93d90a692939c46010e7478d59b963bbc3",
+  "judge_version": 2
+}

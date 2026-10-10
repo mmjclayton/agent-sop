@@ -1,0 +1,1 @@
+Committed the fix and SOP close-out as `3b29f2c` (`fix: apply count twice tonnage once`). The working tree is clean. All 486 tests passed earlier; Backlog B1 remains `[IN PROGRESS]` until CI passes.

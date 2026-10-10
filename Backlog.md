@@ -1293,3 +1293,21 @@ Requested by Matt, 10 Oct 2026 ("please fix"), from the readiness check after P1
 **Acceptance criteria:**
 - `--dry-run` against a missing settings path leaves no file or directory behind
 - All fixture suites and shellcheck pass; CI passes with the pinned action
+
+---
+
+### P119 - Control arm: project instructions without agent-sop (R7)
+
+`[SHIPPED - 2026-10-10] [Iteration]`
+review: docs/reviews/20261010-p119-ship-auto.md
+
+**Result (R7, `docs/benchmark/results/r7-codex-summary.md`):** on single-session tasks, k=3 could not separate agent-sop from the project's own instructions. SOP minus context was +0.08, -0.05 and -0.05 by median, with ranges overlapping on every task. Both arms met the core criterion 9/9, but SOP took 1,767 s against 813 s and 130,497 output tokens against 60,785. Most of the R6 gain over the stub is reproduced by the project instructions alone (context minus native +0.20 on task 07, no overlap). Re-judging R6 changed 10 of 18 scores, mean 0.043, so differences of about 0.05 are judge noise. Multi-session tasks are untested.
+
+From an outside review of R6 that Matt passed on, 10 Oct 2026; the review recommended this arm before any larger expansion, and it was run on that basis (9 runs on the ChatGPT login). R6's arms differed in more than agent-sop. `setup.sh` keeps a project's own instructions, so the SOP arm had hst-tracker's 300-line `CLAUDE.md` and 142-line `docs/agent-memory.md`, which at 814b3b5 name all three tasks (B1, P57, P62). The native arm had a 5-line stub. R6 cannot attribute its gains to agent-sop. That stub is also not protocol condition 1.
+
+- New `context` arm in `codex-bench.sh`: the project's `CLAUDE.md` verbatim as `AGENTS.md`, `docs/agent-memory.md` kept, April SOP copies (`docs/sop/`, `.claude/`) removed, nothing installed. Only agent-sop differs between `context` and `sop`.
+- R7: 9 `context` runs (tasks 05, 07, 08, k=3) on the same template, model and login. The 18 R6 runs are re-judged with the current judge alongside them, so all 27 are scored the same way.
+
+**Acceptance criteria:**
+- R7 reports median and range per task for native, context and SOP, with overlap stated for context vs SOP
+- R6 summary carries the confound note

@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The exercise overflow menu adds a “Skip Exercise” option during workout logging."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Skipping prompts for confirmation before applying the change."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The skip action submits each set in the active week with status “skipped”."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "The card displays a “Skipped” badge when all active-week sets are skipped."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The menu offers “Undo Skip Exercise” during the workout and clears the active-week sets."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The existing sets endpoint accepts and persists the skipped status."
+    },
+    {
+      "number": 7,
+      "met": 0.5,
+      "reason": "A server test covers persisting skipped status, but does not test unskip behavior."
+    },
+    {
+      "number": 8,
+      "met": 0,
+      "reason": "The diff adds no client test for the skip UI."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all server and client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "The confirmation, menu, and badge copy is direct and contains no exclamation marks."
+    }
+  ],
+  "overall": 0.85,
+  "packet_sha256": "448f94ad53efdd8e45824d3f08eecbb5d6a9c8cdd2e3f57371bbb7af10829381",
+  "judge_version": 2
+}

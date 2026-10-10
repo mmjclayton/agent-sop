@@ -4,6 +4,8 @@
 
 ## Result
 
+> **Read with R7.** The two arms differ in more than agent-sop. `setup.sh` keeps the project's own instructions, so the SOP arm had hst-tracker's 300-line `CLAUDE.md` and 142-line `docs/agent-memory.md`. At 814b3b5 that `CLAUDE.md` lists all three tasks by ID with one-line descriptions (B1, P57, P62). The native arm had a 5-line stub. R6 therefore measures "project instructions plus agent-sop" against "a stub". It cannot attribute any gain to agent-sop. That stub is also not the protocol's condition 1 ("normal project instructions and native memory"). R7 adds that arm and re-judges these runs with the current judge, under which native's core criterion count is 5/9; see `r7-codex-summary.md`. Found by an outside review on 2026-10-10.
+
 Agent SOP scored the same as native Codex or higher on all three tasks, by median. Only task 07 separates the arms: its ranges do not overlap. On tasks 05 and 08 the ranges overlap, so k=3 cannot separate the arms there. The SOP arm used about 3.3 times the wall time, 4.8 times the output tokens and 6.3 times the input tokens (96% of it cached).
 
 | Task | Arm | Judge median | Range (k=3) | Core criterion met | Wall median (s) | Uncached input median | Output median |
@@ -65,6 +67,7 @@ The one arithmetic error is corrected above. `valid` (Codex exit 0 and usage pre
 
 - **k=3 is small.** The protocol expands repetitions based on observed variance. Task 05 native (0.50-1.00) and task 08 SOP (0.65-0.95) have the widest spread.
 - **Same model family.** One model judges the work of the same model family. Its scores are not human ratings and were not calibrated against any.
+- **Unequal project instructions.** The SOP arm keeps the project's `CLAUDE.md` and `docs/agent-memory.md`, which name the three tasks. The native arm gets a stub instead. See the note under Result.
 - **Native keeps project docs.** The native arm keeps everything except the removed SOP paths, as the historical baseline did: `Backlog.md`, `README.md`, `docs/feature-map.md`, `docs/feature-inventory.md`, `docs/build-plans/` and three product documents. At 814b3b5, `Backlog.md` holds the B1, P57 and P62 specifications, so the native arm can find the same specification text the SOP arm reads.
 - **Narrow scope.**
   - Lite subset only: three tasks, one target repo, one model.

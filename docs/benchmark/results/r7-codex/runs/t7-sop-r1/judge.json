@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The workout exercise menu includes a “Skip Exercise” option."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Selecting it opens a confirmation dialog before applying the skip."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "Skipping sends every set with status `skipped`, and the server persists that status."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "The card checks for all sets skipped and displays “Skipped” before its completion or partial status."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "When all sets are skipped, the menu offers “Unskip Exercise” during the workout."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The existing `POST /sets` endpoint accepts and stores set status, including `skipped`."
+    },
+    {
+      "number": 7,
+      "met": 0,
+      "reason": "The diff adds no server test for skip or unskip."
+    },
+    {
+      "number": 8,
+      "met": 0,
+      "reason": "The diff adds no client test for the skip UI."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all 197 server and 289 client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "The added UI copy is direct and contains no exclamation marks."
+    }
+  ],
+  "overall": 0.8,
+  "packet_sha256": "b98be598c129551389996d244e618263fe44bbdcbd3fc846e55b0a473b96b3da",
+  "judge_version": 2
+}

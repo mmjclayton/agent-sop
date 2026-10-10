@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The exercise overflow menu includes a “Skip Exercise” option during log mode."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Skipping prompts for confirmation with window.confirm before calling the endpoint."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The server endpoint marks each set in the selected week with status \"skipped\"."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "An exercise whose sets are all skipped displays a “Skipped” label before the completion-state logic."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The menu offers “Unskip Exercise”; the endpoint restores logged status to filled sets and the UI updates."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "A POST endpoint handles skip and unskip for an exercise and rotation."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "A new server test covers skipping all sets and unskipping while preserving logged values."
+    },
+    {
+      "number": 8,
+      "met": 0,
+      "reason": "The diff adds no client test for the skip UI."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all server and client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "The added UI copy is direct and contains no exclamation marks."
+    }
+  ],
+  "overall": 0.9,
+  "packet_sha256": "94f852800d46f47e297cd03145d85697f0176609b9131a908e9d6ac7ef69bebc",
+  "judge_version": 2
+}

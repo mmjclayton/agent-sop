@@ -1,0 +1,57 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The keyboard row contains Copy Last, Done, and Next buttons."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done has flex: 2 while the adjacent buttons each have flex: 1, so it is narrower than the former full-width button."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "All three buttons have a 48px minimum height."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "Copy Last uses the prior set's value for the matching field and sends it to onChange."
+    },
+    {
+      "number": 5,
+      "met": 0.5,
+      "reason": "Next switches keypad state to reps, but NumericKeypad does not sync its displayed value when that state changes, so focus advancement is incomplete."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The button styles use design system color and radius variables."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The action buttons use a flexible row layout that accommodates the keypad on mobile."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "None of the button labels contain exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all 197 server and 291 client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "A new test checks that Copy Last sends the previous value to onChange."
+    }
+  ],
+  "overall": 0.95,
+  "packet_sha256": "0f1264594d90f22ae73f52a0b332e95f3c56210d23c7850b08582f3239e06438",
+  "judge_version": 2
+}

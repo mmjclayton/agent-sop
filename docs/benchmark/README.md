@@ -3,8 +3,9 @@
 > evaluation requirements are in `evaluation-protocol.md`; fixture suites remain
 > mandatory for script changes. Historical percentages are not current claims.
 >
-> **Current measurement:** [R6, native Codex vs current Agent SOP](results/r6-codex-summary.md)
-> (2026-10-10, k=3, `codex-bench.sh`). The lite subset is pinned to hst-tracker
+> **Current measurement:** [R7, project instructions with and without Agent SOP](results/r7-codex-summary.md)
+> (2026-10-10, k=3, `codex-bench.sh`), which supersedes the attribution in
+> [R6](results/r6-codex-summary.md). The lite subset is pinned to hst-tracker
 > 814b3b5 there; the 76b3b77 pin below already ships tasks 05, 07 and 08.
 
 # Agent SOP Benchmark Framework

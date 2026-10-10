@@ -1,0 +1,1 @@
+P57 remains **IN PROGRESS**. The local test suite passes (197 server, 289 client tests), but the isolated review still cannot read its clone under the sandbox, and CI confirmation is outstanding. I refreshed the in-flight record and resume snapshot; no commit was made.

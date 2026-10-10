@@ -1,0 +1,37 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The client formula applies one 2× multiplier when either or both flags are enabled."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "The same multiplier doubles the result when only one flag is enabled."
+    },
+    {
+      "number": 3,
+      "met": 0.5,
+      "reason": "The render-time client calculation is fixed, but the attempt also changes server-side tonnage calculations."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "No database columns or migrations were added."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "Harness results show all 197 server and 290 client tests passed."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "A test was added, but it checks standalone arithmetic rather than the component's calculation."
+    }
+  ],
+  "overall": 0.8333333333333334,
+  "packet_sha256": "f4f36c016ce4beaa1951306fe141018f61b6913cffbe31e250afb73cfd9ffb0f",
+  "judge_version": 2
+}

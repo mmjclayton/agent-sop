@@ -1,0 +1,37 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The client now applies a single multiplier of 2 when either flag is enabled, including when both are enabled."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "The OR-based multiplier doubles the tonnage when either individual flag is enabled."
+    },
+    {
+      "number": 3,
+      "met": 0.5,
+      "reason": "The client formula is fixed, but the attempt also changes server-side tonnage calculations despite tonnage being display-only."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "No database columns or migrations were added."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The harness reports all server and client tests passing."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "New tests cover the expected value, but the client test uses a hard-coded expression rather than exercising the client calculation."
+    }
+  ],
+  "overall": 0.8333333333333334,
+  "packet_sha256": "e643bc8444e5981ef919043d93fc12ad11eaa3adad7efee037207c23ae8eaa3c",
+  "judge_version": 2
+}

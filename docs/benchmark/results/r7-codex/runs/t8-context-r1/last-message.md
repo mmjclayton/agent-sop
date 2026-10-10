@@ -1,0 +1,3 @@
+Added the keyboard action row in [NumericKeypad.jsx](/private/tmp/claude-501/-Users-matt-clayton/5828038a-da51-4c78-a159-25c2f245b01f/scratchpad/p116/r7/runs/t8-context-r1/proj/client/src/components/NumericKeypad.jsx): **Copy Last** fills the current field from the previous set, and **Next** advances from weight to reps. Added tests for both actions.
+
+`npm test` passed: 197 server tests and 291 client tests.

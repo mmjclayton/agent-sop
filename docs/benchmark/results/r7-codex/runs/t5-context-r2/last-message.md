@@ -1,0 +1,3 @@
+Fixed the count-twice tonnage bug. When either or both toggles are enabled, tonnage now applies a single 2× multiplier. This corrects the live total, previous-workout comparison, finish summary, and workout history; historical tonnage is recalculated when displayed.
+
+Verification passed: focused client tests (17) and server integration tests (197). `git diff --check` is clean. B1 remains marked **IN PROGRESS** in [Backlog.md](/private/tmp/claude-501/-Users-matt-clayton/5828038a-da51-4c78-a159-25c2f245b01f/scratchpad/p116/r7/runs/t5-context-r2/proj/Backlog.md:2311).
