@@ -29,6 +29,10 @@
 # Environment:
 #   HST_REPO (~/Projects/hst-tracker)  BENCH_BASE_COMMIT (814b3b5)  BENCH_TEMPLATE (required for run)
 #   BENCH_ARMS ("native sop"; also "context")  BENCH_MODEL (gpt-6-luna)  BENCH_EFFORT (medium)  BENCH_JUDGE_EFFORT (high)  BENCH_TIMEOUT (1800 s)
+#   BENCH_END_MODE (closed): how a session before the last ends (P121). "closed": the
+#   session ends when the agent stops, as when the user closes the window. "ask": the
+#   task's "## End Prompt" is sent in the same session first, as when the user says
+#   they are stopping. One end mode per <out> directory.
 set -euo pipefail
 umask 077
 
@@ -52,6 +56,8 @@ read -r -a ARMS <<< "${BENCH_ARMS:-native sop}"
 [ "${#ARMS[@]}" -gt 0 ] || { echo "codex-bench: BENCH_ARMS is empty" >&2; exit 2; }
 for a in "${ARMS[@]}"; do case "$a" in native|context|sop) ;; *) echo "codex-bench: unknown arm $a" >&2; exit 2 ;; esac; done
 [ "$(printf '%s\n' "${ARMS[@]}" | sort -u | wc -l)" -eq "${#ARMS[@]}" ] || { echo "codex-bench: duplicate arm in BENCH_ARMS" >&2; exit 2; }
+END_MODE="${BENCH_END_MODE:-closed}"
+case "$END_MODE" in closed|ask) ;; *) echo "codex-bench: BENCH_END_MODE must be closed or ask" >&2; exit 2 ;; esac
 TIMED_OUT=142   # with_timeout's exit status
 JUDGE_VERSION=2 # bump when the packet or validation changes; older judge.json files are re-judged
 
@@ -60,6 +66,10 @@ log() { echo "[codex-bench $(date +%H:%M:%S)] $*" >&2; }
 task_file() { local f; f=$(printf '%s/task-%02d-' "$TASK_DIR" "$1"); ls "$f"*.md 2>/dev/null | head -1; }
 # The verbatim prompt is the quoted block under "## Prompt".
 task_prompt() { awk '/^## Prompt/{p=1;next} /^## /{p=0} p && /^>/{sub(/^> ?/,""); print}' "$(task_file "$1")"; }
+# Optional quoted block under "## End Prompt": sent in the same session when END_MODE=ask.
+task_end_prompt() { awk '/^## End Prompt/{p=1;next} /^## /{p=0} p && /^>/{sub(/^> ?/,""); print}' "$(task_file "$1")"; }
+# The first message the agent wrote in a session, for reading how it picked up the work.
+first_message() { jq -rs '[.[] | select(.type == "item.completed" and .item.type == "agent_message") | .item.text] | first // ""' "$1" 2>/dev/null | head -c 2000; }
 task_criteria() { awk '/^## Acceptance Criteria/{p=1;next} /^## /{p=0} p' "$(task_file "$1")"; }
 criteria_count() { task_criteria "$1" | grep -cE '^[0-9]+\.'; }
 # Optional "## Target" section: the file a dependent session should reach (continuity metric).
@@ -195,6 +205,38 @@ run_tests() {
     done
 }
 
+# After a session that is not the last: with END_MODE=ask, sends the task's End Prompt
+# in the same session (codex exec resume --last; the isolated CODEX_HOME holds only this
+# run's sessions) and records the turn in end.json; with "closed" records that none was sent.
+end_session() {
+    local run=$1 sdir=$2 task=$3 prior=$4 eprompt estatus=0 estart; shift 4
+    if [ "$END_MODE" != ask ] || [ "$prior" != 0 ]; then
+        jq -n '{sent:false, exit_code:0, wall_seconds:0, usage:null}' > "$sdir/end.json"; return 0
+    fi
+    eprompt=$(task_end_prompt "$task")
+    [ -n "$eprompt" ] || die "END_MODE=ask but task $task has no End Prompt"
+    printf '%s\n' "$eprompt" > "$sdir/end-prompt.txt"
+    install -m 600 "$AUTH" "$run/home/.codex/auth.json"
+    clean_env "$run/home"; estart=$(date +%s)
+    (cd "$run/proj" && with_timeout "$TIMEOUT" "${CLEAN[@]}" \
+        codex exec resume --last -m "$MODEL" \
+        -c model_reasoning_effort="\"$EFFORT\"" -c approval_policy='"never"' -c sandbox_mode='"workspace-write"' \
+        -c sandbox_workspace_write.network_access=true -c "sandbox_workspace_write.writable_roots=[\"$run/proj/.git\"]" \
+        "$@" --json -o "$sdir/end-last-message.md" - \
+        < "$sdir/end-prompt.txt" > "$sdir/end-events.jsonl" 2> "$sdir/end-stderr.log") || estatus=$?
+    rm -f "$run/home/.codex/auth.json"
+    restore_git "$run/proj" "$run"
+    jq -n --argjson exit "$estatus" --argjson wall "$(( $(date +%s) - estart ))" \
+        --argjson usage "$(usage_json "$sdir/end-events.jsonl" || echo null)" \
+        '{sent:true, exit_code:$exit, wall_seconds:$wall, usage:$usage}' > "$sdir/end.json"
+}
+
+# Files changed since the arm commit, as of now (a JSON array of paths).
+session_changes() {
+    local tree; tree=$(snapshot_tree "$1")
+    hgit -C "$1/proj" diff-tree -r --name-only "$(cat "$1/arm-commit")" "$tree" | jq -R . | jq -s .
+}
+
 # One run, in its own process so `set -e` applies throughout.
 one_run() {
     local out=$1 task=$2 arm=$3 rep=$4 run prompt start status=0 extra=()
@@ -247,13 +289,19 @@ one_run() {
         # Undo anything the agent wrote into .git that would run code under the harness.
         restore_git "$run/proj" "$run"
         if [ "$i" != "$n" ]; then
+            end_session "$run" "$sdir" "${seq[$((i - 1))]}" "$status" "${extra[@]+"${extra[@]}"}"
             usage_json "$sdir/events.jsonl" > "$sdir/usage.json" || { log "usage unreadable for session $i of $run"; echo null > "$sdir/usage.json"; }
+            session_changes "$run" > "$sdir/files-changed.json"
             jq -n --argjson session "$i" --arg task "${seq[$((i - 1))]}" --argjson exit "$status" --argjson wall "$wall" --slurpfile u "$sdir/usage.json" \
                 --argjson locate "$(locate_steps "$sdir/events.jsonl" "$(task_target "${seq[$((i - 1))]}")")" \
-                '{session:$session, task:$task, exit_code:$exit, wall_seconds:$wall, usage:$u[0], locate_steps:$locate}' > "$sdir/session.json"
+                --arg end_mode "$END_MODE" --slurpfile end "$sdir/end.json" --slurpfile changed "$sdir/files-changed.json" \
+                '{session:$session, task:$task, exit_code:$exit, wall_seconds:$wall, usage:$u[0], locate_steps:$locate,
+                  end_mode:$end_mode, end:$end[0], files_changed:$changed[0]}' > "$sdir/session.json"
             # A later session is only meaningful if this one completed and did work.
             [ "$status" = 0 ] || die "session $i of $run did not complete (exit $status)"
             jq -e '.usage != null' "$sdir/session.json" >/dev/null || die "session $i of $run reported no usage"
+            jq -e '.end.exit_code == 0 and ((.end.sent | not) or .end.usage != null)' "$sdir/session.json" >/dev/null \
+                || die "the end-of-session turn for session $i of $run did not complete"
         fi
     done
     hgit -C "$run/proj" add -A
@@ -280,8 +328,9 @@ finish_run() {
         --argjson s_exit "$(cat "$run/test-server.exit")" --argjson c_exit "$(cat "$run/test-client.exit")" \
         --argjson s_pass "$s_pass" --argjson s_fail "$s_fail" --argjson c_pass "$c_pass" --argjson c_fail "$c_fail" \
         --argjson usage "$usage" --arg codex "$(codex --version)" --arg judged "$judged" --argjson sessions "$sessions" \
+        --arg end_mode "$END_MODE" --arg first "$(first_message "$run/events.jsonl")" \
         --argjson locate "$(locate_steps "$run/events.jsonl" "$(task_target "$judged")")" '
-        {task:$task, judged_task:$judged, earlier_sessions:$sessions, locate_steps:$locate, arm:$arm, rep:$rep, model:$model, effort:$effort, codex:$codex, exit_code:$exit,
+        {task:$task, judged_task:$judged, earlier_sessions:$sessions, end_mode:$end_mode, first_message:$first, locate_steps:$locate, arm:$arm, rep:$rep, model:$model, effort:$effort, codex:$codex, exit_code:$exit,
          timed_out:($exit == $timed_out_code), wall_seconds:$wall, files_changed:$changed,
          tests:{server:{exit:$s_exit, passed:$s_pass, failed:$s_fail}, client:{exit:$c_exit, passed:$c_pass, failed:$c_fail}},
          tests_ran:($s_pass != null and $c_pass != null), usage:$usage}
@@ -353,7 +402,7 @@ JSON
 
 report() {
     local out=$1 r d
-    { printf 'task\tarm\trep\tvalid\texit\ttimed_out\tjudge\tserver_exit\tserver_pass\tserver_fail\tclient_exit\tclient_pass\tclient_fail\twall_s\tinput_tokens\tcached_input\toutput_tokens\treasoning\tlocate_steps\tearlier_wall_s\tearlier_output_tokens\n'
+    { printf 'task\tarm\trep\tvalid\texit\ttimed_out\tjudge\tserver_exit\tserver_pass\tserver_fail\tclient_exit\tclient_pass\tclient_fail\twall_s\tinput_tokens\tcached_input\toutput_tokens\treasoning\tlocate_steps\tearlier_wall_s\tearlier_output_tokens\tend_mode\n'
       for r in "$out"/runs/*/result.json; do
           [ -f "$r" ] || continue
           d=$(dirname "$r")
@@ -369,8 +418,8 @@ report() {
             [.task, .arm, .rep, .valid, .exit_code, .timed_out, ($j // "NA"),
              .tests.server.exit, .tests.server.passed, .tests.server.failed, .tests.client.exit, .tests.client.passed, .tests.client.failed,
              .wall_seconds, tok(.input_tokens), tok(.cached_input_tokens), tok(.output_tokens), tok(.reasoning_output_tokens),
-             .locate_steps, ((.earlier_sessions // []) | map(.wall_seconds) | add),
-             ((.earlier_sessions // []) | map(.usage // [] | map(.output_tokens // 0) | add) | add)]
+             .locate_steps, ((.earlier_sessions // []) | map(.wall_seconds + (.end.wall_seconds // 0)) | add),
+             ((.earlier_sessions // []) | map((.usage // []) + (.end.usage // []) | map(.output_tokens // 0) | add) | add), (.end_mode // "closed")]
             | map(if . == null then "NA" else . end) | @tsv' "$r"
       done; } > "$out/scores.tsv"
     column -t -s $'\t' "$out/scores.tsv"
@@ -398,6 +447,8 @@ case "$cmd" in
         done
         [ -f "$AUTH" ] || die "no Codex login at $AUTH"
         mkdir -p "$out/runs"; out=$(cd "$out" && pwd -P)
+        if [ -f "$out/end-mode" ]; then [ "$(cat "$out/end-mode")" = "$END_MODE" ] || die "$out was run with end mode $(cat "$out/end-mode"); use another directory"
+        else echo "$END_MODE" > "$out/end-mode"; fi
         plan=$(for t in $tasks; do for r in $(seq 1 "$k"); do for a in "${ARMS[@]}"; do echo "$t $a $r"; done; done; done | perl -MList::Util=shuffle -e 'print shuffle <STDIN>')
         [ -n "$plan" ] || die "empty plan (check -k and --tasks)"
         printf '%s\n' "$plan" > "$out/plan.txt"
