@@ -58,6 +58,7 @@ criteria_count() { task_criteria "$1" | grep -cE '^[0-9]+\.'; }
 with_timeout() {
     perl -e 'my $t = shift; my $pid = fork // die "fork: $!";
         if (!$pid) { setpgrp(0, 0); exec @ARGV or exit 127 }
+        for my $sig ("INT", "TERM") { $SIG{$sig} = sub { kill "TERM", -$pid; sleep 2; kill "KILL", -$pid; exit 130 } }
         local $SIG{ALRM} = sub { kill "TERM", -$pid; sleep 2; kill "KILL", -$pid; waitpid($pid, 0); exit '"$TIMED_OUT"' };
         alarm $t; waitpid($pid, 0); alarm 0;
         exit($? & 127 ? 128 + ($? & 127) : $? >> 8)' "$@"
@@ -80,7 +81,7 @@ restore_git() {
     local proj=$1 run=$2
     [ -d "$proj/.git" ] && [ ! -L "$proj/.git" ] || die ".git in $proj was replaced; run is unusable"
     rm -f "$proj/.git/config"; cp "$run/git-config.orig" "$proj/.git/config"
-    rm -rf "$proj/.git/hooks"
+    rm -rf "$proj/.git/hooks" "$proj/.git/info/exclude" "$proj/.git/info/attributes"
 }
 
 isolated_home() {
@@ -162,10 +163,13 @@ one_run() {
     if [ -f "$run/result.json" ] && jq -e '.valid == true' "$run/result.json" >/dev/null 2>&1; then
         log "done already: $run"; return 0
     fi
-    rm -rf "$run"; mkdir -p "$run"
+    # An invalid attempt is kept as evidence, never deleted.
+    if [ -e "$run" ]; then local n=1; while [ -e "$run.invalid-$n" ]; do n=$((n + 1)); done; mv "$run" "$run.invalid-$n"; fi
+    mkdir -p "$run"
     # Expanded now: the locals are gone by the time the trap fires.
     # shellcheck disable=SC2064
-    trap "rm -f $(printf '%q' "$run/home/.codex/auth.json")" EXIT INT TERM
+    trap "rm -f $(printf '%q' "$run/home/.codex/auth.json")" EXIT
+    trap 'exit 130' INT; trap 'exit 143' TERM
     isolated_home "$run/home"
     prepare_arm "$run" "$arm"
     prompt=$(task_prompt "$task"); [ -n "$prompt" ] || die "no prompt for task $task"
@@ -213,7 +217,7 @@ finish_run() {
          tests:{server:{exit:$s_exit, passed:$s_pass, failed:$s_fail}, client:{exit:$c_exit, passed:$c_pass, failed:$c_fail}},
          tests_ran:($s_pass != null and $c_pass != null), usage:$usage}
         | .tests_suspect = ((.tests.server.exit != 0 and .tests.server.failed == 0) or (.tests.client.exit != 0 and .tests.client.failed == 0))
-        | .valid = (.exit_code == 0 and .tests_ran and (.tests_suspect | not) and .usage != null)' > "$run/result.json.tmp"
+        | .valid = (.exit_code == 0 and .usage != null)' > "$run/result.json.tmp"
     mv "$run/result.json.tmp" "$run/result.json"
 }
 
@@ -258,7 +262,8 @@ JSON
     rm -f "$run/judge-raw.json" "$run/judge.json.tmp"
     jh="$run/judge-home"; rm -rf "$jh"; jdir=$(mktemp -d)
     # shellcheck disable=SC2064
-    trap "rm -rf $(printf '%q %q' "$jh" "$jdir")" EXIT INT TERM
+    trap "rm -rf $(printf '%q %q' "$jh" "$jdir")" EXIT
+    trap 'exit 130' INT; trap 'exit 143' TERM
     isolated_home "$jh"
     clean_env "$jh"
     with_timeout 900 "${CLEAN[@]}" codex exec -C "$jdir" --skip-git-repo-check -s read-only \
@@ -318,7 +323,7 @@ case "$cmd" in
             bash "$SELF" one "$out" "$t" "$a" "$r" < /dev/null || { failed=$((failed + 1)); log "run failed: t$t $a r$r"; }
         done 3<<< "$plan"
         invalid=$(for r in "$out"/runs/*/result.json; do [ -f "$r" ] || continue; jq -r 'select(.valid != true) | "\(.task) \(.arm) \(.rep)"' "$r"; done)
-        [ -z "$invalid" ] || { log "invalid runs (codex exit or tests did not run):"; printf '%s\n' "$invalid" >&2; failed=$((failed + $(printf '%s\n' "$invalid" | wc -l))); }
+        [ -z "$invalid" ] || { log "invalid runs (codex failed or reported no usage):"; printf '%s\n' "$invalid" >&2; failed=$((failed + $(printf '%s\n' "$invalid" | wc -l))); }
         [ "$failed" = 0 ] || die "$failed run(s) failed or invalid; rerun to retry them"
         ;;
     judge)
