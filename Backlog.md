@@ -1212,7 +1212,10 @@ Requested by Matt, 30 Sep 2026. Sessions closed with `/update-sop` and then wrot
 
 ### P115 - Independent review findings: README, setup header, archive, lint
 
-`[IN PROGRESS] [Iteration]`
+`[SHIPPED - 2026-10-10] [Iteration]`
+review: docs/reviews/20261010-124948-ship-auto.md
+
+On branch `docs/independent-review-fixes`; merge and remote branch deletion are tracked in the in-flight line until done.
 
 Requested by Matt, 10 Oct 2026, after an outside review of `main` at 61b8642. Verified claim by claim before acting; three of the review's figures were corrected (shellcheck was not clean outside `scripts/`; shell is 7,358 lines, not about 4,550; the archive rule was being followed, with 6 items newly due).
 
