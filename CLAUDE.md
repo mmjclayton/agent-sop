@@ -43,6 +43,7 @@ Test: `bash docs/benchmark/hook-fixtures/run-tests.sh` (also `resume-path-fixtur
 - P80 — Benchmark rubric: pairwise scoring, and read judge reasoning not scores — [OPEN] [Iteration]
 - P108 — Codex compatibility follow-ups from native-runtime review — [OPEN] [Iteration]
 - P116 - Fresh multi-run comparison on the current SOP — [OPEN] [Iteration]
+- P117 - Remove the stale ship-sop reviewer runner from agent-sop — [IN PROGRESS] [Refactor]
 <!-- priority-items:end -->
 
 ---

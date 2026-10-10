@@ -18,6 +18,8 @@ test ! -e "$WORK/project/CLAUDE.md"
 test ! -e "$AGENT_SOP_USER_HOME/.claude"
 test -f "$AGENT_SOP_USER_HOME/.agents/skills/update-sop/SKILL.md"
 jq -e '.hooks | keys == ["PreToolUse","SessionStart","Stop","UserPromptSubmit"]' "$AGENT_SOP_USER_HOME/.codex/hooks.json" >/dev/null
+# The reviewer runner belongs to ship-sop; agent-sop never installs it.
+test ! -e "$AGENT_SOP_USER_HOME/.codex/scripts/ship-sop"
 printf 'PASS: Codex-only install creates native assets without Claude configuration\n'
 printf '\nProject customization\n' >> "$WORK/project/AGENTS.md"
 cp "$WORK/project/AGENTS.md" "$WORK/expected"

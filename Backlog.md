@@ -1248,3 +1248,19 @@ Design follows `docs/benchmark/evaluation-protocol.md`: fresh `claude -p` proces
 - Cost cap, task count, k and success criteria recorded here before the paid run
 - Pilot run proves both arms start clean (no inherited global instructions, no hooks from the operator's home)
 - Results reported as median and range per arm, with overlap stated, in `docs/benchmark/results/`
+
+---
+
+### P117 - Remove the stale ship-sop reviewer runner from agent-sop
+
+`[IN PROGRESS] [Refactor]`
+
+Raised from ship-sop's 10 Oct review follow-up (its P37 record): agent-sop carried `scripts/codex-review.sh`, a P107-era copy of ship-sop's runner without the timeout, process-group kill, retained evidence or telemetry added in ship-sop since. agent-sop's `install-codex.sh` installs that file only when it runs as ship-sop, so the copy was never installed from here; the installed runner on this machine matches ship-sop's. `install-codex.sh` is headed "shared verbatim" but lacked ship-sop's `codex-usage.sh` lines.
+
+- Delete `scripts/codex-review.sh`; ship-sop owns it.
+- Copy ship-sop's `install-codex.sh` so the two match again.
+- Codex fixture asserts an agent-sop install writes nothing under `~/.codex/scripts/ship-sop`.
+
+**Acceptance criteria:**
+- `cmp scripts/install-codex.sh ../ship-sop/scripts/install-codex.sh` is clean
+- All fixture suites pass
