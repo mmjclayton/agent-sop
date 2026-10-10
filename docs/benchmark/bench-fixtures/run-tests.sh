@@ -38,7 +38,7 @@ printf '%s\n%s\n' "$args" "$auth" > "$FAKE_TRACE/args-$n"
 printf '{"type":"thread.started","thread_id":"%s"}\n' "$thread"
 case "$prompt" in
     *"Continue where we left off"*) echo client > "$dir/client/rpe.txt"; msg='Picking up the client side of RPE.'
-        printf '{"type":"item.completed","item":{"type":"command_execution","command":"cat ../session-1/prompt.txt"}}\n' ;;
+        [ -f "$FAKE_TRACE/no-peek" ] || printf '{"type":"item.completed","item":{"type":"command_execution","command":"ls ~/.codex"}}\n' ;;
     *"stopping here"*) echo 'decisions: last set only' > "$dir/notes.md"; msg='Notes written.' ;;
     *) echo server > "$dir/server/rpe.txt"; msg='Server side done.' ;;
 esac
@@ -95,14 +95,20 @@ test ! -e "$run/home/.codex/auth.json"
 printf 'PASS: ask mode resumes session 1 with the end prompt before session 2, and records it\n'
 
 # closed: no end prompt; session 2 still sees what session 1 left.
-mkdir -p "$WORK/out-closed"; reset_trace
+mkdir -p "$WORK/out-closed"; reset_trace; touch "$WORK/trace/no-peek"
 BENCH_END_MODE=closed bench "$WORK/out-closed" 10+11 native 1 2> "$WORK/closed.log" || { tail -20 "$WORK/closed.log"; exit 1; }
 run="$WORK/out-closed/runs/t10+11-native-r1"
 [ "$(find "$WORK/trace" -name 'call-*' | wc -l | tr -d ' ')" = 2 ]
 if grep -q resume "$WORK/trace/call-1"; then echo 'FAIL: closed mode resumed session 1'; exit 1; fi
 jq -e '.end_mode == "closed" and .earlier_sessions[0].end.sent == false and .valid == true' "$run/result.json" >/dev/null
+jq -e '.read_session_records == false and .earlier_sessions[0].changed_client == false' "$run/result.json" >/dev/null
+bash "$BENCH" report "$WORK/out-closed" > /dev/null 2> "$WORK/report-closed.log" || { cat "$WORK/report-closed.log"; exit 1; }
+awk -F'\t' 'NR == 1 { for (i = 1; i <= NF; i++) col[$i] = i }
+    NR == 2 { ok = ($col["read_session_records"] == "false" && $col["s1_changed_client"] == "false" && $col["s1_changed_server"] == "true") }
+    END { exit !ok }' "$WORK/out-closed/scores.tsv"
 test -f "$run/proj/server/rpe.txt"
-printf 'PASS: closed mode sends no end prompt and carries session 1 work forward\n'
+rm "$WORK/trace/no-peek"
+printf 'PASS: closed mode sends no end prompt and carries session 1 work forward; false flags report as false\n'
 
 # A failed end turn invalidates the pair instead of scoring session 2 from a half-closed base.
 mkdir -p "$WORK/out-fail"; reset_trace

@@ -70,14 +70,16 @@ task_prompt() { awk '/^## Prompt/{p=1;next} /^## /{p=0} p && /^>/{sub(/^> ?/,"")
 task_end_prompt() { awk '/^## End Prompt/{p=1;next} /^## /{p=0} p && /^>/{sub(/^> ?/,""); print}' "$(task_file "$1")"; }
 # The first message the agent wrote in a session, for reading how it picked up the work.
 # Lines are parsed one at a time, so a line cut off by a timeout does not hide the rest.
-first_message() { jq -rR 'fromjson? | select(.type == "item.completed" and .item.type == "agent_message") | .item.text' "$1" | head -n 1 | head -c 2000; }
+first_message() { jq -rRn 'first(inputs | fromjson? | select(.type == "item.completed" and .item.type == "agent_message") | .item.text) // ""' "$1" | head -c 2000; }
 # The session's thread id, from its first thread.started event.
-thread_id() { jq -rR 'fromjson? | select(.type == "thread.started") | .thread_id // empty' "$1" | head -n 1; }
-# Paths a session read or ran commands on that hold an earlier session's prompt: the
-# harness's own session folders or Codex's stored transcripts (P121 leak check).
+thread_id() { jq -rRn 'first(inputs | fromjson? | select(.type == "thread.started") | .thread_id) // ""' "$1"; }
+# Commands a session ran that name a place holding an earlier session's prompt: the
+# harness's own session folders or Codex's home and transcripts (P121 leak check).
+# Heuristic: true means such a command was seen; false means none was seen, not that
+# nothing was read (reads by hooks or through other tools are not visible here).
 read_session_records() {
     jq -sR '[split("\n")[] | fromjson? | select(.type == "item.completed") | .item | (.command // "") | tostring
-        | select(test("session-[0-9]+/|\\.codex/sessions|/sessions/20[0-9][0-9]/"))] | length > 0' "$1"
+        | select(test("session-[0-9]+\\b|\\.codex\\b|CODEX_HOME|/sessions/20[0-9][0-9]/"))] | length > 0' "$1"
 }
 task_criteria() { awk '/^## Acceptance Criteria/{p=1;next} /^## /{p=0} p' "$(task_file "$1")"; }
 criteria_count() { task_criteria "$1" | grep -cE '^[0-9]+\.'; }
@@ -447,7 +449,9 @@ report() {
              .wall_seconds, tok(.input_tokens), tok(.cached_input_tokens), tok(.output_tokens), tok(.reasoning_output_tokens),
              .locate_steps, ((.earlier_sessions // []) | map(.wall_seconds + (.end.wall_seconds // 0)) | add),
              ((.earlier_sessions // []) | map((.usage // []) + (.end.usage // []) | map(.output_tokens // 0) | add) | add), (.end_mode // "NA"),
-             (.read_session_records // "NA"), (.earlier_sessions[0].changed_server // "NA"), (.earlier_sessions[0].changed_client // "NA")]
+             (.read_session_records | if . == null then "NA" else . end),
+             (.earlier_sessions[0].changed_server | if . == null then "NA" else . end),
+             (.earlier_sessions[0].changed_client | if . == null then "NA" else . end)]
             | map(if . == null then "NA" else . end) | @tsv' "$r"
       done; } > "$out/scores.tsv"
     column -t -s $'\t' "$out/scores.tsv"
