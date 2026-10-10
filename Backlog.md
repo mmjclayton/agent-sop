@@ -1209,3 +1209,39 @@ Requested by Matt, 30 Sep 2026. Sessions closed with `/update-sop` and then wrot
 - All nine suites pass
 
 ---
+
+### P115 - Independent review findings: README, setup header, archive, lint
+
+`[IN PROGRESS] [Iteration]`
+
+Requested by Matt, 10 Oct 2026, after an outside review of `main` at 61b8642. Verified claim by claim before acting; three of the review's figures were corrected (shellcheck was not clean outside `scripts/`; shell is 7,358 lines, not about 4,550; the archive rule was being followed, with 6 items newly due).
+
+- README: the "awaiting merge" sentence about ownership claims removed; they are on main. New section "What setup changes, and how to remove it": install footprint, `install-hooks.sh --dry-run`, the uninstall commands and what the hooks can block.
+- `setup.sh`: header and usage list `--runtime` and `--no-hooks`.
+- Backlog: P60 to P65 archived with `scripts/archive-backlog.sh`.
+- Lint: seven shellcheck findings under `docs/benchmark/` fixed; CI lints every tracked `.sh` file.
+- Remote branches: `docs/explicit-multi-session-readme` (content already on main) and three merged branches deleted.
+
+**Acceptance criteria:**
+- README states no unshipped feature as pending, and names the uninstall path for each runtime
+- `git ls-files -z '*.sh' | xargs -0 shellcheck -S warning` exits 0, and CI runs it
+- All nine suites pass
+
+---
+
+### P116 - Fresh multi-run comparison on the current SOP
+
+`[OPEN] [Iteration]`
+
+Requested by Matt, 10 Oct 2026, from the same review: the only A/B results are R1 to R5 (April, single-run, margins from +33% to negative), which the repo already labels historical. This is the native-model comparison pilot deferred at AUD 0 on 24 Sep (P110), reopened.
+
+Design follows `docs/benchmark/evaluation-protocol.md`: fresh `claude -p` processes with isolated config directories, never subagents of a working session (they inherit the operator's global instructions into both arms). Conditions 1 and 3 first (native defaults vs current Agent SOP installed into the target); the frozen lite subset (tasks 05, 07, 08) on `hst-tracker` at 76b3b77; deterministic acceptance scored first, then the blind rubric. Pilot of one run per task per arm to validate the harness, then k=3.
+
+**Open questions:**
+- Cost cap for the paid run (Matt). The protocol requires it set before any paid run.
+- Whether the runs bill to the subscription login or an API key; no key is set on this machine.
+
+**Acceptance criteria:**
+- Cost cap, task count, k and success criteria recorded here before the paid run
+- Pilot run proves both arms start clean (no inherited global instructions, no hooks from the operator's home)
+- Results reported as median and range per arm, with overlap stated, in `docs/benchmark/results/`

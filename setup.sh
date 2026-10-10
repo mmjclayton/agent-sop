@@ -14,7 +14,7 @@
 #   --code      Use the code project template (adds Auth, Database, Design System,
 #               Code Quality Rules). Without this flag the base template is used.
 #   --force     Overwrite existing files. Without this flag existing files are skipped.
-#   --no-hooks  Do not register the user-scope hooks; run the workflows manually.
+#   --no-hooks  Do not register the user-scope hooks (Claude or Codex); run the workflows manually.
 #
 # What it creates (per-project, customised — from templates):
 #   CLAUDE.md                          Project instructions
@@ -74,7 +74,7 @@ usage() {
     echo "  --runtime claude|codex|both  (default: claude)"
     echo "  --code       Use the code project template (Auth, DB, Design System)"
     echo "  --force      Overwrite existing files"
-    echo "  --no-hooks   Do not register the user-scope hooks in ~/.claude/settings.json"
+    echo "  --no-hooks   Do not register the user-scope hooks (Claude settings.json or Codex hooks.json)"
     echo ""
     echo "Run this from the agent-sop repo directory."
     exit 1

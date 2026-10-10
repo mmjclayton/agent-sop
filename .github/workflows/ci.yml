@@ -17,4 +17,5 @@ jobs:
             bash "$suite" || exit 1
           done
       - name: Shell lint
-        run: git ls-files -z '*.sh' | xargs -0 shellcheck -S warning
+        shell: bash
+        run: git ls-files -z '*.sh' | xargs -0 -r shellcheck -S warning

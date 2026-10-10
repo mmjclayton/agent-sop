@@ -44,11 +44,10 @@ warn() { echo -e "\033[0;33m[bench]\033[0m $*" >&2; }
 
 parse_opts() {
   while [ $# -gt 0 ]; do
-    # shellcheck disable=SC2206  # --tasks splits its value on purpose
     case "$1" in
       -k) RUNS="${2:?-k needs a value}"; shift 2 ;;
       --lite) TASK_LIST=("${LITE_TASKS[@]}"); shift ;;
-      --tasks) TASK_LIST=(${2:?--tasks needs a value}); shift 2 ;;
+      --tasks) read -r -a TASK_LIST <<< "${2:?--tasks needs a value}"; shift 2 ;;
       *) shift ;;
     esac
   done
