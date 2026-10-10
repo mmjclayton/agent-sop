@@ -2,4 +2,4 @@
 (2026-09-30): P113 and P114 merged via PR #33 (6d89a77). Hook installed and registered on this machine, installed commands and baseline SHAs refreshed the same day. ship-sop replication is ship-sop P36, on its own PR. Nothing else in flight.
 (2026-10-07): research digests moved into docs/research/ (PR #36, 5af9db2); the scheduled scanner now writes there, so each run leaves an uncommitted digest for the next session to commit via PR. Nothing else in flight.
 (2026-10-10): P115 merged via PR #38 (5191fe0); four stale remote branches deleted. P116 (fresh multi-run comparison) is open and waits on Matt's cost cap. Nothing else in flight.
-(2026-10-10): P117 (PR #41), P118 (PR #42), P116 (PR #43, 997570a) merged. P119 R7 control arm in review on feat/p119-context-control-arm.
+(2026-10-10): P117 (PR #41), P118 (PR #42), P116 (PR #43) and P119 (PR #45, 03185c3) merged. Nothing else in flight.
