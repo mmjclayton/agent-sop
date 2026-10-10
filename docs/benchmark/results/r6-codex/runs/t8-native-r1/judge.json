@@ -1,0 +1,56 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "Copy Last, Next (for weight), and Done appear together in the keyboard actions row."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done uses flex sizing in the three-button row instead of full width."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The buttons’ vertical padding and text height provide approximately 44px or more of touch height."
+    },
+    {
+      "number": 4,
+      "met": 0,
+      "reason": "Copy Last updates the keypad value prop, but NumericKeypad’s displayed value is held in local state and does not sync to that prop."
+    },
+    {
+      "number": 5,
+      "met": 0,
+      "reason": "Next changes the target field and value, but the keypad display also does not sync, so the visible keypad does not advance to reps."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "Most colors and the border radius use design tokens, but the buttons still use hardcoded color values."
+    },
+    {
+      "number": 7,
+      "met": 0.5,
+      "reason": "The actions use a flexible row, but no mobile-specific behavior is shown to verify the layout below 768px."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "Button labels are plain and contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all existing server and client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 0,
+      "reason": "The diff adds no test for Copy Last logic."
+    }
+  ],
+  "overall": 0.6,
+  "model_overall": 0.6
+}

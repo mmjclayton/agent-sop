@@ -1,0 +1,36 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "Both flags now apply a single multiplier of 2 to weight × reps."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Either flag alone also applies a multiplier of 2."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The calculation is implemented in client code and used during rendering."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "No database columns or migrations were added."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The harness reports all 197 server and 289 client tests passed."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "A test was added for both flags being enabled."
+    }
+  ],
+  "overall": 1,
+  "model_overall": 1
+}

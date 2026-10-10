@@ -1,0 +1,175 @@
+{
+  "schema_version": 2,
+  "base": "d11e7241f4839c501e0e1b3d12f35c24499b9a5a",
+  "head": "6e6e0df348cbc7e9aaeff9f1376f432b17a99885",
+  "tree": "ad35244c013966db3ac21429b7dbba2770a29aed",
+  "policy_sha256": "2bf3e7532a015bebf17f7553468f92f27d5b777be7d19cb8aca33e5e8b07e494",
+  "tests": {
+    "status": "PASS",
+    "evidence": "At 433a9ed (6e6e0df is docs only): all nine docs/benchmark/*-fixtures/run-tests.sh suites exit 0; git ls-files -z '*.sh' | xargs -0 shellcheck -S warning exits 0. Harness validated with real codex runs after the final changes: template build with baseline 197/289; native and SOP task-05 runs valid; judge and re-judge (skipped by packet hash) exit 0; an invalid stub archived to invalid/ with its auth copy removed; a SOP run reaching 1800 s recorded exit 142 timed_out true with its process group killed; report on the committed R6 folder reproduces identical judge columns; no auth.json copies remain. validate-state-transitions OK."
+  },
+  "reviewers": [
+    {
+      "name": "security-reviewer",
+      "version": "7f43a9e27d8aed8f8a55b4fd970e5c33cf83902f896ade200da05efb15d9bda0",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 4,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 119,
+          "message": "Fixed (was HIGH, below block_on): agent-writable .git could plant config executed by harness git calls; hgit hardening, .git/config restore, hooks and info removal."
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 118,
+          "message": "Fixed (was MEDIUM): operator environment inherited by codex, npm test and judge; now env -i with PATH/HOME/CODEX_HOME/TERM/LANG only."
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 45,
+          "message": "Fixed (was MEDIUM): login copies persisted in run homes; umask 077, install -m 600, deleted after each exec and by EXIT trap, removed before archiving."
+        },
+        {
+          "severity": "MEDIUM",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 143,
+          "message": "npm test runs agent-written code on the host outside the Codex sandbox. Accepted residual; stated in the header."
+        },
+        {
+          "severity": "MEDIUM",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 45,
+          "message": "Login copies could rotate refresh tokens. Mitigated by warming the main login first; main login confirmed working after R6. Accepted."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 165,
+          "message": "Hooks inside the writable workspace run under --dangerously-bypass-hook-trust; sandboxed. Accepted."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 80,
+          "message": ".git subpaths other than config, hooks and info could be replaced by symlinks. Accepted."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 172,
+          "message": "Archived attempts keep the agent-written proj/.git; harness never runs git there. Accepted."
+        }
+      ]
+    },
+    {
+      "name": "code-reviewer",
+      "version": "f6420e5df2c684f2da46628e1c1c264dbb865ac3130701ff8025111b392bd677",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 4,
+      "block_rounds": 0,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "MEDIUM",
+          "file": "docs/benchmark/results/r6-codex/runs/t7-native-r2/judge.json",
+          "line": 1,
+          "message": "Judge overall 0.70 disagreed with its criteria mean 0.60. Fixed: overall recomputed from marks in all files (model_overall kept); summary task 07 row and delta corrected; harness computes scores."
+        },
+        {
+          "severity": "MEDIUM",
+          "file": "Backlog.md",
+          "line": 1249,
+          "message": "Baseline stated as 212/305; corrected to 197/289 at 814b3b5."
+        },
+        {
+          "severity": "MEDIUM",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 170,
+          "message": "Archived invalid runs matched runs/* globs. Fixed: archives under <out>/invalid/."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/results/r6-codex-summary.md",
+          "line": 77,
+          "message": "Native arm keeps project docs beyond Backlog.md. Disclosed in Limits."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/results/r6-codex-summary.md",
+          "line": 62,
+          "message": "valid definition wording; fixed in 6e6e0df."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/recent-work/2026-10-10_solo_p116-codex-benchmark.md",
+          "line": 5,
+          "message": "Commit list; fixed in 6e6e0df."
+        }
+      ]
+    },
+    {
+      "name": "silent-failure-hunter",
+      "version": "004ce0389356e0666d80c89cef39ad895ab326b3f7d19d34d23c70ab249a795d",
+      "model": "sonnet",
+      "verdict": "PASS",
+      "launches": 1,
+      "rechecks": 4,
+      "block_rounds": 1,
+      "usage": null,
+      "findings": [
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 200,
+          "message": "Fixed (BLOCK round 645fae2, was HIGH): set -e inert inside one_run; each run now a separate process."
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 135,
+          "message": "Fixed (was HIGH): unrun suites read as 0 failures; count_tests returns null, report shows exits and pass counts."
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 108,
+          "message": "Fixed (was HIGH): failed codex runs recorded as normal results; valid flag, invalid runs skipped by judge and archived."
+        },
+        {
+          "severity": "INFO",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 216,
+          "message": "Fixed (was MEDIUM): suite-broken and timed-out runs were classed invalid and retried, biasing toward the arm that breaks or stalls; now scored as results."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 312,
+          "message": "Report summary does not count timed-out runs per arm (column shows them). Accepted."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 303,
+          "message": "Older-version judge scores are shown with a stderr warning; needed for the frozen R6 folder. Accepted."
+        },
+        {
+          "severity": "LOW",
+          "file": "docs/benchmark/codex-bench.sh",
+          "line": 228,
+          "message": "A timed-out run can be valid with NA usage, excluded from token sums. Accepted; NA shown."
+        }
+      ]
+    }
+  ]
+}

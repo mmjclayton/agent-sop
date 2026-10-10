@@ -28,7 +28,8 @@
 set -euo pipefail
 
 HST_REPO="${HST_REPO:-$HOME/Projects/hst-tracker}"
-# Base commit: has sharpened CLAUDE.md but BEFORE any benchmark features were implemented
+# Base commit: has sharpened CLAUDE.md. It already ships lite-subset tasks 05, 07 and
+# 08 (B1 e06d4a5, P57 cd51d88, P62 f126f7c); codex-bench.sh pins 814b3b5 instead (P116).
 BASE_COMMIT="${BENCH_BASE_COMMIT:-76b3b77}"
 
 # Frozen lite subset. See docs/benchmark/README.md "Frozen lite subset".

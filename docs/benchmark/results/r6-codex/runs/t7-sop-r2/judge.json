@@ -1,0 +1,56 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The workout exercise menu includes “Skip Exercise” while logging is active."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Selecting it opens a confirmation modal before applying the skip."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The existing sets endpoint accepts skipped status, and the client submits every set with status “skipped”."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "An exercise whose sets are all skipped displays a “Skipped” label, with a separate partial-completion condition."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The menu offers “Resume Exercise” for a skipped exercise and clears its skipped statuses."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The existing sets endpoint handles marking sets skipped and supports clearing them to resume."
+    },
+    {
+      "number": 7,
+      "met": 0,
+      "reason": "The diff contains no new server test for skip or unskip."
+    },
+    {
+      "number": 8,
+      "met": 0,
+      "reason": "The diff contains no new client test for the skip UI."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The reported server and client test suites both pass."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "The added UI copy is direct and contains no exclamation marks."
+    }
+  ],
+  "overall": 0.8,
+  "model_overall": 0.8
+}

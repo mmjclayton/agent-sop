@@ -1,0 +1,36 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The client formula applies a single ×2 multiplier when either flag is enabled, including when both are true."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "With either flag alone, the formula doubles the resulting weight × reps value."
+    },
+    {
+      "number": 3,
+      "met": 0.5,
+      "reason": "The client render-time calculation is fixed, but the attempt also changes server tonnage calculations."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "No database columns or migrations were added."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The harness reports all 197 server and 289 client tests passing."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "A both-flags assertion was added, though it tests a duplicated helper formula rather than the application calculation."
+    }
+  ],
+  "overall": 0.8333333333333334,
+  "model_overall": 0.8333333333
+}

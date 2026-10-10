@@ -1,0 +1,36 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The client helper applies a single ×2 multiplier when both flags are true."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Either flag alone also applies ×2 to each set's tonnage."
+    },
+    {
+      "number": 3,
+      "met": 0.5,
+      "reason": "The display calculation is fixed in the client, but the attempt also changes server tonnage calculations."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "No database columns or migrations were added."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The harness reports all existing server and client tests pass."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "Tests were added for both flags enabled and each flag enabled individually."
+    }
+  ],
+  "overall": 0.9166666666666666,
+  "model_overall": 0.9166666667
+}

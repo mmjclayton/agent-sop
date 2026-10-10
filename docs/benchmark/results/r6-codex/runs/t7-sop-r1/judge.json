@@ -1,0 +1,56 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The exercise menu includes a “Skip Exercise” option during log mode."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Selecting it opens a confirmation dialog before applying the skip."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "Skipping sends every set with status \"skipped\" and the server stores that status."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "The card displays “Skipped” when all sets are skipped, and mixed skipped sets are treated as partial."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The menu offers “Unskip Exercise” during the same session."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The existing sets endpoint handles the skip status."
+    },
+    {
+      "number": 7,
+      "met": 0,
+      "reason": "No new server test for skip or unskip appears in the diff."
+    },
+    {
+      "number": 8,
+      "met": 0,
+      "reason": "No new client test for the skip UI appears in the diff."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all existing server and client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "The UI copy is direct and contains no exclamation marks."
+    }
+  ],
+  "overall": 0.8,
+  "model_overall": 0.8
+}

@@ -1,0 +1,36 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The client formula uses one ×2 multiplier when either flag is enabled, including when both are true."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "The same multiplier doubles tonnage when either single flag is enabled."
+    },
+    {
+      "number": 3,
+      "met": 0.5,
+      "reason": "The client display calculation is fixed, but the attempt also changes server-side tonnage calculations."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "No database columns or migrations were added."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "Harness results show all 198 server and 289 client tests passed."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "A new server test checks that both flags produce 225 for 12.5 × 9."
+    }
+  ],
+  "overall": 0.9166666666666666,
+  "model_overall": 0.9166666667
+}

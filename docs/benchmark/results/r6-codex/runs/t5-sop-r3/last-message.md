@@ -1,0 +1,1 @@
+The implementation and regression tests are complete locally: 289 client tests and 197 server tests pass. I left B1 `[IN PROGRESS]` because the project requires CI confirmation before marking it shipped. I added the in-flight note and refreshed the resume snapshot; no commit was made.

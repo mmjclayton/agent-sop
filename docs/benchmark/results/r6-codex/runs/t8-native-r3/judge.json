@@ -1,0 +1,56 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 0.5,
+      "reason": "Copy Last and Done always render, but Next is conditional and disappears when the keypad is on reps."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done uses flex sizing alongside the other actions, so it is narrower than its former full-width layout."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The action buttons’ padding and text height provide at least a 44px touch target."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "Copy Last uses the previous set’s value for the active field and sends it through onChange."
+    },
+    {
+      "number": 5,
+      "met": 0.5,
+      "reason": "Next switches the keypad state to reps, but NumericKeypad’s local display is not updated when its value prop changes."
+    },
+    {
+      "number": 6,
+      "met": 0.5,
+      "reason": "The new action styling uses design tokens, but Done retains a hard-coded white text color."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The actions use a flexible row layout that can fit within the keypad sheet on mobile."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "The button labels contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all server and client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "A new test verifies that Copy Last sends the previous value to onChange."
+    }
+  ],
+  "overall": 0.85,
+  "model_overall": 0.85
+}

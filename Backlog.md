@@ -1234,15 +1234,24 @@ Requested by Matt, 10 Oct 2026, after an outside review of `main` at 61b8642. Ve
 
 ### P116 - Fresh multi-run comparison on the current SOP
 
-`[OPEN] [Iteration]`
+`[SHIPPED - 2026-10-10] [Iteration]`
+review: docs/reviews/20261010-p116-ship-auto.md
+
+**Result (R6, `docs/benchmark/results/r6-codex-summary.md`):** SOP median at or above native on all three tasks (05 +0.00, 07 +0.15, 08 +0.20); only task 07's ranges do not overlap. Core criterion met in 9/9 SOP runs and 6/9 native. SOP used about 3.3x the wall time, 4.8x the output tokens and 6.3x the input tokens (96% cached). k=3, one model, one judge model.
 
 Requested by Matt, 10 Oct 2026, from the same review: the only A/B results are R1 to R5 (April, single-run, margins from +33% to negative), which the repo already labels historical. This is the native-model comparison pilot deferred at AUD 0 on 24 Sep (P110), reopened.
 
-Design follows `docs/benchmark/evaluation-protocol.md`: fresh `claude -p` processes with isolated config directories, never subagents of a working session (they inherit the operator's global instructions into both arms). Conditions 1 and 3 first (native defaults vs current Agent SOP installed into the target); the frozen lite subset (tasks 05, 07, 08) on `hst-tracker` at 76b3b77; deterministic acceptance scored first, then the blind rubric. Pilot of one run per task per arm to validate the harness, then k=3.
+Original design (superseded by the Codex decision below) followed `docs/benchmark/evaluation-protocol.md`: fresh `claude -p` processes with isolated config directories, never subagents of a working session (they inherit the operator's global instructions into both arms). Conditions 1 and 3 first (native defaults vs current Agent SOP installed into the target); the frozen lite subset (tasks 05, 07, 08) on `hst-tracker` at 76b3b77; deterministic acceptance scored first, then the blind rubric. Pilot of one run per task per arm to validate the harness, then k=3.
 
-**Open questions:**
-- Cost cap for the paid run (Matt). The protocol requires it set before any paid run.
-- Whether the runs bill to the subscription login or an API key; no key is set on this machine.
+**Decided 10 Oct 2026 (Matt): run and score with Codex, not Claude.** This answers both open questions: runs bill to Matt's ChatGPT login through `codex exec`, with no API spend, so the cost cap is the plan's own usage allowance. Recorded before the measured run:
+
+- Runtime: Codex CLI 0.160.1, model `gpt-6-luna`, reasoning effort medium, both arms. The configured default `gpt-6-astra` is refused on a ChatGPT login; `gpt-6-luna`, `gpt-5.6-terra` and `gpt-5.6-luna` are the models it accepts, and `gpt-6-luna` is the newest.
+- Arms: native (the historical stack-only stub as `AGENTS.md`; `CLAUDE.md`, `docs/agent-memory.md`, `docs/sop/` and `.claude/` removed) vs current Agent SOP (`setup.sh --runtime codex --code --force` from a snapshot of main, hooks run with `--dangerously-bypass-hook-trust`). Each run is a fresh process with its own `HOME` and `CODEX_HOME` holding only a copy of the login, so neither arm sees the operator's instructions, memories, skills or hooks.
+- Tasks: frozen lite subset 05, 07, 08 on `hst-tracker` at **814b3b5**, which files B1, P57 and P62 before any is built. The documented pin 76b3b77 (`run-multi-round.sh`) already ships all three: P57 Skip Exercise (cd51d88), P62 keypad buttons (f126f7c) and the B1 tonnage fix (e06d4a5) all precede it, so a run there asks the agent for work that is done. Found in the pilot when a SOP-arm agent reported Skip Exercise already present; the 76b3b77 runs were discarded. Baseline at 814b3b5: 197 server and 289 client tests pass. k=3 per task per arm, 18 runs, order shuffled, after a k=1 pilot.
+- Harness fixes from the pilot, applied to both arms: the isolated `HOME` gets the harness `PATH` (Codex's login shell otherwise found Node v8.4.0); `.git` is writable (`--add-dir`) so agents can commit; sandbox network is on so the server suite reaches the local test database its setup defaults to (`hst_tracker_test`); runs are sequential because that database is shared.
+- Scoring: harness re-runs both suites after each attempt (baseline 197 server, 289 client at 814b3b5). A blind Codex judge (`gpt-6-luna`, high effort, fresh home, process files removed from the diff) scores each acceptance criterion 1, 0.5 or 0.
+- Success criterion: report median and range per task per arm, with overlap stated. Any SOP effect is claimed only where the arms' ranges do not overlap.
+- Harness: `docs/benchmark/codex-bench.sh`.
 
 **Acceptance criteria:**
 - Cost cap, task count, k and success criteria recorded here before the paid run

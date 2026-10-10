@@ -1,0 +1,1 @@
+B1 remains in progress pending CI and the ship workflow. I added it to the in-flight tracker and refreshed the resume snapshot. The in-flight refresh script could not run because `docs/agent-memory.md` lacks its required sentinel, so I updated that section manually.

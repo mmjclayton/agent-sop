@@ -1,0 +1,56 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 1,
+      "reason": "The keyboard row contains Copy Last, Done, and Next buttons."
+    },
+    {
+      "number": 2,
+      "met": 1,
+      "reason": "Done uses flex: 2 beside two flex: 1 buttons, so it is narrower than the full row."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "All three buttons have a 48px height, exceeding the 44px minimum."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "Copy Last uses the previous value supplied for the active field and updates the display and value."
+    },
+    {
+      "number": 5,
+      "met": 0.5,
+      "reason": "Next switches the keypad state to reps, but the keypad’s internal display is not synchronized with the new value, so the reps value may not appear."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The buttons use design tokens for colors and border radius."
+    },
+    {
+      "number": 7,
+      "met": 1,
+      "reason": "The actions share a flexible row that fits the existing keypad layout on mobile."
+    },
+    {
+      "number": 8,
+      "met": 1,
+      "reason": "The button labels contain no exclamation marks or hype."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all 197 server and 291 client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "A new test checks that Copy Last calls onChange with the previous value and updates the display."
+    }
+  ],
+  "overall": 0.95,
+  "model_overall": 0.95
+}

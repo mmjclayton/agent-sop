@@ -1,0 +1,56 @@
+{
+  "criteria": [
+    {
+      "number": 1,
+      "met": 0,
+      "reason": "Skip is an action icon on the exercise card, not an option in the exercise menu."
+    },
+    {
+      "number": 2,
+      "met": 0,
+      "reason": "The skip handler applies immediately without a confirmation prompt."
+    },
+    {
+      "number": 3,
+      "met": 1,
+      "reason": "The finish endpoint writes each submitted set for a skipped exercise with status \"skipped\"."
+    },
+    {
+      "number": 4,
+      "met": 1,
+      "reason": "The card uses the \"Skipped\" label when the exercise is marked skipped."
+    },
+    {
+      "number": 5,
+      "met": 1,
+      "reason": "The same-session action toggles skip off, and the card exposes an undo-skip control."
+    },
+    {
+      "number": 6,
+      "met": 1,
+      "reason": "The existing finish endpoint handles skipped exercises."
+    },
+    {
+      "number": 7,
+      "met": 0,
+      "reason": "The diff adds no server test for skip or unskip."
+    },
+    {
+      "number": 8,
+      "met": 0,
+      "reason": "The diff adds no client test for skip UI."
+    },
+    {
+      "number": 9,
+      "met": 1,
+      "reason": "The harness reports all existing server and client tests passing."
+    },
+    {
+      "number": 10,
+      "met": 1,
+      "reason": "The added UI labels use direct wording and contain no exclamation marks."
+    }
+  ],
+  "overall": 0.6,
+  "model_overall": 0.7
+}
