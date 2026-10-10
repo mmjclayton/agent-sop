@@ -1316,7 +1316,9 @@ From an outside review of R6 that Matt passed on, 10 Oct 2026; the review recomm
 
 ### P120 - Dependent-session pair: does agent-sop pay off across sessions? (R8)
 
-`[BLOCKED] [Iteration]`
+`[IN PROGRESS] [Iteration]`
+
+**Unblocked 11 Oct 2026:** Matt reported the Codex usage limit reset; a test call succeeded and R8 started.
 
 **Blocked on:** the ChatGPT plan's Codex usage limit, hit at 17:45 on 10 Oct 2026 during the first R8 pair ("try again at Nov 9th, 2026 2:30 PM", per Codex). No R8 data was produced: one SOP pair completed session 1 and failed in session 2; the other eight failed in session 1. The harness pair mode and task 09 are built and were validated with one native smoke pair (both sessions completed; session 2 reached `logger.js` in 1 command). Unblocks when the quota resets. **Decided 10 Oct 2026 (Matt): wait for the reset and run then; no plan upgrade or API key.** Earliest run: 9 Nov 2026 after 2:30 PM (the reset Codex reported). Rebuild the template first (`codex-bench.sh template <dir>`), since the 10 Oct template lived in a session scratchpad. An earlier session must complete (exit 0, usage reported); a session-1 timeout makes the pair invalid rather than scoring session 2 from a half-finished base. Re-run with `BENCH_ARMS="native context sop" codex-bench.sh run <out> -k 3 --tasks "5+9"`.
 
