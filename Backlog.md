@@ -1278,7 +1278,7 @@ Requested by Matt, 10 Oct 2026 ("please fix"), from the readiness check after P1
 
 - `install-hooks.sh --dry-run` created an empty settings file when none existed. A missing file is now read as `{}` and only a real install creates it. Fixture `installer-dry-run-writes-nothing` fails against the previous commit.
 - CI pins `actions/checkout` to the v4.4.0 commit SHA instead of the moving `v4` tag.
-- README states that a change to agent instruction files needs a receipt whatever its size.
+- README states that a change to agent instruction files needs a receipt whatever its size when an enabled reviewer is in scope.
 - Review round one (a3ee6b8) found that a directory at the settings path reported success with nothing written, and an empty settings file reported up to date; fixed in bde0ff2 with three fixtures, two of which fail against a3ee6b8.
 
 **Acceptance criteria:**
