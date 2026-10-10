@@ -202,8 +202,10 @@ c="$TMPDIR/call-$n"; printf '%s\0' "$@" > "$c.args"
   if security list-keychains >/dev/null 2>&1; then echo keychain=reachable; else echo keychain=blocked; fi
   if node -e 'require("fs").realpathSync(".")' >/dev/null 2>&1; then echo node=ok; else echo node=broken; fi
   # SIGCONT is harmless. The target is an unrelated sleeper the test started outside the
-  # sandbox; its pid arrives in the project copy. (The profile before 1188475 also blocked
-  # this target; the sibling case it missed is verified by hand, see the P122 review.)
+  # sandbox; its pid arrives in the project copy. This covers the harness's real case:
+  # nothing outside the sandbox shares claude's process group. A sibling started by the
+  # same shell as sandbox-exec was the case the older "(target others)" rule missed; it
+  # was checked by hand when the rule changed (P122 review round 4).
   if kill -CONT "$(cat .outside-pid)" 2>/dev/null; then echo outside_signal=allowed; else echo outside_signal=denied; fi
   (sleep 5 & c=$!; if kill "$c" 2>/dev/null; then echo own_child_signal=ok; else echo own_child_signal=denied; fi)
   if pbpaste >/dev/null 2>&1; then echo pasteboard=readable; else echo pasteboard=denied; fi
@@ -339,3 +341,13 @@ na_case earlier-null '.earlier_sessions[0].usage = null'
 na_case end-null '.earlier_sessions[0].end.usage = null'
 na_case cost-missing '.usage[0].cost_usd = null'
 printf 'PASS: cost is NA when any turn lacks usage or cost\n'
+
+# A run under the operator's home is refused before anything runs: the profile hides home
+# metadata, so a working folder there could not resolve its own path.
+mkdir -p "$WORK/fakehome/out-inhome"
+if HOME="$WORK/fakehome" BENCH_END_MODE=closed cbench one "$WORK/fakehome/out-inhome" 10+11 native 1 2> "$WORK/inhome.log"; then
+    echo 'FAIL: a run under the operator home was accepted'; exit 1
+fi
+grep -q 'Claude runs must be outside' "$WORK/inhome.log"
+test -z "$(find "$WORK/fakehome/out-inhome/runs" -name 'call-*.args' 2>/dev/null)"
+printf 'PASS: a run folder under the operator home is refused before Claude starts\n'

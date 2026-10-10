@@ -18,7 +18,8 @@
 #   codex-bench.sh judge <out>                        blind rubric scoring of every valid run
 #   codex-bench.sh report <out>                       scores.tsv plus per-arm counts
 #
-# Keep <out> outside the repository; only result.json, judge.json and
+# Keep <out> outside the repository (and, for the Claude runtime, outside your home
+# folder: its sandbox hides home, so a run there is refused); only result.json, judge.json and
 # last-message.md are meant to be copied into docs/benchmark/results/.
 # A run is valid when Codex exited 0 and reported usage, or when it hit the time
 # limit (an outcome of the attempt, scored on what it left; usage may be NA). Test
@@ -175,6 +176,9 @@ claude_exec() {
     root=$(cd "$root" && pwd -P); home=$(cd "$home" && pwd -P); cwd=$(cd "$cwd" && pwd -P)
     oh=$(cd "$HOME" && pwd -P); runs=$(cd "$root/.." && pwd -P)
     tokdir=$(cd "$(dirname "$CLAUDE_TOKEN_FILE")" && pwd -P)
+    # The run must live outside the operator's home: the profile hides home metadata, and
+    # a working folder under it cannot resolve its own path.
+    case "$root/" in "$oh"/*) die "Claude runs must be outside $oh (use an output folder under /tmp, for example); got $root" ;; esac
     prof="$root.sb"
     cat > "$prof" <<SB
 (version 1)
@@ -187,6 +191,7 @@ claude_exec() {
 (allow file-read-metadata)
 (deny file-read-metadata (subpath "$oh"))
 (allow file-read-metadata (literal "$oh"))
+(allow file-read-metadata (subpath "$home") (subpath "$cwd") (subpath "$root/tmp"))
 (deny process-info*)
 (allow process-info* (target same-sandbox))
 (deny signal)
