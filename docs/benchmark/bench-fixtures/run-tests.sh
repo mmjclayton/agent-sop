@@ -201,6 +201,11 @@ c="$TMPDIR/call-$n"; printf '%s\0' "$@" > "$c.args"
   if ls "/Users/$(id -un)" >/dev/null 2>&1; then echo operator_home_read=allowed; else echo operator_home_read=denied; fi
   if security list-keychains >/dev/null 2>&1; then echo keychain=reachable; else echo keychain=blocked; fi
   if node -e 'require("fs").realpathSync(".")' >/dev/null 2>&1; then echo node=ok; else echo node=broken; fi
+  # SIGCONT is harmless; PPID is the harness's timeout process, outside the sandbox.
+  if kill -CONT "$PPID" 2>/dev/null; then echo outside_signal=allowed; else echo outside_signal=denied; fi
+  (sleep 5 & c=$!; if kill "$c" 2>/dev/null; then echo own_child_signal=ok; else echo own_child_signal=denied; fi)
+  if pbpaste >/dev/null 2>&1; then echo pasteboard=readable; else echo pasteboard=denied; fi
+  if ls "/Users/$(id -un)/Library" >/dev/null 2>&1; then echo home_names=listable; else echo home_names=hidden; fi
 } > "$c.env"
 resume=''; schema=''; prev=''
 for a in "$@"; do [ "$prev" = --resume ] && resume=$a; [ "$prev" = --json-schema ] && schema=$a; prev=$a; done
@@ -245,6 +250,8 @@ has_flag() { tr '\0' '\n' < "$1" | grep -qx -- "$2"; }
 ls "/Users/$(id -un)" >/dev/null 2>&1 || { echo 'FAIL: control: operator home not listable outside the sandbox'; exit 1; }
 security list-keychains >/dev/null 2>&1 || { echo 'FAIL: control: keychain unreachable outside the sandbox'; exit 1; }
 cat "$WORK/tok/claude-token" >/dev/null || { echo 'FAIL: control: token unreadable outside the sandbox'; exit 1; }
+kill -CONT $$ || { echo 'FAIL: control: cannot signal outside the sandbox'; exit 1; }
+pbpaste >/dev/null 2>&1 || { echo 'FAIL: control: pasteboard unreadable outside the sandbox'; exit 1; }
 mkdir -p "$WORK/out-claude"
 BENCH_END_MODE=ask cbench one "$WORK/out-claude" 10+11 native 1 2> "$WORK/claude.log" || { tail -20 "$WORK/claude.log"; exit 1; }
 run="$WORK/out-claude/runs/t10+11-native-r1"
@@ -258,6 +265,7 @@ for i in 0 1 2; do
     grep -qx outside_write=denied "$e"; grep -qx token_read=denied "$e"; grep -qx earlier_prompt_read=denied "$e"
     grep -qx harness_write=denied "$e"; grep -qx operator_home_read=denied "$e"; grep -qx keychain=blocked "$e"
     grep -qx node=ok "$e"   # node starts and resolves its cwd under the profile
+    grep -qx outside_signal=denied "$e"; grep -qx own_child_signal=ok "$e"; grep -qx pasteboard=denied "$e"; grep -qx home_names=hidden "$e"
 done
 test -f "$run/session-1/prompt.txt"   # the earlier-prompt probe had a real file to refuse
 has_pair "$run/tmp/call-1.args" --resume sess-1

@@ -157,10 +157,13 @@ claude_token() {
 # toolchain lives outside home.
 # No keychain, no LaunchServices or Apple Events (so nothing can be started outside the
 # sandbox), no pasteboard, and no inspecting or signalling processes outside it.
-# Reads are also closed for /Volumes. File metadata (names, sizes) stays readable
-# everywhere and /private/var/folders stays readable, because node resolves parent paths
-# and its per-user cache at startup; keep nothing sensitive outside home. Network stays
-# open: Claude needs its API. Verified with the real client and server suites.
+# Reads are also closed for /Volumes, and file names in the operator's home are hidden
+# too. Outside home, file metadata and /private/var/folders and /tmp stay readable,
+# because node resolves parent paths and its per-user cache at startup; keep nothing
+# sensitive there. "(target others)" did not stop signals to outside processes in a
+# test, so signals and process info are denied and re-allowed for the same sandbox only.
+# Network stays open: Claude needs its API. Verified with the real client and server
+# suites (server 197/197) under this profile.
 # The environment is rebuilt from nothing in a subshell, so only these variables pass
 # (no proxy or CA settings: set them here if a network needs them).
 # claude_exec <root> <home> <cwd> <timeout> <stdin> <stdout> <stderr> <claude args...>
@@ -182,13 +185,15 @@ claude_exec() {
 (deny file-read* (subpath "$oh") (subpath "$runs") (subpath "$tokdir") (subpath "/Volumes"))
 (allow file-read* (subpath "$home") (subpath "$cwd") (subpath "$root/tmp"))
 (allow file-read-metadata)
-(deny process-info* (target others))
+(deny file-read-metadata (subpath "$oh"))
+(allow file-read-metadata (literal "$oh"))
+(deny process-info*)
 (allow process-info* (target same-sandbox))
-(deny signal (target others))
+(deny signal)
 (allow signal (target same-sandbox))
-(deny mach-lookup (global-name "com.apple.SecurityServer") (global-name "com.apple.securityd")
-    (global-name-prefix "com.apple.coreservices.launchservicesd") (global-name-prefix "com.apple.lsd.")
-    (global-name "com.apple.coreservices.appleevents") (global-name-prefix "com.apple.pasteboard"))
+(deny mach-lookup (global-name "com.apple.SecurityServer") (global-name "com.apple.securityd") (global-name "com.apple.secd")
+    (global-name-prefix "com.apple.security.") (global-name-prefix "com.apple.coreservices.launchservicesd")
+    (global-name-prefix "com.apple.lsd.") (global-name "com.apple.coreservices.appleevents") (global-name-prefix "com.apple.pasteboard"))
 SB
     (
         cd "$cwd" || exit 1
