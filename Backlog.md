@@ -1253,7 +1253,9 @@ Design follows `docs/benchmark/evaluation-protocol.md`: fresh `claude -p` proces
 
 ### P117 - Remove the stale ship-sop reviewer runner from agent-sop
 
-`[IN PROGRESS] [Refactor]`
+`[SHIPPED - 2026-10-10] [Refactor]`
+
+review: docs/reviews/20261010-141500-ship-auto.md
 
 Raised from ship-sop's 10 Oct review follow-up (its P37 record): agent-sop carried `scripts/codex-review.sh`, a P107-era copy of ship-sop's runner without the timeout, process-group kill, retained evidence or telemetry added in ship-sop since. agent-sop's `install-codex.sh` installs that file only when it runs as ship-sop, so the copy was never installed from here; the installed runner on this machine matches ship-sop's. `install-codex.sh` is headed "shared verbatim" but lacked ship-sop's `codex-usage.sh` lines.
 
